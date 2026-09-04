@@ -178,7 +178,7 @@
                 var items = byDay[d] || [];
                 var dateStr = year + '-' + pad(month + 1) + '-' + pad(d);
                 var isToday = dateStr === todayCompare;
-                var isPast = !canApprove && dateStr < todayCompare;
+                var isPast = dateStr < todayCompare;
 
                 var chips = '';
                 if (isPast) {
@@ -420,8 +420,8 @@
             if (modalDate) { modalDate.value = dateStr; }
             if (modalMonth) { modalMonth.value = currentYm(); }
             if (mDate) {
-                // Solicitante não pode escolher data passada; o gestor pode.
-                if (canApprove) { mDate.removeAttribute('min'); } else { mDate.min = todayStr(); }
+                // Todas as datas passadas ficam inativas
+                mDate.min = todayStr();
                 mDate.value = dateStr;
             }
             if (mTime && !mTime.value) { mTime.value = '08:00'; }
@@ -639,13 +639,11 @@
                     return;
                 }
                 if (mDate && mTime && mDate.value && mTime.value) {
-                    // Valida se data nao é passada (para nao aprovador)
-                    if (!canApprove) {
-                        var today = todayStr();
-                        if (mDate.value < today) {
-                            alert('Não é possível reservar em data passada. Escolha hoje ou futuro.');
-                            return;
-                        }
+                    // Valida se data não é passada (todas as datas passadas inativas)
+                    var today = todayStr();
+                    if (mDate.value < today) {
+                        alert('Não é possível reservar em data passada. Escolha hoje ou futuro.');
+                        return;
                     }
                     modalDep.value = mDate.value + 'T' + mTime.value;
                 } else {
