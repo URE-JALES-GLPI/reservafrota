@@ -115,11 +115,11 @@
                             <input type="hidden" name="date_arrival" id="cb-m-arr">
 
                             <h4 class="reservafrota-modal__formtitle" id="cb-m-form-title"><i class="ti ti-calendar-plus"></i> {{ __('Novo agendamento', 'reservafrota') }}</h4>
-                            <p class="reservafrota-hint" id="cb-m-hint">{{ __('Escolha o veículo, motorista e horário. Apenas veículos ativos e sem conflito no horário ficarão disponíveis.', 'reservafrota') }}</p>
+                            <p class="reservafrota-hint" id="cb-m-hint">{{ __('Escolha o veículo desejado, motorista e horário. Veículos em manutenção não aparecem; datas passadas ficam indisponíveis.', 'reservafrota') }}</p>
 
-                            <label class="form-label" for="cb-m-car">1. {{ __('Veículo', 'reservafrota') }} <span class="reservafrota-optional">{{ __('(opcional — se não escolher, o gestor designará)', 'reservafrota') }}</span></label>
-                            <select class="form-select" id="cb-m-car" name="plugin_reservafrota_cars_id">
-                                <option value="">{{ __('— Selecione o veículo (opcional) —', 'reservafrota') }}</option>
+                            <label class="form-label" for="cb-m-car">1. {{ __('Veículo', 'reservafrota') }} <span class="reservafrota-optional" style="color:#059669;">{{ __('* escolha entre os disponíveis', 'reservafrota') }}</span></label>
+                            <select class="form-select" id="cb-m-car" name="plugin_reservafrota_cars_id" required>
+                                <option value="">{{ __('— Selecione o veículo —', 'reservafrota') }}</option>
                                 {% for id, car in cars %}
                                     <option value="{{ id }}">{{ car.name }}{% if car.plate %} — {{ car.plate }}{% endif %}{% if car.model_year %} ({{ car.model_year }}){% endif %}</option>
                                 {% endfor %}

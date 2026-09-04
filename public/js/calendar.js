@@ -173,13 +173,17 @@
                 html += '<div class="reservafrota-cell is-empty is-other-month"><span class="reservafrota-cell__num is-other">' + pd + '</span></div>';
             }
 
+            var todayCompare = todayStr();
             for (var d = 1; d <= daysInMonth; d++) {
                 var items = byDay[d] || [];
                 var dateStr = year + '-' + pad(month + 1) + '-' + pad(d);
-                var isToday = dateStr === todayStr;
+                var isToday = dateStr === todayCompare;
+                var isPast = !canApprove && dateStr < todayCompare;
 
                 var chips = '';
-                if (items.length === 0) {
+                if (isPast) {
+                    chips = '<span class="reservafrota-evt s-past" title="Data já passou"><i class="ti ti-ban" style="font-size:0.7rem;"></i> Indisponível</span>';
+                } else if (items.length === 0) {
                     chips = '<span class="reservafrota-evt s-empty" title="Clique para reservar"><i class="ti ti-plus" style="font-size:0.7rem;"></i> Disponível</span>';
                 } else {
                     items.slice(0, 4).forEach(function (b) {
@@ -201,9 +205,10 @@
                 var hasConflict = canApprove && items.some(function (b) { return b.conflict; });
                 html += '<div class="reservafrota-cell' + (items.length ? ' has-items' : '')
                     + (isToday ? ' is-today' : '')
+                    + (isPast ? ' is-past' : '')
                     + (hasAllArrived ? ' is-all-arrived' : (hasSomeArrived ? ' is-some-arrived' : ''))
                     + (hasConflict ? ' is-conflict-day' : '')
-                    + '" data-day="' + d + '">'
+                    + '" data-day="' + d + '"' + (isPast ? ' title="Data passada - indisponível"' : '') + '>'
                     + '<span class="reservafrota-cell__num">' + d + '</span>'
                     + '<div class="reservafrota-cell__evts">' + chips + '</div>'
                     + '</div>';
@@ -220,6 +225,7 @@
             grid.innerHTML = html;
 
             grid.querySelectorAll('.reservafrota-cell[data-day]').forEach(function (cell) {
+                if (cell.classList.contains('is-past')) { return; }
                 var dayItems = byDay[cell.dataset.day] || [];
                 cell.addEventListener('click', function () {
                     openDay(parseInt(cell.dataset.day, 10), dayItems);
@@ -627,7 +633,20 @@
                     if (!ok) { return; }
                 }
 
+                if (carSelect && carSelect.hasAttribute('required') && !carSelect.value) {
+                    alert('Selecione o veículo que deseja reservar.');
+                    carSelect.focus();
+                    return;
+                }
                 if (mDate && mTime && mDate.value && mTime.value) {
+                    // Valida se data nao é passada (para nao aprovador)
+                    if (!canApprove) {
+                        var today = todayStr();
+                        if (mDate.value < today) {
+                            alert('Não é possível reservar em data passada. Escolha hoje ou futuro.');
+                            return;
+                        }
+                    }
                     modalDep.value = mDate.value + 'T' + mTime.value;
                 } else {
                     alert('Informe o dia e a hora da saída.');
@@ -649,10 +668,13 @@
 
                 // Mostra estado de envio
                 if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="ti ti-loader ti-spin"></i> Enviando...'; }
+                var formData = new FormData(modalForm);
+                // Garante que token atual está no FormData (atualiza caso tenha sido renovado)
+                if (csrf) { formData.set('_glpi_csrf_token', csrf); }
                 fetch(bform, {
                     method: 'POST',
-                    body: new FormData(modalForm),
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-Glpi-Csrf-Token': csrf },
                     credentials: 'same-origin'
                 })
                     .then(function(r){
@@ -663,6 +685,15 @@
                         });
                     })
                     .then(function(res){
+                        // Atualiza token CSRF se servidor retornou novo
+                        if (res.data && res.data.csrf_token) {
+                            csrf = res.data.csrf_token;
+                            root.dataset.csrf = csrf;
+                            var csrfInput = document.getElementById('reservafrota-modal-form') ? document.getElementById('reservafrota-modal-form').querySelector('input[name="_glpi_csrf_token"]') : null;
+                            if (csrfInput) { csrfInput.value = csrf; }
+                            // Atualiza também todos os data-csrf dos botoes
+                            document.querySelectorAll('[data-csrf]').forEach(function(el){ el.setAttribute('data-csrf', csrf); });
+                        }
                         if (res.data && res.data.success) {
                             closeModal();
                             reloadBookingList();
@@ -697,7 +728,18 @@
                                 reloadBookingList();
                                 load();
                             } else {
-                                alert('Erro ao solicitar reserva (HTTP '+res.status+'). Tente novamente.');
+                                var msg = 'Erro ao solicitar reserva (HTTP '+res.status+').';
+                                if (res.status === 403) {
+                                    msg += '\n\nPossíveis causas:\n- Sua sessão expirou (recarregue a página)\n- Seu perfil não tem permissão "Criar" em Administração > Perfis > Reserva de Frota\n- Token CSRF inválido';
+                                }
+                                // Tenta extrair mensagem do HTML de erro do GLPI
+                                try {
+                                    var m = res.text.match(/<div[^>]*class="[^"]*alert[^"]*"[^>]*>(.*?)<\/div>/i);
+                                    if (m && m[1]) {
+                                        var tmp = document.createElement('div'); tmp.innerHTML = m[1]; msg += '\n\nDetalhe: ' + tmp.textContent.trim().substring(0,200);
+                                    }
+                                } catch(e){}
+                                alert(msg);
                                 if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = isEditing ? '<i class="ti ti-device-floppy"></i> Salvar alterações' : '<i class="ti ti-send"></i> Solicitar agendamento'; }
                             }
                         }

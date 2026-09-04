@@ -1382,3 +1382,9 @@ body.reservafrota-modal-open { overflow: hidden; }
     .reservafrota-cal-bar { flex-wrap: wrap; }
     .reservafrota-new-booking { width: 100%; justify-content: center; margin-left: 0; }
 }
+
+/* ---------- Dias passados indisponíveis ---------- */
+.reservafrota-cell.is-past { background: #f1f5f9; opacity: 0.6; cursor: not-allowed !important; }
+.reservafrota-cell.is-past .reservafrota-cell__num { color: #94a3b8; text-decoration: line-through; }
+.reservafrota-cell.is-past:hover { background: #f1f5f9 !important; }
+.reservafrota-evt.s-past { background: rgba(148,163,184,0.15); border-left-color: #94a3b8; color: #64748b; font-style: italic; }

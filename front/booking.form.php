@@ -35,8 +35,9 @@ if (isset($_POST['add'])) {
         $messages = $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
         // Limpa mensagens já capturadas para não duplicar no próximo redirect
         unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
+        $newToken = Session::getNewCSRFToken();
         if ($newID) {
-            echo json_encode(['success' => true, 'id' => $newID, 'messages' => $messages]);
+            echo json_encode(['success' => true, 'id' => $newID, 'messages' => $messages, 'csrf_token' => $newToken]);
         } else {
             // Tenta extrair mensagem de erro já adicionada em prepareInputForAdd
             $error = 'Falha ao criar reserva. Verifique os dados e tente novamente.';
@@ -53,7 +54,11 @@ if (isset($_POST['add'])) {
                     $error = $messages;
                 }
             }
-            echo json_encode(['success' => false, 'error' => $error, 'messages' => $messages]);
+            // Também verifica se o objeto tem erros específicos
+            if (isset($_SESSION['MESSAGE_AFTER_REDIRECT']) && !empty($_SESSION['MESSAGE_AFTER_REDIRECT'])) {
+                $error = json_encode($_SESSION['MESSAGE_AFTER_REDIRECT']);
+            }
+            echo json_encode(['success' => false, 'error' => $error, 'messages' => $messages, 'csrf_token' => $newToken]);
         }
         exit;
     }
@@ -165,7 +170,8 @@ if (isset($_POST['add'])) {
             header('Content-Type: application/json; charset=utf-8');
             $messages = $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
             unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
-            echo json_encode(['success' => false, 'error' => 'Edição não permitida para este status.', 'messages' => $messages]);
+            $newToken = Session::getNewCSRFToken();
+            echo json_encode(['success' => false, 'error' => 'Edição não permitida para este status.', 'messages' => $messages, 'csrf_token' => $newToken]);
             exit;
         }
         Html::back();
@@ -185,10 +191,11 @@ if (isset($_POST['add'])) {
         header('Content-Type: application/json; charset=utf-8');
         $messages = $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
         unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
+        $newToken = Session::getNewCSRFToken();
         if ($ok) {
-            echo json_encode(['success' => true, 'messages' => $messages]);
+            echo json_encode(['success' => true, 'messages' => $messages, 'csrf_token' => $newToken]);
         } else {
-            echo json_encode(['success' => false, 'error' => 'Falha ao atualizar.', 'messages' => $messages]);
+            echo json_encode(['success' => false, 'error' => 'Falha ao atualizar.', 'messages' => $messages, 'csrf_token' => $newToken]);
         }
         exit;
     }

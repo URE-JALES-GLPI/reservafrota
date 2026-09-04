@@ -145,8 +145,12 @@ class Booking extends CommonDBTM
             $input['name'] = $who . ' — ' . Html::convDateTime($input['date_departure']);
         }
 
-        // Validação de veículo: verifica manutenção (is_active) e conflito de horário
+        // Validação de veículo: obrigatório para usuário comum, verifica manutenção e conflito
         $carId = (int) ($input['plugin_reservafrota_cars_id'] ?? 0);
+        if ($carId === 0 && !self::canApprove()) {
+            Session::addMessageAfterRedirect(__('Selecione o veículo que deseja reservar.', 'reservafrota'), false, ERROR);
+            return false;
+        }
         if ($carId > 0) {
             $car = new Car();
             if ($car->getFromDB($carId) && !(int) $car->fields['is_active']) {
