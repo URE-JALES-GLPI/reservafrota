@@ -94,7 +94,12 @@
                     {% if cars is empty %}
                         <div class="reservafrota-empty">
                             <i class="ti ti-car-off"></i>
-                            <p>{{ __('Nenhum carro cadastrado ainda.', 'reservafrota') }}</p>
+                            <p>{{ __('Nenhum veículo cadastrado ou ativo.', 'reservafrota') }}</p>
+                            {% if can_manage_cars %}
+                                <a href="{{ web_dir }}/front/car.form.php" class="reservafrota-export-btn" style="margin-top:0.6rem;"><i class="ti ti-plus"></i> {{ __('Cadastrar veículo', 'reservafrota') }}</a>
+                            {% else %}
+                                <p class="reservafrota-hint">{{ __('Solicite ao administrador que cadastre veículos ativos para a frota.', 'reservafrota') }}</p>
+                            {% endif %}
                         </div>
                     {% else %}
                         <form method="post" action="{{ web_dir }}/front/booking.form.php" class="reservafrota-form" id="reservafrota-modal-form">
@@ -184,6 +189,12 @@
                             <p class="reservafrota-hint">{{ __('O pedido fica pendente até a aprovação do administrador.', 'reservafrota') }}</p>
                         </form>
                     {% endif %}
+                {% else %}
+                    <div class="reservafrota-empty">
+                        <i class="ti ti-lock"></i>
+                        <p>{{ __('Você não tem permissão para criar reservas.', 'reservafrota') }}</p>
+                        <p class="reservafrota-hint">{{ __('Contate o administrador para liberar o acesso em Administração > Perfis > Reserva de Frota.', 'reservafrota') }}</p>
+                    </div>
                 {% endif %}
                 </div>
 

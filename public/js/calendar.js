@@ -372,6 +372,8 @@
                         // Store editing id for availability check (exclude self)
                         editingId = b.id;
                         carSelect.value = b.car_id ? String(b.car_id) : '';
+                        // No agendamento o veiculo nao pode ser alterado na edicao - desabilita para evitar confusao
+                        carSelect.disabled = true;
                         // if car no longer active, add option
                         if (b.car_id && !Array.from(carSelect.options).some(function(o){ return o.value==String(b.car_id); })) {
                             var opt = document.createElement('option');
@@ -419,7 +421,7 @@
             if (mTime && !mTime.value) { mTime.value = '08:00'; }
             if (mADate) { mADate.value = ''; }
             if (mATime) { mATime.value = ''; }
-            if (carSelect) { carSelect.value = ''; }
+            if (carSelect) { carSelect.value = ''; carSelect.disabled = false; }
             editingId = null;
             if (carHint) { carHint.hidden = true; carHint.textContent=''; }
 
@@ -444,6 +446,7 @@
 
             editingStatus = null;
             editingId = null;
+            if (carSelect) { carSelect.disabled = false; }
             if (submitBtn) { submitBtn.disabled = false; }
             if (cancelBtn) { cancelBtn.hidden = true; cancelBtn.disabled = false; }
             if (confirmBtn) { confirmBtn.hidden = true; confirmBtn.disabled = false; }
@@ -644,19 +647,67 @@
                     }
                 }
 
+                // Mostra estado de envio
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="ti ti-loader ti-spin"></i> Enviando...'; }
                 fetch(bform, {
                     method: 'POST',
                     body: new FormData(modalForm),
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     credentials: 'same-origin'
                 })
-                    .then(function () {
-                        closeModal();
-                        reloadBookingList();
+                    .then(function(r){
+                        return r.text().then(function(text){
+                            var data = null;
+                            try { data = JSON.parse(text); } catch(e) { /* resposta pode ser HTML em caso de redirect */ }
+                            return {ok: r.ok, status: r.status, data: data, text: text};
+                        });
+                    })
+                    .then(function(res){
+                        if (res.data && res.data.success) {
+                            closeModal();
+                            reloadBookingList();
+                            load();
+                            // Toast sucesso
+                            var toast = document.createElement('div');
+                            toast.className = 'reservafrota-toast';
+                            toast.style.background = '#059669';
+                            toast.innerHTML = '<i class="ti ti-check"></i> Reserva solicitada com sucesso! <button class="reservafrota-toast__close" onclick="this.parentElement.remove()"><i class="ti ti-x"></i></button>';
+                            document.body.appendChild(toast);
+                            setTimeout(function(){ if(toast.parentElement) toast.remove(); }, 4000);
+                        } else if (res.data && !res.data.success) {
+                            var err = res.data.error || 'Erro ao criar reserva';
+                            // Tenta extrair mensagens detalhadas
+                            if (res.data.messages) {
+                                try {
+                                    var msgs = res.data.messages;
+                                    var flat = [];
+                                    for (var k in msgs) {
+                                        if (Array.isArray(msgs[k])) { flat = flat.concat(msgs[k]); }
+                                        else if (typeof msgs[k]==='string') { flat.push(msgs[k]); }
+                                    }
+                                    if (flat.length) { err = flat.join(' '); }
+                                } catch(e){}
+                            }
+                            alert(err);
+                            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = isEditing ? '<i class="ti ti-device-floppy"></i> Salvar alterações' : '<i class="ti ti-send"></i> Solicitar agendamento'; }
+                        } else {
+                            // Fallback: se resposta não é JSON mas ok (redirect HTML), considera sucesso e recarrega
+                            if (res.ok) {
+                                closeModal();
+                                reloadBookingList();
+                                load();
+                            } else {
+                                alert('Erro ao solicitar reserva (HTTP '+res.status+'). Tente novamente.');
+                                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = isEditing ? '<i class="ti ti-device-floppy"></i> Salvar alterações' : '<i class="ti ti-send"></i> Solicitar agendamento'; }
+                            }
+                        }
                     })
                     .catch(function () {
                         // Sem rede/erro inesperado: cai para o envio normal do formulário.
-                        modalForm.submit();
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = isEditing ? '<i class="ti ti-device-floppy"></i> Salvar alterações' : '<i class="ti ti-send"></i> Solicitar agendamento'; }
+                        // tenta envio normal se AJAX falhar
+                        // modalForm.submit();
+                        alert('Falha de conexão. Verifique sua internet e tente novamente.');
                     });
             });
         }

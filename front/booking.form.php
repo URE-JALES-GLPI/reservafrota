@@ -9,6 +9,10 @@ $booking = new Booking();
 if (isset($_POST['add'])) {
     // Qualquer usuário com CREATE pode solicitar um agendamento.
     $booking->check(-1, CREATE, $_POST);
+
+    // Detecta requisição AJAX vinda do calendário (fetch com X-Requested-With)
+    $is_ajax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
     $newID = $booking->add($_POST);
 
     // Repetição: cria o mesmo agendamento nos demais dias da semana marcados.
@@ -23,6 +27,35 @@ if (isset($_POST['add'])) {
                 true
             );
         }
+    }
+
+    // Resposta AJAX: retorna JSON com sucesso/erro e mensagens
+    if ($is_ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        $messages = $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
+        // Limpa mensagens já capturadas para não duplicar no próximo redirect
+        unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
+        if ($newID) {
+            echo json_encode(['success' => true, 'id' => $newID, 'messages' => $messages]);
+        } else {
+            // Tenta extrair mensagem de erro já adicionada em prepareInputForAdd
+            $error = 'Falha ao criar reserva. Verifique os dados e tente novamente.';
+            if (!empty($messages)) {
+                // Mensagens são arrays por tipo (ERROR, WARNING, INFO)
+                foreach ($messages as $type => $msgs) {
+                    if (!empty($msgs)) {
+                        $error = is_array($msgs) ? implode(' ', $msgs) : (string) $msgs;
+                        break;
+                    }
+                }
+                // Caso formato seja flat
+                if (is_string($messages) && $messages !== '') {
+                    $error = $messages;
+                }
+            }
+            echo json_encode(['success' => false, 'error' => $error, 'messages' => $messages]);
+        }
+        exit;
     }
 
     // Volta para o calendário quando o pedido veio do popup do calendário.
@@ -123,10 +156,18 @@ if (isset($_POST['add'])) {
     Html::back();
 
 } elseif (isset($_POST['update'])) {
+    $is_ajax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
     $booking->check($_POST['id'], UPDATE);
     $st = (int) ($booking->fields['status'] ?? 0);
     if (!in_array($st, [Booking::STATUS_PENDING, Booking::STATUS_APPROVED], true)) {
         Session::addMessageAfterRedirect(__('Só agendamentos pendentes ou aprovados podem ser editados.', 'reservafrota'), false, ERROR);
+        if ($is_ajax) {
+            header('Content-Type: application/json; charset=utf-8');
+            $messages = $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
+            unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
+            echo json_encode(['success' => false, 'error' => 'Edição não permitida para este status.', 'messages' => $messages]);
+            exit;
+        }
         Html::back();
     }
     // O carro nunca é alterado pela edição.
@@ -138,7 +179,19 @@ if (isset($_POST['add'])) {
         $_POST['date_validation']   = null;
         Session::addMessageAfterRedirect(__('O agendamento foi editado e voltou para Pendente.', 'reservafrota'), false, WARNING);
     }
-    $booking->update($_POST);
+    $ok = $booking->update($_POST);
+
+    if ($is_ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        $messages = $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
+        unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
+        if ($ok) {
+            echo json_encode(['success' => true, 'messages' => $messages]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Falha ao atualizar.', 'messages' => $messages]);
+        }
+        exit;
+    }
     
     // Volta para o calendário quando o pedido veio do popup do calendário.
     if (!empty($_POST['_from_calendar'])) {
