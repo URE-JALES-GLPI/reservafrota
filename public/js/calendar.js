@@ -173,7 +173,7 @@
                 html += '<div class="reservafrota-cell is-empty is-other-month"><span class="reservafrota-cell__num is-other">' + pd + '</span></div>';
             }
 
-            var todayCompare = todayStr();
+            var todayCompare = todayStr;
             for (var d = 1; d <= daysInMonth; d++) {
                 var items = byDay[d] || [];
                 var dateStr = year + '-' + pad(month + 1) + '-' + pad(d);
