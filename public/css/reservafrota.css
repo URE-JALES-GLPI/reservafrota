@@ -1,0 +1,1353 @@
+/* ============================================================
+   Reservafrota — agenda de carros (visual repaginado)
+   Scoped em .reservafrota-* para não afetar o resto do GLPI.
+   Usa variáveis do tema (--tblr-*) com fallback e respeita
+   prefers-reduced-motion.
+   ============================================================ */
+
+.reservafrota-agenda {
+    --cb-radius: 18px;
+    --cb-free:  #6366f1;
+    --cb-pending: #f59e0b;
+    --cb-approved: #10b981;
+    --cb-rejected: #f43f5e;
+    --cb-ink: var(--tblr-body-color, #1c2230);
+    --cb-surface: var(--tblr-bg-surface, #ffffff);
+    --cb-muted: var(--tblr-secondary, #6b7689);
+    --cb-border: var(--tblr-border-color, #e7e9ee);
+    --cb-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -12px rgba(16, 24, 40, 0.22);
+    --cb-shadow-lift: 0 2px 6px rgba(16, 24, 40, 0.06), 0 28px 50px -18px rgba(16, 24, 40, 0.40);
+    max-width: 1180px;
+    margin: 0 auto;
+    color: var(--cb-ink);
+}
+
+/* ---------- HERO ---------- */
+.reservafrota-hero {
+    position: relative;
+    border-radius: 22px;
+    overflow: hidden;
+    padding: 1.5rem 1.6rem;
+    margin-bottom: 1.4rem;
+    color: #fff;
+    background: linear-gradient(125deg, #1e293b 0%, #3730a3 52%, #1d4ed8 100%);
+    box-shadow: var(--cb-shadow);
+    isolation: isolate;
+}
+.reservafrota-hero::before {
+    /* brilho ambiente */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(120% 140% at 88% -10%, rgba(56, 189, 248, 0.45), transparent 55%),
+        radial-gradient(90% 120% at 0% 120%, rgba(99, 102, 241, 0.45), transparent 60%);
+    z-index: -1;
+}
+.reservafrota-hero::after {
+    /* faixa de "asfalto" sutil na base */
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0; height: 4px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    opacity: 0.4;
+}
+.reservafrota-hero__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.reservafrota-hero__title {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+.reservafrota-hero__title > i {
+    font-size: 1.7rem;
+    width: 3rem; height: 3rem;
+    display: grid; place-items: center;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.reservafrota-hero__title h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+}
+.reservafrota-subtitle {
+    margin: 0.15rem 0 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.86rem;
+}
+
+/* Barra de data dentro do hero */
+.reservafrota-datebar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+}
+.reservafrota-nav {
+    border: none;
+    background: rgba(255, 255, 255, 0.0);
+    color: #fff;
+    width: 2.1rem; height: 2.1rem;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-size: 1.1rem;
+}
+.reservafrota-nav:hover { background: rgba(255, 255, 255, 0.2); }
+.reservafrota-date-input {
+    border: none;
+    background: rgba(255, 255, 255, 0.92);
+    color: #1c2230;
+    border-radius: 10px;
+    padding: 0.35rem 0.6rem;
+    font-weight: 600;
+    min-width: 150px;
+}
+.reservafrota-today {
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1d4ed8;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.35rem 0.8rem;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease;
+}
+.reservafrota-today:hover { background: #fff; transform: translateY(-1px); }
+
+/* ---------- ABAS ---------- */
+.reservafrota-tabs {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 1.3rem;
+    border-bottom: 1px solid var(--cb-border);
+    flex-wrap: wrap;
+}
+.reservafrota-back {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.45rem 0.85rem; margin: 0 0.3rem 0 0; align-self: center;
+    font-weight: 600; font-size: 0.85rem; cursor: pointer;
+    color: var(--cb-muted); background: var(--cb-surface, #fff);
+    border: 1px solid var(--cb-border, #e2e8f0); border-radius: 8px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.reservafrota-back:hover { color: var(--tblr-primary, #2563eb); background: var(--tblr-bg-surface-secondary, #f3f5f9); }
+.reservafrota-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.95rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--cb-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    border-radius: 8px 8px 0 0;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.reservafrota-tab:hover { color: var(--tblr-primary, #2563eb); background: var(--tblr-bg-surface-secondary, #f3f5f9); }
+.reservafrota-tab.is-active {
+    color: var(--tblr-primary, #2563eb);
+    border-bottom-color: var(--tblr-primary, #2563eb);
+}
+
+/* ---------- LAYOUT ---------- */
+.reservafrota-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 1.3rem;
+    align-items: start;
+}
+@media (max-width: 920px) {
+    .reservafrota-layout { grid-template-columns: 1fr; }
+}
+
+/* ---------- BOARD ---------- */
+.reservafrota-board__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+}
+.reservafrota-board__head h3 {
+    margin: 0; font-size: 1.05rem; font-weight: 650;
+}
+.reservafrota-legend {
+    display: flex; gap: 0.9rem; font-size: 0.78rem; color: var(--cb-muted);
+}
+.reservafrota-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.reservafrota-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
+.dot-free { background: var(--cb-free); }
+.dot-pending { background: var(--cb-pending); }
+.dot-approved { background: #10b981; }
+.dot-arrived { background: #4263eb; }
+
+.reservafrota-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+    gap: 1.1rem;
+}
+
+/* ---------- CARTÃO 3D ---------- */
+.reservafrota-card {
+    position: relative;
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: var(--cb-radius);
+    box-shadow: var(--cb-shadow);
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: cb-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: var(--d, 0ms);
+}
+.reservafrota-card:hover {
+    transform: perspective(950px) rotateX(4deg) translateY(-10px);
+    box-shadow: var(--cb-shadow-lift);
+}
+
+/* Palco do carro (topo) com tint do status */
+.reservafrota-card__stage {
+    position: relative;
+    height: 132px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+        radial-gradient(120% 90% at 50% 18%, var(--cb-tint, #eef2f7), transparent 70%),
+        var(--tblr-bg-surface-secondary, #f3f5f9);
+}
+.reservafrota-card.is-free    { --cb-tint: rgba(16, 185, 129, 0.16); }
+.reservafrota-card.is-pending { --cb-tint: rgba(245, 159, 11, 0.18); }
+.reservafrota-card.is-approved{ --cb-tint: rgba(99, 102, 241, 0.18); }
+
+.reservafrota-card__car {
+    width: 82%;
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    filter: drop-shadow(0 10px 12px rgba(16, 24, 40, 0.18));
+    transform: translateZ(30px);
+}
+.reservafrota-card:hover .reservafrota-card__car {
+    transform: translateY(-6px) scale(1.05) translateZ(40px);
+}
+.reservafrota-card__car img { width: 100%; height: 100%; object-fit: contain; }
+.reservafrota-card__car svg { width: 100%; height: auto; display: block; }
+/* foto real do carro ocupa o palco inteiro */
+.reservafrota-card__stage.has-photo { padding: 0; }
+.reservafrota-card__stage.has-photo .reservafrota-card__car {
+    width: 100%; height: 100%; filter: none;
+}
+.reservafrota-card__stage.has-photo .reservafrota-card__car img { height: 100%; }
+
+/* Badge de status flutuando */
+.reservafrota-card__status {
+    position: absolute;
+    top: 0.6rem; right: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    background: var(--cb-surface);
+    box-shadow: 0 4px 10px rgba(16, 24, 40, 0.12);
+    z-index: 2;
+}
+.reservafrota-card__status .ti { font-size: 0.85rem; }
+.reservafrota-card.is-free    .reservafrota-card__status { color: var(--cb-free); }
+.reservafrota-card.is-pending .reservafrota-card__status { color: var(--cb-pending); }
+.reservafrota-card.is-approved.reservafrota-card__status,
+.reservafrota-card.is-approved .reservafrota-card__status { color: var(--cb-approved); }
+.reservafrota-card__status .pulse {
+    width: 0.45rem; height: 0.45rem; border-radius: 50%;
+    background: currentColor;
+    animation: cb-pulse 1.5s ease-in-out infinite;
+}
+
+/* Corpo */
+.reservafrota-card__body { padding: 0.85rem 0.95rem 1rem; }
+.reservafrota-card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.reservafrota-card__name { font-weight: 700; margin: 0; font-size: 0.98rem; line-height: 1.2; }
+.reservafrota-card__year { color: var(--cb-muted); font-size: 0.8rem; font-weight: 600; }
+.reservafrota-card__plate {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    background: var(--tblr-bg-surface-secondary, #f1f3f7);
+    border: 1px solid var(--cb-border);
+    border-radius: 6px;
+    padding: 0.06rem 0.42rem;
+    color: var(--cb-ink);
+}
+.reservafrota-card__free {
+    margin: 0.7rem 0 0;
+    font-size: 0.82rem;
+    color: var(--cb-free);
+    font-weight: 600;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+
+.reservafrota-uses {
+    list-style: none; padding: 0; margin: 0.7rem 0 0;
+    border-top: 1px dashed var(--cb-border);
+}
+.reservafrota-uses li,
+.reservafrota-use {
+    display: flex; gap: 0.5rem; align-items: flex-start;
+    padding: 0.5rem 0 0; font-size: 0.8rem;
+}
+.reservafrota-use {
+    text-decoration: none;
+    color: inherit;
+    padding: 0.5rem 0.4rem;
+    margin: 0 -0.4rem;
+    border-radius: 8px;
+    align-items: center;
+    transition: background 0.15s ease;
+}
+.reservafrota-use:hover { background: var(--tblr-bg-surface-secondary, #f3f5f9); }
+.reservafrota-use__arrow { margin-left: auto; color: var(--cb-muted); font-size: 0.95rem; }
+.reservafrota-uses .user { font-weight: 650; }
+.reservafrota-uses .time { color: var(--cb-muted); font-size: 0.76rem; }
+.reservafrota-uses .mini-chip {
+    font-size: 0.66rem; font-weight: 700;
+    padding: 0.08rem 0.42rem; border-radius: 999px; white-space: nowrap;
+    margin-top: 0.05rem;
+}
+.mini-chip.s-1 { color: var(--cb-pending); background: rgba(245, 159, 11, 0.16); }
+.mini-chip.s-2 { color: var(--cb-approved); background: rgba(99, 102, 241, 0.16); }
+
+/* ---------- PAINEL DO FORMULÁRIO ---------- */
+.reservafrota-panel { position: sticky; top: 1rem; }
+.reservafrota-panel__card {
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: var(--cb-radius);
+    box-shadow: var(--cb-shadow);
+    overflow: hidden;
+}
+.reservafrota-panel__card > h3 {
+    margin: 0;
+    padding: 0.95rem 1.1rem;
+    font-size: 1.02rem;
+    font-weight: 650;
+    color: #fff;
+    display: flex; align-items: center; gap: 0.5rem;
+    background: linear-gradient(120deg, #3730a3, #1d4ed8);
+}
+.reservafrota-form { padding: 0.4rem 1.1rem 1.1rem; }
+.reservafrota-form .form-label {
+    margin-top: 0.75rem; margin-bottom: 0.25rem;
+    font-weight: 600; font-size: 0.83rem;
+}
+.reservafrota-optional { color: var(--cb-muted); font-weight: 400; font-size: 0.76rem; }
+.reservafrota-submit {
+    width: 100%; margin-top: 1.1rem;
+    border: none; border-radius: 12px;
+    padding: 0.6rem 1rem; font-weight: 700; color: #fff; cursor: pointer;
+    background: linear-gradient(120deg, #4338ca, #2563eb);
+    box-shadow: 0 8px 18px -6px rgba(37, 99, 235, 0.6);
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+}
+.reservafrota-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -6px rgba(37, 99, 235, 0.7); }
+.reservafrota-hint { margin: 0.7rem 0 0; font-size: 0.75rem; color: var(--cb-muted); text-align: center; }
+
+.reservafrota-conflict {
+    margin-top: 0.55rem; padding: 0.55rem 0.7rem; border-radius: 10px;
+    background: rgba(245, 159, 11, 0.13);
+    border: 1px solid rgba(245, 159, 11, 0.3);
+    color: #92400e; font-size: 0.79rem;
+    display: flex; gap: 0.45rem; align-items: flex-start;
+    animation: cb-rise 0.25s ease forwards;
+}
+.reservafrota-conflict .ti { margin-top: 1px; }
+
+.reservafrota-empty { text-align: center; color: var(--cb-muted); padding: 1.4rem 1rem; }
+.reservafrota-empty .ti { font-size: 2.2rem; display: block; margin-bottom: 0.4rem; color: var(--cb-border); }
+
+/* ---------- Loading ---------- */
+.reservafrota-loading {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    color: var(--cb-muted); padding: 2.5rem 0;
+}
+.reservafrota-spinner {
+    width: 1.15rem; height: 1.15rem;
+    border: 2px solid var(--cb-border);
+    border-top-color: var(--tblr-primary, #2563eb);
+    border-radius: 50%;
+    animation: cb-spin 0.7s linear infinite;
+}
+
+/* ---------- Chips de status (listagem + form de aprovação) ---------- */
+.reservafrota-chip {
+    display: inline-block; font-size: 0.76rem; font-weight: 700;
+    padding: 0.16rem 0.62rem; border-radius: 999px;
+}
+.reservafrota-chip.status-pending { color: var(--cb-pending); background: rgba(245, 159, 11, 0.16); }
+.reservafrota-chip.status-approved { color: var(--cb-approved); background: rgba(16, 185, 129, 0.16); }
+.reservafrota-chip.status-rejected { color: var(--cb-rejected); background: rgba(244, 63, 94, 0.16); }
+.reservafrota-chip.status-cancelled { color: var(--cb-muted); background: rgba(107, 118, 137, 0.16); }
+.reservafrota-chip.status-arrived { color: #3b5bdb; background: rgba(66, 99, 235, 0.15); }
+
+/* Evento no calendário — status chegado */
+.reservafrota-evt.s-5 { border-left-color: #4263eb; background: rgba(66, 99, 235, 0.12); }
+.reservafrota-day-item.s-5 { border-left-color: #4263eb; }
+.reservafrota-tip__item.s-5 { border-left-color: #4263eb; background: rgba(66, 99, 235, 0.08); }
+.reservafrota-blist-item.s-5 { border-left-color: #4263eb; }
+
+/* Botão de adicionar folha no calendário */
+.reservafrota-btn-sheet {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; border: 1px solid #10b981; color: #059669;
+    background: rgba(16, 185, 129, 0.1); transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.reservafrota-btn-sheet:hover { background: rgba(16, 185, 129, 0.2); color: #047857; }
+.reservafrota-statusbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+
+/* ---------- Painel de aprovação ---------- */
+.reservafrota-approval {
+    margin-top: 1.5rem; padding: 1.1rem;
+    border: 1px solid var(--cb-border); border-radius: var(--cb-radius);
+    background: var(--tblr-bg-surface-secondary, #f8f9fb);
+}
+.reservafrota-approval h3 { margin: 0 0 0.8rem; font-size: 1.02rem; display: flex; align-items: center; gap: 0.45rem; }
+.reservafrota-approval__actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+
+/* ---------- Formulário de carro ---------- */
+.reservafrota-photo-preview {
+    width: 100%; aspect-ratio: 4 / 3; border-radius: var(--cb-radius); overflow: hidden;
+    background:
+        radial-gradient(120% 90% at 50% 20%, rgba(99,102,241,0.14), transparent 70%),
+        var(--tblr-bg-surface-secondary, #f1f3f7);
+    display: grid; place-items: center; margin-bottom: 0.6rem; padding: 0.6rem;
+}
+.reservafrota-photo-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+.reservafrota-photo-preview svg { width: 88%; height: auto; filter: drop-shadow(0 10px 12px rgba(16,24,40,0.18)); }
+.reservafrota-formactions { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* ---------- Animações ---------- */
+@keyframes cb-rise { to { opacity: 1; transform: translateY(0); } }
+@keyframes cb-spin { to { transform: rotate(360deg); } }
+@keyframes cb-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.6); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .reservafrota-card, .reservafrota-conflict { animation: none; opacity: 1; transform: none; }
+    .reservafrota-card:hover { transform: translateY(-4px); }
+    .reservafrota-card:hover .reservafrota-card__car { transform: none; }
+    .reservafrota-card__status .pulse { animation: none; }
+    .reservafrota-spinner { animation-duration: 1.4s; }
+}
+
+/* ============================================================
+   Painel de análise
+   ============================================================ */
+.reservafrota-month-label {
+    font-size: 1.05rem; font-weight: 650; color: var(--cb-ink);
+    margin: 0 0 1rem; text-transform: capitalize;
+}
+
+/* Cartões de resumo */
+.reservafrota-cards2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem; margin-bottom: 1.3rem;
+}
+.reservafrota-stat {
+    display: flex; align-items: center; gap: 0.8rem;
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: var(--cb-radius);
+    box-shadow: var(--cb-shadow);
+    padding: 0.95rem 1.05rem;
+}
+.reservafrota-stat__icon {
+    flex: 0 0 auto;
+    width: 2.7rem; height: 2.7rem; border-radius: 13px;
+    display: grid; place-items: center; font-size: 1.25rem;
+    color: var(--c, #4263eb);
+    background: color-mix(in srgb, var(--c, #4263eb) 14%, transparent);
+}
+.reservafrota-stat__value {
+    font-size: 1.25rem; font-weight: 750; line-height: 1.1; color: var(--cb-ink);
+    word-break: break-word;
+}
+.reservafrota-stat__label { font-size: 0.78rem; color: var(--cb-muted); margin-top: 0.1rem; }
+
+/* Grid dos gráficos */
+.reservafrota-analytics-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1.3rem; align-items: start;
+}
+@media (max-width: 900px) { .reservafrota-analytics-grid { grid-template-columns: 1fr; } }
+.reservafrota-chartbox { padding: 1.1rem; }
+.reservafrota-chartbox h3 {
+    margin: 0 0 1rem; font-size: 1.02rem; font-weight: 650;
+    display: flex; align-items: center; gap: 0.45rem;
+}
+
+/* Pizza */
+.reservafrota-chart-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.reservafrota-pie-svg { width: 200px; height: 200px; flex: 0 0 auto; }
+.reservafrota-slice { cursor: pointer; transition: opacity 0.15s ease; }
+.reservafrota-legend2 { list-style: none; padding: 0; margin: 0; flex: 1 1 160px; min-width: 150px; }
+.reservafrota-legend2 li {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.3rem 0; font-size: 0.84rem; cursor: default;
+    transition: opacity 0.15s ease;
+}
+.reservafrota-legend2 .dot { width: 0.7rem; height: 0.7rem; border-radius: 3px; flex: 0 0 auto; }
+.reservafrota-legend2 .lbl { flex: 1 1 auto; }
+.reservafrota-legend2 .val { color: var(--cb-muted); font-weight: 600; white-space: nowrap; }
+
+/* Barras */
+.reservafrota-bars { display: flex; flex-direction: column; gap: 0.6rem; }
+.reservafrota-bar-row { display: flex; align-items: center; gap: 0.6rem; }
+.reservafrota-bar-label {
+    flex: 0 0 30%; max-width: 30%; font-size: 0.82rem; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.reservafrota-bar-track {
+    flex: 1 1 auto; height: 16px; border-radius: 8px;
+    background: var(--tblr-bg-surface-secondary, #f1f3f7); overflow: hidden;
+}
+.reservafrota-bar-fill {
+    height: 100%; border-radius: 8px; min-width: 2px;
+    transition: width 0.5s cubic-bezier(0.22,1,0.36,1);
+}
+.reservafrota-bar-val { flex: 0 0 auto; font-size: 0.82rem; font-weight: 700; color: var(--cb-ink); }
+
+/* ============================================================
+   Calendário mensal (estilo "calendário de mesa")
+   ============================================================ */
+.reservafrota-cal-bar {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 0.4rem 0 1rem;
+}
+.reservafrota-cal-monthtitle {
+    margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px;
+    text-transform: uppercase; color: var(--cb-approved);
+    flex: 0 0 auto; min-width: 230px;
+}
+.reservafrota-cal-arrow {
+    width: 2.2rem; height: 2.2rem; border-radius: 11px;
+    border: 1px solid var(--cb-border); background: var(--cb-surface);
+    color: var(--cb-ink); cursor: pointer; font-size: 1.1rem;
+    display: grid; place-items: center; transition: all 0.15s ease;
+}
+.reservafrota-cal-arrow:hover { background: var(--cb-approved); color: #fff; border-color: var(--cb-approved); }
+.reservafrota-cal-today {
+    margin-left: auto; padding: 0.45rem 1rem; border-radius: 10px;
+    border: 1px solid var(--cb-border); background: var(--cb-surface);
+    color: var(--cb-ink); font-weight: 600; cursor: pointer; transition: all 0.15s ease;
+}
+.reservafrota-cal-today:hover { background: var(--cb-approved); color: #fff; border-color: var(--cb-approved); }
+
+/* Folha do calendário */
+.reservafrota-sheet {
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: var(--cb-radius);
+    box-shadow: var(--cb-shadow);
+    overflow: hidden;
+}
+.reservafrota-grid-loading { padding: 3rem; text-align: center; color: var(--cb-muted); }
+
+/* Cabeçalho dos dias da semana */
+.reservafrota-grid-head {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    background: #2b3344;
+}
+.reservafrota-grid-wd {
+    padding: 0.6rem 0.5rem; text-align: center;
+    color: #fff; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+.reservafrota-grid-wd:last-child { border-right: none; }
+
+/* Corpo da grade */
+.reservafrota-grid-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+.reservafrota-cell {
+    min-height: 104px; padding: 0.3rem 0.35rem 0.4rem;
+    border-right: 1px solid var(--cb-border);
+    border-bottom: 1px solid var(--cb-border);
+    display: flex; flex-direction: column; gap: 0.2rem;
+    position: relative; background: var(--cb-surface);
+    transition: background 0.12s ease;
+    min-width: 0; overflow: hidden;
+}
+.reservafrota-cell:nth-child(7n) { border-right: none; }
+.reservafrota-cell.is-empty { background: #fafbfc; }
+.reservafrota-cell[data-day] { cursor: pointer; }
+.reservafrota-cell[data-day]:hover { background: rgba(99, 102, 241, 0.07); }
+.reservafrota-cell.has-items { cursor: pointer; }
+.reservafrota-cell.has-items:hover { background: rgba(99, 102, 241, 0.05); }
+/* Células com chegadas marcadas */
+.reservafrota-cell.is-all-arrived { background: rgba(66, 99, 235, 0.13); }
+.reservafrota-cell.is-all-arrived:hover { background: rgba(66, 99, 235, 0.22); }
+.reservafrota-cell.is-all-arrived .reservafrota-cell__num { color: #3b5bdb; font-weight: 700; }
+.reservafrota-cell.is-some-arrived { background: rgba(66, 99, 235, 0.06); }
+/* Gestor: destaca em laranja o dia com conflito de agendamento (tem prioridade
+   visual sobre o tom de "chegada marcada" acima). */
+.reservafrota-cell.is-conflict-day { background: rgba(249, 115, 22, 0.16); }
+.reservafrota-cell.is-conflict-day:hover { background: rgba(249, 115, 22, 0.26); }
+.reservafrota-cell.is-conflict-day .reservafrota-cell__num { color: #c2410c; font-weight: 700; }
+.reservafrota-cell__num {
+    font-size: 0.95rem; font-weight: 700; color: var(--cb-ink);
+    align-self: flex-start; line-height: 1.4;
+    width: 1.7rem; height: 1.7rem; display: grid; place-items: center;
+}
+.reservafrota-cell.is-today .reservafrota-cell__num {
+    background: var(--cb-approved); color: #fff; border-radius: 50%;
+}
+.reservafrota-cell__evts { display: flex; flex-direction: column; gap: 2px; overflow: hidden; min-width: 0; }
+.reservafrota-evt {
+    font-size: 0.7rem; line-height: 1.25; padding: 1px 5px; border-radius: 5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    border-left: 3px solid var(--cb-pending);
+    background: rgba(245, 159, 11, 0.12); color: var(--cb-ink);
+}
+.reservafrota-evt b { font-weight: 700; }
+.reservafrota-evt.s-2 { border-left-color: var(--cb-approved); background: rgba(99, 102, 241, 0.12); }
+.reservafrota-evt.s-3 { border-left-color: var(--cb-rejected); background: rgba(244, 63, 94, 0.12); text-decoration: line-through; opacity: 0.75; }
+.reservafrota-evt-more { font-size: 0.68rem; color: var(--cb-muted); font-weight: 600; padding-left: 4px; }
+
+/* Painel de detalhe do dia */
+.reservafrota-day-panel {
+    margin-top: 1.1rem; background: var(--cb-surface);
+    border: 1px solid var(--cb-border); border-radius: var(--cb-radius);
+    box-shadow: var(--cb-shadow-lift); overflow: hidden;
+}
+.reservafrota-day-panel__head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--cb-border);
+    background: linear-gradient(135deg, rgba(99,102,241,0.08), transparent);
+}
+.reservafrota-day-panel__head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.reservafrota-day-close {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 1.2rem; color: var(--cb-muted); padding: 0.2rem;
+}
+.reservafrota-day-close:hover { color: var(--cb-rejected); }
+.reservafrota-day-list { padding: 0.6rem 1.1rem 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.reservafrota-day-actions-top { display: flex; justify-content: flex-end; }
+.reservafrota-day-schedule {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    font-size: 0.9rem; font-weight: 700; text-decoration: none;
+    padding: 0.55rem 1.1rem; border-radius: 11px; color: #fff;
+    background: linear-gradient(135deg, #4263eb, #6366f1);
+    box-shadow: 0 8px 18px -8px rgba(66, 99, 235, 0.8);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.reservafrota-day-schedule:hover {
+    color: #fff; transform: translateY(-2px);
+    box-shadow: 0 12px 22px -8px rgba(66, 99, 235, 0.9);
+}
+.reservafrota-day-empty {
+    display: flex; align-items: center; gap: 0.5rem;
+    color: var(--cb-muted); font-size: 0.9rem;
+    padding: 0.9rem 1rem; border: 1px dashed var(--cb-border); border-radius: 13px;
+}
+.reservafrota-day-item {
+    display: flex; gap: 0.8rem; align-items: flex-start; justify-content: space-between;
+    padding: 0.75rem 0.9rem; border: 1px solid var(--cb-border); border-radius: 13px;
+    border-left: 4px solid var(--cb-pending);
+}
+.reservafrota-day-item.s-2 { border-left-color: var(--cb-approved); }
+.reservafrota-day-item.s-3 { border-left-color: var(--cb-rejected); }
+.reservafrota-day-item__top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+.reservafrota-day-item__top strong { font-size: 1rem; }
+.reservafrota-day-item__meta { font-size: 0.84rem; color: var(--cb-muted); margin-top: 0.15rem; }
+.reservafrota-day-item__reason {
+    font-size: 0.84rem; color: var(--cb-ink); margin-top: 0.35rem;
+    padding-top: 0.35rem; border-top: 1px dashed var(--cb-border);
+}
+.reservafrota-day-item__actions { display: flex; flex-direction: column; gap: 0.4rem; flex: 0 0 auto; }
+.reservafrota-open, .reservafrota-del {
+    display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap;
+    font-size: 0.8rem; font-weight: 600; padding: 0.35rem 0.7rem; border-radius: 9px;
+    cursor: pointer; text-decoration: none; border: 1px solid var(--cb-border);
+    background: var(--cb-surface); color: var(--cb-ink);
+}
+.reservafrota-open:hover { background: var(--cb-approved); color: #fff; border-color: var(--cb-approved); }
+.reservafrota-del { color: var(--cb-rejected); border-color: rgba(244,63,94,0.4); }
+.reservafrota-del:hover { background: var(--cb-rejected); color: #fff; }
+
+@media (max-width: 760px) {
+    .reservafrota-cal-monthtitle { font-size: 1.4rem; min-width: 0; }
+    .reservafrota-cell { min-height: 76px; }
+    .reservafrota-evt { font-size: 0.62rem; }
+    .reservafrota-day-item { flex-direction: column; }
+    .reservafrota-day-item__actions { flex-direction: row; }
+}
+
+/* ============================================================
+   Análise — sub-abas, donut, tabela, lista anual, aprovação
+   ============================================================ */
+.reservafrota-subtabs { display: flex; gap: 0.5rem; margin: 0.2rem 0 1rem; flex-wrap: wrap; }
+.reservafrota-subtab {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.45rem 1rem; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--cb-border); background: var(--cb-surface);
+    color: var(--cb-muted); font-weight: 600; font-size: 0.9rem; transition: all 0.15s ease;
+}
+.reservafrota-subtab:hover { color: var(--cb-ink); }
+.reservafrota-subtab.is-active { background: var(--cb-approved); color: #fff; border-color: var(--cb-approved); }
+
+.reservafrota-donut-num { font-size: 2rem; font-weight: 800; fill: var(--cb-ink); }
+.reservafrota-donut-cap { font-size: 0.8rem; fill: var(--cb-muted); }
+
+/* Tabela */
+.reservafrota-table-wrap { overflow-x: auto; }
+.reservafrota-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.reservafrota-table th {
+    text-align: left; padding: 0.55rem 0.7rem; color: var(--cb-muted);
+    font-weight: 650; border-bottom: 2px solid var(--cb-border); white-space: nowrap;
+}
+.reservafrota-table td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--cb-border); }
+.reservafrota-table tbody tr:hover { background: rgba(99, 102, 241, 0.04); }
+
+.reservafrota-pill {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: rgba(99, 102, 241, 0.1); color: var(--cb-approved);
+    padding: 0.12rem 0.55rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+}
+
+/* Lista anual */
+.reservafrota-year-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.4rem;
+}
+.reservafrota-year-head h3 { margin: 0; }
+.reservafrota-export-btn {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    font-size: 0.88rem; font-weight: 700; text-decoration: none; white-space: nowrap;
+    padding: 0.5rem 1rem; border-radius: 11px; color: #fff;
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 8px 18px -8px rgba(16, 185, 129, 0.8);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.reservafrota-export-btn:hover {
+    color: #fff; transform: translateY(-2px);
+    box-shadow: 0 12px 22px -8px rgba(16, 185, 129, 0.95);
+}
+.reservafrota-year-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.reservafrota-year-month {
+    font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--cb-approved); font-size: 0.85rem;
+    margin: 0.8rem 0 0.2rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--cb-border);
+}
+.reservafrota-year-row {
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    padding: 0.5rem 0.7rem; border: 1px solid var(--cb-border); border-radius: 10px;
+    border-left: 4px solid var(--cb-pending);
+}
+.reservafrota-year-row.s-2 { border-left-color: var(--cb-approved); }
+.reservafrota-year-row.s-3 { border-left-color: var(--cb-rejected); }
+.reservafrota-year-date { font-weight: 800; color: var(--cb-ink); min-width: 3rem; }
+.reservafrota-year-time { color: var(--cb-muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.reservafrota-year-car { flex: 0 0 auto; }
+.reservafrota-year-user { color: var(--cb-muted); font-size: 0.85rem; }
+
+/* Resumo no painel de aprovação */
+.reservafrota-approval__summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.6rem 1.2rem; margin: 0.6rem 0 1.1rem;
+    padding: 0.9rem 1rem; background: rgba(99, 102, 241, 0.05);
+    border: 1px solid var(--cb-border); border-radius: 13px;
+}
+.reservafrota-approval__summary .full { grid-column: 1 / -1; }
+.reservafrota-approval__summary .lbl {
+    display: flex; align-items: center; gap: 0.3rem;
+    font-size: 0.75rem; color: var(--cb-muted); margin-bottom: 0.1rem;
+}
+.reservafrota-approval__summary strong { font-size: 0.95rem; color: var(--cb-ink); }
+
+/* ============================================================
+   Popup (modal) de agendamento no calendário
+   ============================================================ */
+body.reservafrota-modal-open { overflow: hidden; }
+.reservafrota-modal {
+    position: fixed; inset: 0; z-index: 2000;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 4vh 1rem; overflow-y: auto;
+}
+.reservafrota-modal[hidden] { display: none; }
+.reservafrota-modal__backdrop {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+}
+.reservafrota-modal__dialog {
+    position: relative; z-index: 1; width: 100%; max-width: 520px;
+    background: var(--cb-surface, #fff); border-radius: var(--cb-radius, 16px);
+    box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.45);
+    border: 1px solid var(--cb-border); overflow: hidden;
+    animation: reservafrota-modal-in 0.16s ease-out;
+}
+@keyframes reservafrota-modal-in {
+    from { transform: translateY(-12px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+.reservafrota-modal__head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--cb-border);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), transparent);
+}
+.reservafrota-modal__head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.reservafrota-modal__close {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 1.25rem; color: var(--cb-muted); padding: 0.2rem; line-height: 1;
+}
+.reservafrota-modal__close:hover { color: var(--cb-rejected); }
+.reservafrota-modal__body { padding: 1rem 1.2rem 1.3rem; }
+.reservafrota-modal__formtitle {
+    margin: 0.2rem 0 0.6rem; font-size: 0.98rem; font-weight: 700;
+    display: flex; align-items: center; gap: 0.4rem; color: var(--cb-ink);
+}
+.reservafrota-modal__existinghead {
+    font-size: 0.82rem; font-weight: 700; color: var(--cb-muted);
+    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 0.4rem;
+}
+#reservafrota-modal-existing:not(:empty) {
+    padding: 0 0 0.9rem; margin-bottom: 0.9rem;
+    border-bottom: 1px dashed var(--cb-border);
+}
+@media (max-width: 560px) {
+    .reservafrota-modal { padding: 0; align-items: stretch; }
+    .reservafrota-modal__dialog { max-width: none; border-radius: 0; min-height: 100%; }
+}
+
+/* ---------- Tooltip de agendamentos no calendário ---------- */
+.reservafrota-tip {
+    position: fixed; z-index: 1900; max-width: 320px;
+    background: var(--cb-surface, #fff); color: var(--cb-ink, #1e293b);
+    border: 1px solid var(--cb-border, #e2e8f0); border-radius: 12px;
+    box-shadow: 0 16px 40px -12px rgba(15, 23, 42, 0.4);
+    padding: 0.6rem 0.75rem; pointer-events: none; font-size: 0.82rem;
+}
+.reservafrota-tip[hidden] { display: none; }
+.reservafrota-tip__head {
+    font-weight: 800; font-size: 0.8rem; margin-bottom: 0.4rem;
+    color: var(--cb-approved, #6366f1); text-transform: uppercase; letter-spacing: 0.4px;
+}
+.reservafrota-tip__item {
+    padding: 0.35rem 0.5rem; border-radius: 8px; margin-top: 0.3rem;
+    border-left: 3px solid var(--cb-pending, #f59e0b); background: rgba(245, 159, 11, 0.08);
+}
+.reservafrota-tip__item.s-2 { border-left-color: var(--cb-approved, #6366f1); background: rgba(99, 102, 241, 0.08); }
+.reservafrota-tip__item.s-3 { border-left-color: var(--cb-rejected, #f43f5e); background: rgba(244, 63, 94, 0.08); }
+.reservafrota-tip__line { font-weight: 600; }
+.reservafrota-tip__sub { color: var(--cb-muted, #64748b); font-size: 0.76rem; margin-top: 0.1rem; }
+
+/* ============================================================
+   Lista de agendamentos em 3 colunas + notificações
+   ============================================================ */
+.reservafrota-notify {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.75rem 1rem; margin-bottom: 1.1rem; border-radius: 12px;
+    background: rgba(245, 159, 11, 0.12); border: 1px solid rgba(245, 159, 11, 0.4);
+    color: #92400e; font-weight: 600;
+}
+.reservafrota-notify .ti { font-size: 1.2rem; }
+
+.reservafrota-blist-cols {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start;
+}
+@media (max-width: 900px) { .reservafrota-blist-cols { grid-template-columns: 1fr; } }
+.reservafrota-blist-col {
+    background: var(--cb-surface, #fff); border: 1px solid var(--cb-border);
+    border-radius: var(--cb-radius, 14px); padding: 0.8rem; min-width: 0;
+}
+.reservafrota-blist-head {
+    display: flex; align-items: center; gap: 0.45rem; font-weight: 800;
+    font-size: 0.95rem; padding-bottom: 0.6rem; margin-bottom: 0.6rem;
+    border-bottom: 2px solid var(--cb-border);
+}
+.col-pending  .reservafrota-blist-head { color: var(--cb-pending, #f59e0b); }
+.col-approved .reservafrota-blist-head { color: var(--cb-approved, #6366f1); }
+.col-rejected .reservafrota-blist-head { color: var(--cb-rejected, #f43f5e); }
+.reservafrota-blist-count {
+    margin-left: auto; background: var(--cb-border); color: var(--cb-ink);
+    border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.8rem;
+}
+.reservafrota-blist-empty { color: var(--cb-muted); font-size: 0.85rem; padding: 0.4rem 0.2rem; }
+.reservafrota-blist-item {
+    border: 1px solid var(--cb-border); border-left: 4px solid var(--cb-pending);
+    border-radius: 11px; padding: 0.6rem 0.7rem; margin-bottom: 0.6rem;
+    transition: opacity 0.15s ease;
+}
+.reservafrota-blist-item[draggable="true"] { cursor: grab; }
+.reservafrota-blist-item[draggable="true"]:active { cursor: grabbing; }
+.reservafrota-blist-item.is-dragging { opacity: 0.4; }
+
+/* Kanban: destaca as colunas onde o card arrastado pode ser solto. */
+.reservafrota-blist-col[data-status-group] { transition: box-shadow 0.15s ease, background-color 0.15s ease; }
+.reservafrota-blist-col.is-drop-ok {
+    box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.35);
+}
+.reservafrota-blist-col.is-drop-over {
+    box-shadow: inset 0 0 0 2px var(--cb-approved, #6366f1);
+    background-color: rgba(99, 102, 241, 0.06);
+}
+.reservafrota-blist-item.s-2 { border-left-color: var(--cb-approved, #6366f1); }
+.reservafrota-blist-item.s-3 { border-left-color: var(--cb-rejected, #f43f5e); }
+.reservafrota-blist-item__date { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; }
+.reservafrota-blist-day { font-weight: 800; color: var(--cb-ink); }
+.reservafrota-blist-time { font-size: 0.8rem; color: var(--cb-muted); font-variant-numeric: tabular-nums; }
+.reservafrota-blist-item__body strong { font-size: 0.95rem; }
+.reservafrota-blist-meta { font-size: 0.82rem; color: var(--cb-muted); margin-top: 0.15rem; }
+.reservafrota-blist-item__side {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;
+}
+.reservafrota-blist-actions { display: flex; gap: 0.4rem; margin-left: auto; }
+.reservafrota-blist-actions form { margin: 0; }
+.reservafrota-btn-approve, .reservafrota-btn-reject {
+    display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;
+    font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.6rem; border-radius: 8px;
+    border: 1px solid transparent;
+}
+.reservafrota-btn-approve { background: rgba(16,185,129,0.12); color: #059669; border-color: rgba(16,185,129,0.4); }
+.reservafrota-btn-approve:hover { background: #10b981; color: #fff; }
+.reservafrota-btn-reject { background: rgba(244,63,94,0.1); color: #e11d48; border-color: rgba(244,63,94,0.4); }
+.reservafrota-btn-reject:hover { background: #f43f5e; color: #fff; }
+
+/* Toast flutuante de notificação */
+.reservafrota-toast {
+    position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 2100;
+    display: flex; align-items: center; gap: 0.6rem; max-width: 360px;
+    padding: 0.8rem 1rem; border-radius: 12px;
+    background: #1e293b; color: #fff; box-shadow: 0 16px 40px -10px rgba(15,23,42,0.6);
+    animation: reservafrota-modal-in 0.2s ease-out;
+}
+.reservafrota-toast .ti-bell-ringing { color: #fbbf24; font-size: 1.25rem; }
+.reservafrota-toast a { color: #fff; font-weight: 600; text-decoration: none; font-size: 0.88rem; }
+.reservafrota-toast a:hover { text-decoration: underline; }
+.reservafrota-toast__close { background: transparent; border: none; color: #cbd5e1; cursor: pointer; padding: 0.1rem; margin-left: auto; }
+.reservafrota-toast__close:hover { color: #fff; }
+
+/* Carimbo de versão (diagnóstico de deploy) */
+.reservafrota-build { margin-left: auto; align-self: center; font-size: 0.7rem; color: var(--cb-muted); opacity: 0.6; }
+
+/* ============================================================
+   v1.0.47 — popup 2 colunas, data/hora, semana, chegada, cancelar, ajuda
+   ============================================================ */
+.reservafrota-modal__dialog { max-width: 860px; }
+.reservafrota-modal__cols { display: grid; grid-template-columns: 1fr 1.1fr; gap: 1.2rem; }
+@media (max-width: 760px) { .reservafrota-modal__cols { grid-template-columns: 1fr; } }
+.reservafrota-modal__col-existing { border-right: 1px solid var(--cb-border); padding-right: 1.1rem; min-width: 0; }
+@media (max-width: 760px) {
+    .reservafrota-modal__col-existing { border-right: none; border-bottom: 1px solid var(--cb-border); padding-right: 0; padding-bottom: 0.8rem; }
+}
+.reservafrota-modal__coltitle, .reservafrota-modal__formtitle {
+    margin: 0 0 0.6rem; font-size: 0.95rem; font-weight: 800;
+    display: flex; align-items: center; gap: 0.4rem; color: var(--cb-ink);
+}
+.reservafrota-modal__col-existing #reservafrota-modal-existing:empty::after {
+    content: "Nenhum agendamento neste dia."; color: var(--cb-muted); font-size: 0.85rem;
+}
+
+/* Data + hora lado a lado */
+.reservafrota-datetime { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem; margin-bottom: 0.4rem; }
+
+/* Dias da semana */
+.reservafrota-weekdays { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
+.reservafrota-weekdays label {
+    display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer;
+    padding: 0.35rem 0.6rem; border: 1px solid var(--cb-border); border-radius: 8px;
+    font-size: 0.85rem; background: var(--cb-surface);
+}
+.reservafrota-weekdays input { width: 1.05rem; height: 1.05rem; }
+
+/* Botões chegada/cancelar */
+.reservafrota-btn-arrive, .reservafrota-btn-cancel {
+    display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;
+    font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.6rem; border-radius: 8px;
+    border: 1px solid transparent;
+}
+.reservafrota-btn-arrive { background: rgba(99,102,241,0.12); color: #4f46e5; border-color: rgba(99,102,241,0.4); }
+.reservafrota-btn-arrive:hover { background: #6366f1; color: #fff; }
+.reservafrota-btn-cancel { background: rgba(100,116,139,0.12); color: #475569; border-color: rgba(100,116,139,0.35); }
+.reservafrota-btn-cancel:hover { background: #64748b; color: #fff; }
+.reservafrota-blist-meta.ok { color: #3b5bdb; font-weight: 600; }
+.reservafrota-blist-meta.no { color: #b45309; }
+
+/* Tabela de chegadas (concluído = azul) */
+.reservafrota-arrived-section { margin-top: 2rem; background: var(--cb-surface); border: 1px solid rgba(66,99,235,0.35); border-radius: var(--cb-radius, 14px); padding: 1rem 1.2rem; scroll-margin-top: 80px; }
+.reservafrota-arrived-head { color: #3b5bdb !important; border-bottom: 2px solid rgba(66,99,235,0.3); margin-bottom: 0.8rem; padding-bottom: 0.6rem; }
+.reservafrota-arrived-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.reservafrota-arrived-table th { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid rgba(66,99,235,0.25); color: var(--cb-muted); white-space: nowrap; }
+.reservafrota-arrived-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--cb-border); }
+.reservafrota-arrived-table td.ok { color: #3b5bdb; font-weight: 700; white-space: nowrap; }
+.reservafrota-returned { margin-top: 1.4rem; background: var(--cb-surface); border: 1px solid var(--cb-border); border-radius: var(--cb-radius, 14px); padding: 0.9rem 1rem; }
+.reservafrota-blist-head.ret { color: #3b5bdb; }
+.reservafrota-table-wrap { overflow-x: auto; }
+.reservafrota-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.reservafrota-table th { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--cb-border); color: var(--cb-muted); white-space: nowrap; }
+.reservafrota-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--cb-border); }
+.reservafrota-table td.ok { color: #059669; font-weight: 700; white-space: nowrap; }
+
+/* Faixa "como funciona" (fluxo fácil) */
+.reservafrota-help {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem;
+    padding: 0.7rem 1rem; margin-bottom: 1.1rem; border-radius: 12px;
+    background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.25);
+    font-size: 0.9rem;
+}
+.reservafrota-help__step { display: inline-flex; align-items: center; gap: 0.4rem; }
+.reservafrota-help__step b {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #6366f1; color: #fff; font-size: 0.8rem;
+}
+.reservafrota-help .ti { color: var(--cb-muted); }
+
+/* Erro do popup de cancelamento */
+.reservafrota-cancel-err { color: var(--cb-rejected, #f43f5e); font-size: 0.82rem; margin: 0.2rem 0 0.5rem; font-weight: 600; }
+
+/* ---------- v1.0.48: imagem do carro + conflito ---------- */
+.reservafrota-carpick { display: flex; align-items: center; gap: 0.6rem; }
+.reservafrota-carpick .form-select { flex: 1; min-width: 0; }
+.reservafrota-car-thumb {
+    width: 56px; height: 42px; object-fit: cover; border-radius: 8px;
+    border: 1px solid var(--cb-border); flex: none; background: #f1f5f9;
+}
+.reservafrota-conflict.is-hard {
+    background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.5); color: #b91c1c;
+}
+
+/* ---------- v1.0.51: legenda, conflito, cancelamento na análise ---------- */
+.reservafrota-legend {
+    display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+    padding: 0.5rem 0.2rem 0.9rem; font-size: 0.85rem; color: var(--cb-ink);
+}
+.reservafrota-legend__item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.reservafrota-dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; display: inline-block; }
+.dot-approved { background: #4263eb; }
+.dot-pending  { background: #facc15; }
+.dot-conflict { background: #f97316; }
+
+/* Conflito em laranja no calendário */
+.reservafrota-evt.is-conflict {
+    background: rgba(249, 115, 22, 0.18) !important;
+    border-left-color: #f97316 !important; color: #9a3412 !important;
+}
+.reservafrota-day-item.is-conflict { border-left-color: #f97316 !important; }
+.reservafrota-day-item.is-editing {
+    border-color: #4263eb !important;
+    background: #f0f4ff !important;
+    box-shadow: 0 0 0 2px rgba(66, 99, 235, 0.2);
+}
+.reservafrota-chip.status-conflict { background: rgba(249,115,22,0.15); color: #c2410c; }
+
+/* Ponto de alerta no botão aprovar quando há conflito */
+.reservafrota-confdot {
+    display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%;
+    background: #f97316; margin-left: 0.15rem; vertical-align: middle;
+}
+
+/* Botão "ver motivo" */
+.reservafrota-btn-info {
+    display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;
+    font-size: 0.78rem; font-weight: 600; padding: 0.25rem 0.55rem; border-radius: 8px;
+    background: var(--cb-surface); color: var(--cb-muted); border: 1px solid var(--cb-border);
+}
+.reservafrota-btn-info:hover { color: var(--tblr-primary, #2563eb); border-color: var(--tblr-primary, #2563eb); }
+.reservafrota-table td.no { color: #b45309; }
+
+/* ---------- v1.0.53: histórico + filtros ---------- */
+.reservafrota-filters {
+    display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: flex-end;
+    margin: 0.4rem 0 1rem; padding: 0.8rem; border: 1px solid var(--cb-border);
+    border-radius: 12px; background: var(--cb-surface);
+}
+.reservafrota-filters label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; color: var(--cb-muted); }
+.reservafrota-filters .form-control, .reservafrota-filters .form-select { min-width: 150px; }
+.reservafrota-level {
+    font-size: 0.75rem; font-weight: 700; margin-left: 0.5rem; padding: 0.15rem 0.55rem;
+    border-radius: 999px; background: rgba(99,102,241,0.12); color: #4f46e5; vertical-align: middle;
+}
+#cb-h-table small { color: var(--cb-muted); }
+#cb-h-table small.no { color: #b45309; }
+
+/* ---------- v1.0.54: layout da Frota (grid de cartões) ---------- */
+.reservafrota-fleet-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.1rem;
+}
+.reservafrota-fleet-head h2 { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem; }
+.reservafrota-fleet-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem;
+}
+.reservafrota-fleet-card {
+    display: flex; flex-direction: column; text-decoration: none; color: inherit;
+    background: var(--cb-surface, #fff); border: 1px solid var(--cb-border); border-radius: 16px;
+    overflow: hidden; transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+.reservafrota-fleet-card:hover {
+    transform: translateY(-3px); border-color: #6366f1;
+    box-shadow: 0 16px 32px -16px rgba(66, 99, 235, 0.55); color: inherit;
+}
+.reservafrota-fleet-card.is-off { opacity: 0.6; }
+.reservafrota-fleet-card__img {
+    position: relative; height: 140px; background: linear-gradient(135deg, #eef2ff, #f8fafc);
+    display: flex; align-items: center; justify-content: center;
+}
+.reservafrota-fleet-card__img img { width: 100%; height: 100%; object-fit: cover; }
+.reservafrota-fleet-card__img > .ti { font-size: 3.2rem; color: #c7d2fe; }
+.reservafrota-fleet-off {
+    position: absolute; top: 0.5rem; right: 0.5rem; font-size: 0.7rem; font-weight: 700;
+    background: rgba(244, 63, 94, 0.9); color: #fff; padding: 0.15rem 0.55rem; border-radius: 999px;
+}
+.reservafrota-fleet-card__body { padding: 0.8rem 0.9rem 0.6rem; flex: 1; }
+.reservafrota-fleet-card__body strong { font-size: 1rem; display: block; margin-bottom: 0.45rem; }
+.reservafrota-fleet-meta { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; }
+.reservafrota-plate {
+    font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.8rem;
+    background: #1e293b; color: #fff; padding: 0.12rem 0.5rem; border-radius: 5px; letter-spacing: 0.5px;
+}
+.reservafrota-fleet-year { font-size: 0.82rem; color: var(--cb-muted); display: inline-flex; align-items: center; gap: 0.25rem; }
+.reservafrota-fleet-edit {
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    padding: 0.5rem; font-size: 0.82rem; font-weight: 700; color: #4f46e5;
+    border-top: 1px solid var(--cb-border); background: rgba(99, 102, 241, 0.05);
+}
+.reservafrota-fleet-card:hover .reservafrota-fleet-edit { background: rgba(99, 102, 241, 0.12); }
+
+/* ---------- v1.0.61: edição só pendente + filtros nas tabelas ---------- */
+.reservafrota-noedit {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    color: var(--cb-muted); font-size: 0.88rem; font-weight: 600;
+    padding: 0.45rem 0.2rem;
+}
+.reservafrota-tablefilter .reservafrota-filters { margin-top: 0.2rem; }
+
+/* ---------- v1.0.63: voltar ao calendário no formulário ---------- */
+.reservafrota-formtop { margin-bottom: 1rem; }
+
+/* ---------- v1.0.66: checkbox/preview de folha + botão de imagem ---------- */
+.reservafrota-check {
+    display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem;
+    font-size: 0.9rem; font-weight: 600; color: var(--cb-ink); cursor: pointer;
+}
+.reservafrota-check input { width: 1.05rem; height: 1.05rem; }
+
+/* Escolha do carro ao confirmar/aprovar (item bloqueado fica visível, porém ofuscado) */
+.reservafrota-carchoice-list { display: flex; flex-direction: column; gap: 0.45rem; margin: 0.6rem 0; max-height: 260px; overflow-y: auto; }
+.reservafrota-carchoice {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.75rem;
+    border: 1px solid var(--cb-border); border-radius: 10px; cursor: pointer;
+    font-size: 0.9rem; transition: border-color 0.15s ease, background 0.15s ease;
+}
+.reservafrota-carchoice:hover { border-color: var(--tblr-primary, #2563eb); }
+.reservafrota-carchoice input[type="radio"]:checked ~ span { font-weight: 700; }
+.reservafrota-carchoice:has(input:checked) { border-color: var(--tblr-primary, #2563eb); background: rgba(37, 99, 235, 0.06); }
+.reservafrota-carchoice.is-blocked { opacity: 0.5; cursor: not-allowed; }
+.reservafrota-carchoice.is-blocked:hover { border-color: var(--cb-border); }
+.reservafrota-carchoice small { display: block; width: 100%; color: var(--cb-rejected, #f43f5e); font-size: 0.76rem; margin-top: 0.1rem; }
+.reservafrota-filepreview {
+    margin-top: 0.6rem; padding: 0.5rem; border: 1px dashed var(--cb-border);
+    border-radius: 10px; background: var(--cb-surface); font-size: 0.85rem; color: var(--cb-muted);
+}
+.reservafrota-filepreview img { max-width: 100%; max-height: 180px; border-radius: 8px; display: block; }
+.reservafrota-submit[disabled] { opacity: 0.5; cursor: not-allowed; }
+.reservafrota-back[disabled], .reservafrota-btn-info[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.reservafrota-addimg {
+    display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;
+    padding: 0.5rem 0.9rem; border-radius: 10px; font-weight: 600; font-size: 0.9rem;
+    color: #fff; background: linear-gradient(135deg, #4263eb, #6366f1);
+    box-shadow: 0 8px 18px -10px rgba(66, 99, 235, 0.8); border: none;
+}
+.reservafrota-addimg:hover { filter: brightness(1.05); }
+.reservafrota-addimg.is-disabled { opacity: 0.5; pointer-events: none; }
+.reservafrota-imgname { margin-top: 0.4rem; font-size: 0.82rem; }
+
+/* ---------- v1.0.67: info do arquivo na prévia ---------- */
+.reservafrota-fileinfo { margin-top: 0.5rem; font-size: 0.82rem; line-height: 1.35; color: var(--cb-ink); }
+.reservafrota-fileinfo span { color: var(--cb-muted); }
+
+/* ---------- v1.0.68: Agendamentos embutidos abaixo do calendário ---------- */
+.reservafrota-blist-embed { margin-top: 2rem; }
+.reservafrota-blist-title {
+    display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem;
+    margin: 0 0 1rem; padding-top: 1.2rem; border-top: 2px solid var(--cb-border);
+}
+
+/* ---------- v1.0.70: cor por carro, folha no form, retorno ---------- */
+.reservafrota-dot.dot-multicar {
+    background: conic-gradient(#4263eb, #0ca678, #e8590c, #7048e8, #d6336c, #4263eb);
+}
+.reservafrota-legend__hint { color: var(--cb-muted); font-size: 0.8rem; }
+.reservafrota-sheetbox {
+    margin: 0.4rem 0 1rem; padding: 0.8rem 1rem; border: 1px solid var(--cb-border);
+    border-radius: 12px; background: var(--cb-surface);
+}
+.reservafrota-sheetbox__row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.4rem; }
+.reservafrota-sheet-ok { color: #2b8a3e; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+
+/* ---------- v1.0.71: prévia da folha anexada ---------- */
+.reservafrota-sheet-preview { margin: 0.5rem 0; }
+.reservafrota-sheet-preview img {
+    max-width: 100%; max-height: 320px; border-radius: 10px;
+    border: 1px solid var(--cb-border); display: block;
+}
+.reservafrota-sheet-preview iframe {
+    width: 100%; height: 380px; border: 1px solid var(--cb-border);
+    border-radius: 10px; background: #fff;
+}
+.reservafrota-sheet-file {
+    padding: 0.6rem 0.8rem; border: 1px dashed var(--cb-border); border-radius: 10px;
+    color: var(--cb-muted); font-size: 0.85rem;
+}
+
+/* ---------- v1.0.75: cores por status (paleta definitiva) ----------
+   Amarelo = Pendente · Verde = Aprovado · Azul = Retorno (Concluído)
+   Laranja = Em conflito · Vermelho = Cancelado/Recusado            */
+
+/* Legenda */
+.reservafrota-dot.dot-pending   { background: #f59f00; }
+.reservafrota-dot.dot-approved  { background: #10b981; }
+.reservafrota-dot.dot-arrived   { background: #4263eb; }
+.reservafrota-dot.dot-conflict  { background: #f97316; }
+.reservafrota-dot.dot-cancelled { background: #e03131; }
+
+/* Chips do calendário (eventos) */
+.reservafrota-evt.s-1 { border-left-color: #f59f00 !important; background: rgba(245,159,0,0.16) !important; color: inherit !important; text-decoration: none !important; opacity: 1 !important; }
+.reservafrota-evt.s-2 { border-left-color: #10b981 !important; background: rgba(16,185,129,0.12) !important; }
+.reservafrota-evt.s-5 { border-left-color: #4263eb !important; background: rgba(66,99,235,0.14) !important; }
+.reservafrota-evt.s-3 { border-left-color: #e03131 !important; background: rgba(224,49,49,0.10) !important; }
+.reservafrota-evt.s-4 { border-left-color: #e03131 !important; background: rgba(224,49,49,0.12) !important; }
+.reservafrota-evt.is-conflict { border-left-color: #f97316 !important; background: rgba(249,115,22,0.18) !important; color: #9a3412 !important; }
+
+/* Itens do popup do dia */
+.reservafrota-day-item.s-1 { border-left-color: #f59f00 !important; }
+.reservafrota-day-item.s-2 { border-left-color: #10b981 !important; }
+.reservafrota-day-item.s-5 { border-left-color: #4263eb !important; }
+.reservafrota-day-item.s-3 { border-left-color: #e03131 !important; }
+.reservafrota-day-item.s-4 { border-left-color: #e03131 !important; }
+.reservafrota-day-item.is-conflict { border-left-color: #f97316 !important; }
+
+/* Selos de status (texto) — usados no calendário e nas listas */
+.reservafrota-chip.status-pending   { background: rgba(245,159,0,0.18);  color: #b8860b; }
+.reservafrota-chip.status-approved  { background: rgba(16,185,129,0.16); color: #059669; }
+.reservafrota-chip.status-arrived   { background: rgba(66,99,235,0.15);  color: #3b5bdb; }
+.reservafrota-chip.status-rejected  { background: rgba(224,49,49,0.15);  color: #c92a2a; }
+.reservafrota-chip.status-cancelled { background: rgba(224,49,49,0.15);  color: #c92a2a; }
+.reservafrota-chip.status-conflict  { background: rgba(249,115,22,0.16); color: #c2410c; }
+
+/* ---------- v1.0.76: observação no retorno + linhas expansíveis + confirm ---------- */
+.reservafrota-obsdot {
+    display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%;
+    background: #f97316; vertical-align: middle; box-shadow: 0 0 0 3px rgba(249,115,22,0.2);
+}
+.reservafrota-obstag {
+    font-size: 0.7rem; font-weight: 700; color: #c2410c; text-transform: uppercase;
+    letter-spacing: 0.3px; margin-right: 0.2rem;
+}
+.reservafrota-arow.has-obs > td { background: rgba(249,115,22,0.10); }
+.reservafrota-arow.cb-rowtoggle { cursor: pointer; }
+.reservafrota-arow.cb-rowtoggle:hover > td { background: rgba(249,115,22,0.16); }
+.reservafrota-arow.is-open > td { background: rgba(249,115,22,0.16); }
+.reservafrota-arow-child > td {
+    background: #fff7ed; color: #9a3412; font-size: 0.86rem; padding: 0.6rem 0.9rem;
+    border-left: 3px solid #f97316;
+}
+.reservafrota-day-item.has-obs { box-shadow: inset 0 0 0 1px rgba(249,115,22,0.4); }
+.reservafrota-day-item__reason.obs { color: #c2410c; }
+.reservafrota-confirm-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
+.reservafrota-confirm-actions .reservafrota-back { margin: 0; }
+
+/* ---------- v1.0.78: histórico do carro no estilo do projeto ---------- */
+.reservafrota-carhistory { margin-top: 1.6rem; }
+.reservafrota-carhistory__title {
+    display: flex; align-items: center; gap: 0.4rem; font-size: 1rem; font-weight: 700;
+    color: var(--cb-text, #1f2937); margin: 0 0 0.7rem;
+}
+.reservafrota-histtable { width: 100%; }
+.reservafrota-histtable td { vertical-align: top; }
+.reservafrota-histtable td:first-child { white-space: nowrap; color: var(--cb-muted); }
+.reservafrota-histtable del { color: #c92a2a; }
+.reservafrota-histtable ins { color: #2b8a3e; text-decoration: none; }
+
+/* ---------- v1.0.82: pendente cinza, limpar, editar, aviso ---------- */
+/* Pendente = cinza (sobrescreve amarelo anterior) */
+.reservafrota-dot.dot-pending,
+.dot-pending { background: #868e96 !important; }
+.reservafrota-evt.s-1 { border-left-color: #868e96 !important; background: rgba(134,142,150,0.14) !important; }
+.reservafrota-day-item.s-1 { border-left-color: #868e96 !important; }
+.reservafrota-chip.status-pending { background: rgba(134,142,150,0.18) !important; color: #495057 !important; }
+.mini-chip.s-1 { color: #495057 !important; background: rgba(134,142,150,0.16) !important; }
+.reservafrota-blist-item.s-1 { border-left-color: #868e96 !important; }
+
+/* Botão Limpar (não navega mais para trás) */
+.reservafrota-clearbtn {
+    display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+    border: 1px solid var(--cb-border, #d0d5dd); background: var(--cb-surface, #fff);
+    color: var(--cb-text, #344054); border-radius: 10px; padding: 0.45rem 0.8rem;
+    font-size: 0.85rem; font-weight: 600;
+}
+.reservafrota-clearbtn:hover { background: rgba(0,0,0,0.04); }
+
+/* Botão Editar nos cards */
+.reservafrota-btn-edit {
+    display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+    border: 1px solid #4263eb; background: rgba(66,99,235,0.08); color: #3b5bdb;
+    border-radius: 10px; padding: 0.4rem 0.7rem; font-size: 0.82rem; font-weight: 600;
+    text-decoration: none;
+}
+.reservafrota-btn-edit:hover { background: rgba(66,99,235,0.16); }
+
+/* Aviso (aprovado -> pendente) */
+.reservafrota-warnbox {
+    display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1rem;
+    padding: 0.7rem 1rem; border-radius: 10px; font-size: 0.88rem;
+    background: rgba(249,115,22,0.12); color: #9a3412; border: 1px solid rgba(249,115,22,0.35);
+}
+
+/* ---------- v1.0.85: detalhe na tela de aprovação ---------- */
+.reservafrota-rowdetail__line { display: flex; gap: 0.5rem; padding: 0.25rem 0; align-items: baseline; font-size: 0.9rem; }
+.reservafrota-rowdetail__line .lbl { min-width: 110px; color: var(--cb-muted, #667085); display: inline-flex; align-items: center; gap: 0.3rem; }
+
+/* ---------- v1.0.86: editar observação + tela Analisar (conflito) ---------- */
+.reservafrota-obsbox { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; }
+.reservafrota-rowcaret { transition: transform 0.15s; color: var(--cb-muted, #98a2b3); }
+.reservafrota-arow.is-open .reservafrota-rowcaret { transform: rotate(90deg); }
+
+.reservafrota-btn-analyze { background: rgba(249,115,22,0.14) !important; color: #c2410c !important; border: 1px solid #f97316 !important; }
+.reservafrota-analyze-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 0.6rem 0 0.2rem; }
+@media (max-width: 600px) { .reservafrota-analyze-grid { grid-template-columns: 1fr; } }
+.reservafrota-analyze-card { border: 1px solid var(--cb-border, #e4e7ec); border-radius: 12px; padding: 0.8rem; background: var(--cb-surface, #fff); }
+.reservafrota-analyze-card.is-new { border-color: #4263eb; box-shadow: 0 0 0 1px rgba(66,99,235,0.25); }
+.reservafrota-analyze-card__tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #475467; margin-bottom: 0.4rem; }
+.reservafrota-analyze-card.is-new .reservafrota-analyze-card__tag { color: #3b5bdb; }
+.reservafrota-analyze-card__actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }

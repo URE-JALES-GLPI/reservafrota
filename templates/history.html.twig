@@ -1,0 +1,95 @@
+{# Histórico de agendamentos com filtros (data, hora, status) #}
+
+<div id="reservafrota-history" class="reservafrota-agenda" data-cb-pending-url="{{ web_dir }}/ajax/pending.php">
+
+    {# ---------- Abas ---------- #}
+    <div class="reservafrota-tabs">
+        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        {% if can_manage_cars %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+        {% endif %}
+        {% if can_view_analytics %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
+        {% endif %}
+        <span class="reservafrota-tab is-active"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</span>
+        <span class="reservafrota-build">v1.0.0</span>
+    </div>
+
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}
+            <span class="reservafrota-level">{{ is_manager ? __('Visão do gestor (todos)', 'reservafrota') : __('Meus agendamentos', 'reservafrota') }}</span>
+        </h3>
+
+        {# ---------- Filtros ---------- #}
+        <div class="reservafrota-filters">
+            <label>{{ __('Data', 'reservafrota') }}
+                <input type="date" id="cb-h-date" class="form-control">
+            </label>
+            <label>{{ __('A partir da hora', 'reservafrota') }}
+                <input type="time" id="cb-h-time" class="form-control">
+            </label>
+            <label>{{ __('Status', 'reservafrota') }}
+                <select id="cb-h-status" class="form-select">
+                    <option value="">{{ __('Todos', 'reservafrota') }}</option>
+                    <option value="1">{{ __('Pendente', 'reservafrota') }}</option>
+                    <option value="2">{{ __('Aprovado', 'reservafrota') }}</option>
+                    <option value="5">{{ __('Retorno', 'reservafrota') }}</option>
+                    <option value="4">{{ __('Cancelado', 'reservafrota') }}</option>
+                </select>
+            </label>
+            <label>{{ __('Carro', 'reservafrota') }}
+                {% set cb_seen = [] %}
+                <select id="cb-h-car" class="form-select">
+                    <option value="">{{ __('Todos', 'reservafrota') }}</option>
+                    {% for h in history %}
+                        {% if h.car not in cb_seen %}
+                            {% set cb_seen = cb_seen|merge([h.car]) %}
+                            <option value="{{ h.car }}">{{ h.car }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="button" id="cb-h-clear" class="reservafrota-clearbtn" style="align-self:flex-end;"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</button>
+        </div>
+
+        {% if history is empty %}
+            <p class="reservafrota-blist-empty">{{ __('Nenhum agendamento no histórico.', 'reservafrota') }}</p>
+        {% else %}
+        <div class="reservafrota-table-wrap">
+            <table class="reservafrota-table" id="cb-h-table">
+                <thead><tr>
+                    <th>{{ __('Data', 'reservafrota') }}</th>
+                    <th>{{ __('Hora', 'reservafrota') }}</th>
+                    <th>{{ __('Usuário', 'reservafrota') }}</th>
+                    <th>{{ __('Carro', 'reservafrota') }}</th>
+                    <th>{{ __('Status', 'reservafrota') }}</th>
+                    <th>{{ __('Retorno', 'reservafrota') }}</th>
+                    <th>{{ __('Aprovação / Cancelamento', 'reservafrota') }}</th>
+                    <th>{{ __('Folha', 'reservafrota') }}</th>
+                </tr></thead>
+                <tbody>
+                {% for h in history %}
+                    <tr data-date="{{ h.date }}" data-time="{{ h.time }}" data-status="{{ h.status }}" data-car="{{ h.car }}">
+                        <td>{{ h.date|slice(8,2) }}/{{ h.date|slice(5,2) }}/{{ h.date|slice(0,4) }}</td>
+                        <td>{{ h.time }}{% if h.arrival %} &rarr; {{ h.arrival|slice(11,5) }}{% endif %}</td>
+                        <td>{{ h.user }}</td>
+                        <td>{{ h.car }}</td>
+                        <td><span class="reservafrota-chip status-{{ h.status == 2 ? 'approved' : (h.status == 3 ? 'rejected' : (h.status == 4 ? 'rejected' : 'pending')) }}">{{ h.status_label }}</span></td>
+                        <td>{% if h.returned_at %}<span class="ok">{{ h.returned_at|slice(8,2) }}/{{ h.returned_at|slice(5,2) }} {{ h.returned_at|slice(11,5) }}</span>{% else %}—{% endif %}</td>
+                        <td>
+                            {% if h.acted_by and (h.status == 2 or h.status == 3 or h.status == 4) %}
+                                {{ h.acted_by }}{% if h.acted_at %}<br><small>{{ h.acted_at|slice(8,2) }}/{{ h.acted_at|slice(5,2) }} {{ h.acted_at|slice(11,5) }}</small>{% endif %}
+                                {% if h.status == 4 and h.note %}<br><small class="no">{{ h.note }}</small>{% endif %}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>{% if h.has_sheet %}<a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ h.id }}"><i class="ti ti-download"></i> {{ __('Baixar', 'reservafrota') }}</a>{% else %}—{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="reservafrota-hint" id="cb-h-empty" hidden>{{ __('Nenhum resultado para o filtro.', 'reservafrota') }}</p>
+        {% endif %}
+    </div>
+</div>

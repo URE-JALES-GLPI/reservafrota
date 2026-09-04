@@ -1,0 +1,219 @@
+{# Formulário de cadastro/edição de carro da frota (com upload de foto) #}
+{% set is_new = item.isNewItem() %}
+{% set can_edit = can_edit is defined ? can_edit : false %}
+{% set readonly = not can_edit and not is_new %}
+
+{# ========================= #}
+{# TOPO — voltar para a frota #}
+{# ========================= #}
+<div class="reservafrota-header-actions" style="margin-bottom: 15px;">
+
+    <a class="reservafrota-back" href="{{ web_dir }}/front/car.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar para a Frota', 'reservafrota') }}</a>
+
+</div>
+
+<div class="reservafrota-carform">
+    <form method="post" action="{{ web_dir }}/front/car.form.php" enctype="multipart/form-data">
+
+        {% if not is_new %}
+            <input type="hidden" name="id" value="{{ item.fields['id'] }}">
+        {% endif %}
+
+        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row">
+
+            {# FOTO #}
+            <div class="col-12 col-md-4 reservafrota-carform__photo">
+
+                <div class="reservafrota-photo-preview">
+                    {% if picture_url %}
+                        <img src="{{ picture_url }}" alt="{{ item.fields['name'] }}">
+                    {% else %}
+                        <svg viewBox="0 0 260 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Carro">
+                            <defs>
+                                <linearGradient id="bform" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#4f8ef0"/>
+                                    <stop offset="1" stop-color="#1d4ed8"/>
+                                </linearGradient>
+                                <linearGradient id="gform" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#dbeafe"/>
+                                    <stop offset="1" stop-color="#93c5fd"/>
+                                </linearGradient>
+                                <radialGradient id="sform" cx="0.5" cy="0.5" r="0.5">
+                                    <stop offset="0" stop-color="rgba(15,23,42,0.28)"/>
+                                    <stop offset="1" stop-color="rgba(15,23,42,0)"/>
+                                </radialGradient>
+                            </defs>
+
+                            <ellipse cx="130" cy="120" rx="98" ry="12" fill="url(#sform)"/>
+                            <path d="M22 100 L22 84 Q24 74 40 72 L70 70 Q80 70 86 60 L98 45 Q101 41 110 41 L166 41 Q177 41 183 49 L195 67 Q198 71 207 71 L224 72 Q238 74 238 86 L238 100 Z"
+                                  fill="url(#bform)" stroke="#1e3a8a" stroke-width="1.5"/>
+
+                            <g>
+                                <circle cx="74" cy="100" r="17" fill="#1f2937"/>
+                                <circle cx="74" cy="100" r="9.5" fill="#e5e7eb"/>
+                            </g>
+
+                            <g>
+                                <circle cx="190" cy="100" r="17" fill="#1f2937"/>
+                                <circle cx="190" cy="100" r="9.5" fill="#e5e7eb"/>
+                            </g>
+                        </svg>
+                    {% endif %}
+                </div>
+
+                <label class="form-label">{{ __('Foto do carro', 'reservafrota') }}</label>
+
+                <input type="file"
+                       id="car-picture"
+                       name="picture"
+                       accept="image/*"
+                       class="reservafrota-imgfile"
+                       {% if readonly %}disabled{% endif %}
+                       hidden>
+                <div class="reservafrota-imgname text-muted">{{ __('Use o botão "Adicionar Imagem" abaixo.', 'reservafrota') }}</div>
+
+                <small class="text-muted">{{ __('JPG, PNG, WEBP ou GIF.', 'reservafrota') }}</small>
+
+                {% if can_edit %}
+                    <label for="car-picture" class="reservafrota-addimg" style="margin-top:0.8rem;width:100%;justify-content:center;"><i class="ti ti-photo-plus"></i> {{ __('Adicionar Imagem', 'reservafrota') }}</label>
+                {% endif %}
+            </div>
+
+            {# CAMPOS #}
+            <div class="col-12 col-md-8">
+
+                <div class="mb-3">
+                    <label class="form-label" for="car-name">{{ __('Modelo', 'reservafrota') }}</label>
+                    <input type="text"
+                           class="form-control"
+                           id="car-name"
+                           name="name"
+                           value="{{ item.fields['name'] }}"
+                           required
+                           placeholder="{{ __('Ex.: Fiat Strada', 'reservafrota') }}"
+                           {% if readonly %}readonly{% endif %}>
+                </div>
+
+                <div class="row">
+
+                    <div class="col-6 mb-3">
+                        <label class="form-label" for="car-plate">{{ __('Placa', 'reservafrota') }}</label>
+                        <input type="text"
+                               class="form-control"
+                               id="car-plate"
+                               name="plate"
+                               value="{{ item.fields['plate'] }}"
+                               placeholder="ABC1D23"
+                               {% if readonly %}readonly{% endif %}>
+                    </div>
+
+                    <div class="col-6 mb-3">
+                        <label class="form-label" for="car-year">{{ __('Ano', 'reservafrota') }}</label>
+                        <input type="number"
+                               class="form-control"
+                               id="car-year"
+                               name="model_year"
+                               value="{{ item.fields['model_year'] ?: '' }}"
+                               min="1950"
+                               max="2100"
+                               placeholder="2024"
+                               {% if readonly %}readonly{% endif %}>
+                    </div>
+
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="car-active">
+                        {{ __('Disponível para agendamento', 'reservafrota') }}
+                    </label>
+
+                    <select class="form-select"
+                            id="car-active"
+                            name="is_active"
+                            {% if readonly %}disabled{% endif %}>
+
+                        <option value="1" {{ item.fields['is_active'] ? 'selected' : '' }}>
+                            {{ __('Disponível', 'reservafrota') }}
+                        </option>
+
+                        <option value="0" {{ not item.fields['is_active'] ? 'selected' : '' }}>
+                            {{ __('Indisponível', 'reservafrota') }}
+                        </option>
+
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="car-comment">
+                        {{ __('Observações', 'reservafrota') }}
+                    </label>
+
+                    <textarea class="form-control"
+                              id="car-comment"
+                              name="comment"
+                              rows="2"
+                              {% if readonly %}readonly{% endif %}>{{ item.fields['comment'] }}</textarea>
+                </div>
+
+                {# AÇÕES (abaixo de Observações) #}
+                <div class="reservafrota-formactions">
+                    {% if can_edit %}
+                        {% if is_new %}
+                            <button type="submit" name="add" value="1" class="btn btn-primary">
+                                <i class="ti ti-plus"></i> {{ __('Cadastrar carro', 'reservafrota') }}
+                            </button>
+                        {% else %}
+                            <button type="submit" name="update" value="1" class="btn btn-primary">
+                                <i class="ti ti-device-floppy"></i> {{ _x('button', 'Save') }}
+                            </button>
+                            <button type="submit"
+                                    name="purge"
+                                    value="1"
+                                    class="btn btn-outline-danger"
+                                    onclick="return confirm('{{ __('Excluir definitivamente este carro?', 'reservafrota') }}');">
+                                <i class="ti ti-trash"></i> {{ _x('button', 'Delete permanently') }}
+                            </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+    </form>
+
+    {% if history is defined and history is not empty %}
+    <section class="reservafrota-carhistory reservafrota-tablefilter">
+        <h3 class="reservafrota-carhistory__title"><i class="ti ti-history"></i> {{ __('Últimas modificações', 'reservafrota') }}</h3>
+        <div class="reservafrota-filters">
+            <label>{{ __('Data', 'reservafrota') }}<input type="date" class="cb-f-date form-control"></label>
+            <label>{{ __('A partir da hora', 'reservafrota') }}<input type="time" class="cb-f-time form-control"></label>
+            <button type="button" class="reservafrota-clearbtn cb-f-clear" style="align-self:flex-end;"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</button>
+        </div>
+        <div class="reservafrota-tablewrap">
+            <table class="reservafrota-arrived-table reservafrota-histtable">
+                <thead>
+                    <tr>
+                        <th>{{ __('Data', 'reservafrota') }}</th>
+                        <th>{{ __('Usuário', 'reservafrota') }}</th>
+                        <th>{{ __('Campo', 'reservafrota') }}</th>
+                        <th>{{ __('Atualização', 'reservafrota') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for h in history %}
+                    <tr data-date="{{ h.date|slice(0,10) }}" data-time="{{ h.date|slice(11,5) }}">
+                        <td><b>{{ h.date }}</b></td>
+                        <td>{{ h.user }}</td>
+                        <td>{{ h.field ?: '—' }}</td>
+                        <td>{{ h.change|raw }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+</div>

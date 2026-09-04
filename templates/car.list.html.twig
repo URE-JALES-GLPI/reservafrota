@@ -1,0 +1,55 @@
+{# Frota — grid de cartões de carros #}
+
+<div id="reservafrota-fleet" class="reservafrota-agenda" data-cb-pending-url="{{ web_dir }}/ajax/pending.php">
+
+    {# ---------- Abas ---------- #}
+    <div class="reservafrota-tabs">
+        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        <span class="reservafrota-tab is-active"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</span>
+        {% if can_view_analytics %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
+        {% endif %}
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+        <span class="reservafrota-build">v1.0.0</span>
+    </div>
+
+    <div class="reservafrota-fleet-head">
+        <h2><i class="ti ti-car"></i> {{ __('Frota de carros', 'reservafrota') }} <span class="reservafrota-blist-count">{{ cars|length }}</span></h2>
+        {% if can_edit %}
+            <a href="{{ web_dir }}/front/car.form.php" class="reservafrota-export-btn" style="background:linear-gradient(135deg,#4263eb,#6366f1);box-shadow:0 8px 18px -8px rgba(66,99,235,.8);">
+                <i class="ti ti-plus"></i> {{ __('Cadastrar carro', 'reservafrota') }}
+            </a>
+        {% endif %}
+    </div>
+
+    {% if cars is empty %}
+        <div class="reservafrota-empty">
+            <i class="ti ti-car-off"></i>
+            <p>{{ __('Nenhum carro cadastrado ainda.', 'reservafrota') }}</p>
+        </div>
+    {% else %}
+        <div class="reservafrota-fleet-grid">
+            {% for car in cars %}
+                <a class="reservafrota-fleet-card {{ car.is_active ? '' : 'is-off' }}" href="{{ web_dir }}/front/car.form.php?id={{ car.id }}">
+                    <div class="reservafrota-fleet-card__img">
+                        {% if car.picture_url %}
+                            <img src="{{ car.picture_url }}" alt="{{ car.name }}">
+                        {% else %}
+                            <i class="ti ti-car"></i>
+                        {% endif %}
+                        {% if not car.is_active %}<span class="reservafrota-fleet-off">{{ __('Inativo', 'reservafrota') }}</span>{% endif %}
+                    </div>
+                    <div class="reservafrota-fleet-card__body">
+                        <strong>{{ car.name }}</strong>
+                        <div class="reservafrota-fleet-meta">
+                            {% if car.plate %}<span class="reservafrota-plate">{{ car.plate }}</span>{% endif %}
+                            {% if car.model_year %}<span class="reservafrota-fleet-year"><i class="ti ti-calendar"></i> {{ car.model_year }}</span>{% endif %}
+                        </div>
+                    </div>
+                    {% if can_edit %}<span class="reservafrota-fleet-edit"><i class="ti ti-pencil"></i> {{ __('Editar', 'reservafrota') }}</span>{% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

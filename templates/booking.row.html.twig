@@ -1,0 +1,33 @@
+{# Linha de um agendamento (sem macro). Espera: b, web_dir, can_approve #}
+<div class="reservafrota-blist-item s-{{ b.status }}"
+     data-id="{{ b.id }}"
+     data-status="{{ b.status }}"
+     data-bform="{{ web_dir }}/front/booking.form.php"
+     data-csrf="{{ csrf }}"
+     data-can-approve="{{ can_approve ? '1' : '0' }}"
+     data-can-cancel="{{ b.can_cancel ? '1' : '0' }}"
+     data-cb-edit
+     data-booking="{{ {'id': b.id, 'car': b.car, 'driver': b.driver, 'has_companion': b.has_companion, 'companion': b.companion, 'departure': b.departure, 'arrival': b.arrival, 'destination': b.destination, 'status': b.status, 'can_cancel': b.can_cancel, 'returned_at': b.returned_at}|json_encode|e('html_attr') }}"
+     {% if b.status in [1, 2] %}draggable="true"{% endif %}
+     style="cursor:pointer;">
+    <div class="reservafrota-blist-item__date">
+        <span class="reservafrota-blist-day">{{ b.departure|slice(8,2) }}/{{ b.departure|slice(5,2) }}</span>
+        <span class="reservafrota-blist-time">{{ b.departure|slice(11,5) }}{% if b.arrival %} &rarr; {{ b.arrival|slice(11,5) }}{% endif %}</span>
+    </div>
+    <div class="reservafrota-blist-item__body">
+        <strong>{{ b.car }}</strong>
+        <div class="reservafrota-blist-meta"><i class="ti ti-user"></i> {{ b.user }} &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> {{ b.driver ?: '—' }}{% if b.has_companion %}{% set ccount = b.companion ? b.companion|split(',')|length : 1 %} <span class="text-muted" title="{{ b.companion }}">+ {{ ccount }} {{ __('acompanhante(s)', 'reservafrota') }}</span>{% endif %}</div>
+        {% if b.destination %}<div class="reservafrota-blist-meta"><i class="ti ti-map-pin"></i> {{ b.destination }}</div>{% endif %}
+        {% if b.returned_at %}<div class="reservafrota-blist-meta ok"><i class="ti ti-circle-check"></i> {{ __('Concluído em', 'reservafrota') }} {{ b.returned_at|slice(8,2) }}/{{ b.returned_at|slice(5,2) }} {{ b.returned_at|slice(11,5) }}</div>{% endif %}
+        {% if b.status == 4 and b.note %}<div class="reservafrota-blist-meta no"><i class="ti ti-info-circle"></i> {{ __('Motivo', 'reservafrota') }}: {{ b.note }}</div>{% endif %}
+    </div>
+    <div class="reservafrota-blist-item__side">
+        <span class="reservafrota-chip status-{{ b.status == 2 ? 'approved' : (b.status == 3 ? 'rejected' : (b.status == 4 ? 'rejected' : 'pending')) }}">{{ b.status_label }}</span>
+
+        {% if b.has_sheet %}
+            <div class="reservafrota-blist-actions">
+                <a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ b.id }}"><i class="ti ti-download"></i> {{ __('Baixar folha', 'reservafrota') }}</a>
+            </div>
+        {% endif %}
+    </div>
+</div>

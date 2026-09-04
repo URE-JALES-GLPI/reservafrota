@@ -1,0 +1,10 @@
+# Reservafrota — Agendamento de Carros
+# Arquivo base de traduções (gettext). Gere os .po/.mo com poedit
+# ou com `vendor/bin/extract-locales` se usar o esqueleto "empty".
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: reservafrota 1.0.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"

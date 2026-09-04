@@ -1,0 +1,130 @@
+{# Agenda de carros — hero + board diário da frota + formulário de solicitação #}
+
+<div id="reservafrota-agenda"
+     class="reservafrota-agenda"
+     data-cb-pending-url="{{ web_dir }}/ajax/pending.php"
+     data-ajax="{{ web_dir }}/ajax/carsstatus.php"
+     data-bform="{{ web_dir }}/front/booking.form.php"
+     {% if is_helpdesk %}data-helpdesk="1"{% endif %}
+     data-date="{{ date }}">
+
+    {# ---------- HERO ---------- #}
+    <div class="reservafrota-hero">
+        <div class="reservafrota-hero__top">
+            <div class="reservafrota-hero__title">
+                <i class="ti ti-car"></i>
+               
+            </div>
+
+            <div class="reservafrota-datebar">
+                <button type="button" class="reservafrota-nav" data-step="-1" aria-label="{{ __('Dia anterior', 'reservafrota') }}">
+                    <i class="ti ti-chevron-left"></i>
+                </button>
+                <input type="date" id="reservafrota-date" class="reservafrota-date-input" value="{{ date }}">
+                <button type="button" class="reservafrota-nav" data-step="1" aria-label="{{ __('Próximo dia', 'reservafrota') }}">
+                    <i class="ti ti-chevron-right"></i>
+                </button>
+                <button type="button" class="reservafrota-today">{{ __('Hoje', 'reservafrota') }}</button>
+            </div>
+        </div>
+    </div>
+
+    {# ---------- Abas de navegação (conforme os direitos do usuário) ---------- #}
+    <div class="reservafrota-tabs">
+        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/agenda.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
+        <span class="reservafrota-tab is-active"><i class="ti ti-calendar-plus"></i> {{ __('Agendar', 'reservafrota') }}</span>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/booking.php"><i class="ti ti-list-check"></i> {{ __('Agendamentos', 'reservafrota') }}</a>
+        {% if can_manage_cars %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+        {% endif %}
+        {% if can_view_analytics %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
+        {% endif %}
+    </div>
+
+
+    <div class="reservafrota-layout">
+
+        {# ---------- Board de carros ---------- #}
+        <section class="reservafrota-board" aria-live="polite">
+            <div class="reservafrota-board__head">
+                <h3 id="reservafrota-board-title">{{ __('Carros neste dia', 'reservafrota') }}</h3>
+                <div class="reservafrota-legend">
+                    <span><i class="reservafrota-dot dot-free"></i>{{ __('Livre', 'reservafrota') }}</span>
+                    <span><i class="reservafrota-dot dot-pending"></i>{{ __('Pendente', 'reservafrota') }}</span>
+                    <span><i class="reservafrota-dot dot-approved"></i>{{ __('Em uso', 'reservafrota') }}</span>
+                </div>
+            </div>
+
+            <div id="reservafrota-cards" class="reservafrota-cards">
+                <div class="reservafrota-loading">
+                    <span class="reservafrota-spinner"></span>{{ __('Carregando frota…', 'reservafrota') }}
+                </div>
+            </div>
+        </section>
+
+        {# ---------- Painel do formulário ---------- #}
+        {% if can_create %}
+            <aside class="reservafrota-panel">
+                <div class="reservafrota-panel__card">
+                    <h3><i class="ti ti-calendar-plus"></i> {{ __('Novo agendamento', 'reservafrota') }}</h3>
+
+                    {% if cars is empty %}
+                        <div class="reservafrota-empty">
+                            <i class="ti ti-car-off"></i>
+                            <p>{{ __('Nenhum carro cadastrado ainda.', 'reservafrota') }}</p>
+                            <a class="btn btn-outline-primary" href="{{ cars_url }}">{{ __('Cadastrar carro', 'reservafrota') }}</a>
+                        </div>
+                    {% else %}
+                        <form method="post" action="{{ web_dir }}/front/booking.form.php" class="reservafrota-form">
+                            <input type="hidden" name="add" value="1">
+                            <input type="hidden" name="_from_agenda" value="1">
+                            <input type="hidden" name="_agenda_date" id="reservafrota-form-date" value="{{ date }}">
+                            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+
+                            <label class="form-label" for="cb-car">{{ __('Carro', 'reservafrota') }}</label>
+                            <select class="form-select" id="cb-car" name="plugin_reservafrota_cars_id" required>
+                                <option value="">{{ __('Selecione…', 'reservafrota') }}</option>
+                                {% for id, car in cars %}
+                                    <option value="{{ id }}">{{ car.name }}{% if car.plate %} · {{ car.plate }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
+
+                            <div id="reservafrota-conflict" class="reservafrota-conflict" hidden>
+                                <i class="ti ti-alert-triangle"></i><span></span>
+                            </div>
+
+                            <label class="form-label" for="cb-sector">{{ __('Setor', 'reservafrota') }}</label>
+                            <select class="form-select" id="cb-sector" name="groups_id">
+                                <option value="0">{{ __('— Selecione o setor —', 'reservafrota') }}</option>
+                                {% for id, gname in groups %}
+                                    <option value="{{ id }}">{{ gname }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <label class="form-label" for="cb-dep">{{ __('Saída da SEDUC', 'reservafrota') }}</label>
+                            <input type="datetime-local" class="form-control" id="cb-dep" name="date_departure" value="{{ date }}T08:00" required>
+
+                            <label class="form-label" for="cb-arr">
+                                {{ __('Chegada', 'reservafrota') }} <span class="reservafrota-optional">{{ __('(opcional)', 'reservafrota') }}</span>
+                            </label>
+                            <input type="datetime-local" class="form-control" id="cb-arr" name="date_arrival">
+
+                            <label class="form-label" for="cb-dest">{{ __('Destino', 'reservafrota') }}</label>
+                            <input type="text" class="form-control" id="cb-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}">
+
+                            <label class="form-label" for="cb-reason">{{ __('Motivo', 'reservafrota') }}</label>
+                            <textarea class="form-control" id="cb-reason" name="reason" rows="2" placeholder="{{ __('Ex.: transporte de materiais', 'reservafrota') }}"></textarea>
+
+                            <button type="submit" class="reservafrota-submit">
+                                <i class="ti ti-send"></i> {{ __('Solicitar agendamento', 'reservafrota') }}
+                            </button>
+                            <p class="reservafrota-hint">{{ __('O pedido fica pendente até a aprovação do administrador.', 'reservafrota') }}</p>
+                        </form>
+                    {% endif %}
+                </div>
+            </aside>
+        {% endif %}
+    </div>
+</div>

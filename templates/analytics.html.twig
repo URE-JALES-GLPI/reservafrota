@@ -1,0 +1,242 @@
+{# Painel de análise: sub-abas Mês / Ano #}
+
+<div id="reservafrota-analytics"
+     class="reservafrota-agenda"
+     data-cb-pending-url="{{ web_dir }}/ajax/pending.php"
+     data-sector='{{ data.by_sector|json_encode|raw }}'
+     data-car='{{ data.by_car|json_encode|raw }}'
+     data-status='{{ data.status|json_encode|raw }}'>
+
+    {# ---------- HERO ---------- #}
+    <div class="reservafrota-hero">
+        <div class="reservafrota-hero__top">
+            <div class="reservafrota-hero__title">
+                <i class="ti ti-chart-pie"></i>
+                <div>
+                    <h2>{{ __('Análise da frota', 'reservafrota') }}</h2>
+                    <p class="reservafrota-subtitle">{{ __('Uso dos carros por setor, veículo e status', 'reservafrota') }}</p>
+                </div>
+            </div>
+            <form method="get" class="reservafrota-datebar" action="{{ web_dir }}/front/analytics.php">
+                <input type="month" name="month" class="reservafrota-date-input" value="{{ month }}"
+                       onchange="this.form.submit()">
+            </form>
+        </div>
+    </div>
+
+    {# ---------- Abas principais ---------- #}
+    <div class="reservafrota-tabs">
+        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        {% if can_manage_cars %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+        {% endif %}
+        <span class="reservafrota-tab is-active"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</span>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+    </div>
+
+    {# ---------- Sub-abas: Mês / Ano ---------- #}
+    <div class="reservafrota-subtabs">
+        <button type="button" class="reservafrota-subtab is-active" data-view="month">
+            <i class="ti ti-calendar-stats"></i> {{ month_label }}
+        </button>
+        <button type="button" class="reservafrota-subtab" data-view="year">
+            <i class="ti ti-calendar"></i> {{ __('Ano', 'reservafrota') }} {{ year }}
+        </button>
+    </div>
+
+    {# ===== VISÃO MÊS ===== #}
+    <div id="reservafrota-view-month" class="reservafrota-view">
+        {% if data.total == 0 %}
+            <div class="reservafrota-panel__card" style="padding:2rem;text-align:center;">
+                <i class="ti ti-chart-pie" style="font-size:2.5rem;color:var(--cb-border);"></i>
+                <p>{{ __('Nenhuma viagem registrada neste mês.', 'reservafrota') }}</p>
+            </div>
+        {% else %}
+
+        <div class="reservafrota-cards2">
+            <div class="reservafrota-stat">
+                <span class="reservafrota-stat__icon" style="--c:#4263eb;"><i class="ti ti-route"></i></span>
+                <div><div class="reservafrota-stat__value">{{ data.total }}</div>
+                <div class="reservafrota-stat__label">{{ __('Viagens no mês', 'reservafrota') }}</div></div>
+            </div>
+            <div class="reservafrota-stat">
+                <span class="reservafrota-stat__icon" style="--c:#10b981;"><i class="ti ti-building"></i></span>
+                <div><div class="reservafrota-stat__value">{{ data.top_sector ?? '—' }}</div>
+                <div class="reservafrota-stat__label">{{ __('Setor que mais usou', 'reservafrota') }}</div></div>
+            </div>
+            <div class="reservafrota-stat">
+                <span class="reservafrota-stat__icon" style="--c:#f59e0b;"><i class="ti ti-car"></i></span>
+                <div><div class="reservafrota-stat__value">{{ data.top_car ?? '—' }}</div>
+                <div class="reservafrota-stat__label">{{ __('Carro mais usado', 'reservafrota') }}</div></div>
+            </div>
+            <div class="reservafrota-stat">
+                <span class="reservafrota-stat__icon" style="--c:#6366f1;"><i class="ti ti-checks"></i></span>
+                <div><div class="reservafrota-stat__value">{{ data.approval_rate }}%</div>
+                <div class="reservafrota-stat__label">{{ __('Taxa de aprovação', 'reservafrota') }}</div></div>
+            </div>
+        </div>
+
+        <div class="reservafrota-analytics-grid">
+            <div class="reservafrota-panel__card reservafrota-chartbox">
+                <h3><i class="ti ti-chart-pie"></i> {{ __('Viagens por setor', 'reservafrota') }}</h3>
+                <div class="reservafrota-chart-row">
+                    <div id="reservafrota-pie"></div>
+                    <ul id="reservafrota-pie-legend" class="reservafrota-legend2"></ul>
+                </div>
+            </div>
+
+            <div class="reservafrota-panel__card reservafrota-chartbox">
+                <h3><i class="ti ti-progress-check"></i> {{ __('Situação dos pedidos', 'reservafrota') }}</h3>
+                <div class="reservafrota-chart-row">
+                    <div id="reservafrota-donut"></div>
+                    <ul id="reservafrota-donut-legend" class="reservafrota-legend2"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="reservafrota-panel__card reservafrota-chartbox" style="margin-top:1.3rem;">
+            <h3><i class="ti ti-chart-bar"></i> {{ __('Viagens por carro', 'reservafrota') }}</h3>
+            <div id="reservafrota-bars" class="reservafrota-bars"></div>
+        </div>
+
+        <div class="reservafrota-panel__card reservafrota-chartbox" style="margin-top:1.3rem;">
+            <h3><i class="ti ti-users"></i> {{ __('Agendamentos do mês — quem agendou', 'reservafrota') }}</h3>
+            <div class="reservafrota-tablefilter">
+            <div class="reservafrota-filters">
+                <label>{{ __('Data', 'reservafrota') }}<input type="date" class="cb-f-date form-control"></label>
+                <label>{{ __('A partir da hora', 'reservafrota') }}<input type="time" class="cb-f-time form-control"></label>
+                <label>{{ __('Status', 'reservafrota') }}
+                    <select class="cb-f-status form-select">
+                        <option value="">{{ __('Todos', 'reservafrota') }}</option>
+                        <option value="1">{{ __('Pendente', 'reservafrota') }}</option>
+                        <option value="2">{{ __('Aprovado', 'reservafrota') }}</option>
+                        <option value="5">{{ __('Concluído', 'reservafrota') }}</option>
+                        <option value="4">{{ __('Cancelado', 'reservafrota') }}</option>
+                    </select>
+                </label>
+                <button type="button" class="reservafrota-clearbtn cb-f-clear" style="align-self:flex-end;"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</button>
+            </div>
+            <div class="reservafrota-table-wrap">
+                <table class="reservafrota-table">
+                    <thead><tr>
+                        <th>{{ __('Data', 'reservafrota') }}</th>
+                        <th>{{ __('Solicitante', 'reservafrota') }}</th>
+                        <th>{{ __('Motorista', 'reservafrota') }}</th>
+                        <th>{{ __('Carro', 'reservafrota') }}</th>
+                        <th>{{ __('Status', 'reservafrota') }}</th>
+                        <th>{{ __('Motivo', 'reservafrota') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for b in bookings %}
+                        <tr data-date="{{ b.departure|slice(0,10) }}" data-time="{{ b.departure|slice(11,5) }}" data-status="{{ b.status }}">
+                            <td>{{ b.departure|slice(8,2) }}/{{ b.departure|slice(5,2) }} {{ b.departure|slice(11,5) }}</td>
+                            <td>{{ b.user }}</td>
+                            <td><span class="reservafrota-pill"><i class="ti ti-steering-wheel"></i> {{ b.driver ?: '—' }}</span></td>
+                            <td>{{ b.car }}</td>
+                            <td><span class="reservafrota-chip status-{{ b.status == 2 ? 'approved' : (b.status == 3 ? 'rejected' : (b.status == 4 ? 'rejected' : 'pending')) }}">{{ b.status_label }}</span></td>
+                            <td>
+                                <button type="button" class="reservafrota-btn-info" data-cb-info
+                                    data-title="{{ __('Motivo do agendamento', 'reservafrota') }}"
+                                    data-text="{{ b.reason ?: __('Sem motivo informado.', 'reservafrota') }}{% if b.status == 4 and b.note %}&#10;&#10;{{ __('Cancelado:', 'reservafrota') }} {{ b.note }}{% endif %}">
+                                    <i class="ti ti-eye"></i> {{ __('Ver', 'reservafrota') }}
+                                </button>
+                                {% if b.has_sheet %}
+                                    <a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ b.id }}"><i class="ti ti-download"></i> {{ __('Baixar Folha', 'reservafrota') }}</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+
+        <div class="reservafrota-panel__card reservafrota-chartbox" style="margin-top:1.3rem;">
+            <h3><i class="ti ti-ban"></i> {{ __('Cancelamentos do mês — quem cancelou', 'reservafrota') }}</h3>
+            {% if cancellations is empty %}
+                <p class="text-muted">{{ __('Nenhum cancelamento neste mês.', 'reservafrota') }}</p>
+            {% else %}
+            <div class="reservafrota-tablefilter">
+            <div class="reservafrota-filters">
+                <label>{{ __('Data', 'reservafrota') }}<input type="date" class="cb-f-date form-control"></label>
+                <label>{{ __('A partir da hora', 'reservafrota') }}<input type="time" class="cb-f-time form-control"></label>
+                <label>{{ __('Status', 'reservafrota') }}
+                    <select class="cb-f-status form-select">
+                        <option value="">{{ __('Todos', 'reservafrota') }}</option>
+                        <option value="1">{{ __('Pendente', 'reservafrota') }}</option>
+                        <option value="2">{{ __('Aprovado', 'reservafrota') }}</option>
+                        <option value="5">{{ __('Concluído', 'reservafrota') }}</option>
+                        <option value="4">{{ __('Cancelado', 'reservafrota') }}</option>
+                    </select>
+                </label>
+                <button type="button" class="reservafrota-clearbtn cb-f-clear" style="align-self:flex-end;"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</button>
+            </div>
+            <div class="reservafrota-table-wrap">
+                <table class="reservafrota-table">
+                    <thead><tr>
+                        <th>{{ __('Agendamento (data)', 'reservafrota') }}</th>
+                        <th>{{ __('Solicitante', 'reservafrota') }}</th>
+                        <th>{{ __('Carro', 'reservafrota') }}</th>
+                        <th>{{ __('Cancelado por', 'reservafrota') }}</th>
+                        <th>{{ __('Cancelado em', 'reservafrota') }}</th>
+                        <th>{{ __('Motivo', 'reservafrota') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for b in cancellations %}
+                        <tr data-date="{{ b.departure|slice(0,10) }}" data-time="{{ b.departure|slice(11,5) }}" data-status="{{ b.status }}">
+                            <td>{{ b.departure|slice(8,2) }}/{{ b.departure|slice(5,2) }} {{ b.departure|slice(11,5) }}</td>
+                            <td>{{ b.user }}</td>
+                            <td>{{ b.car }}</td>
+                            <td>{{ b.cancelled_by ?: '—' }}</td>
+                            <td>{% if b.cancelled_at %}{{ b.cancelled_at|slice(8,2) }}/{{ b.cancelled_at|slice(5,2) }}/{{ b.cancelled_at|slice(0,4) }} {{ b.cancelled_at|slice(11,5) }}{% else %}—{% endif %}</td>
+                            <td class="no">{{ b.note ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% endif %}
+    </div>
+
+    {# ===== VISÃO ANO ===== #}
+    <div id="reservafrota-view-year" class="reservafrota-view" hidden>
+        <div class="reservafrota-panel__card reservafrota-chartbox">
+            <div class="reservafrota-year-head">
+                <h3><i class="ti ti-calendar"></i> {{ __('Todos os agendamentos de', 'reservafrota') }} {{ year }}</h3>
+                {% if year_bookings is not empty %}
+                    <a class="reservafrota-export-btn"
+                       href="{{ web_dir }}/front/export.php?year={{ year }}">
+                        <i class="ti ti-file-spreadsheet"></i> {{ __('Gerar planilha (.xlsx)', 'reservafrota') }}
+                    </a>
+                {% endif %}
+            </div>
+            {% if year_bookings is empty %}
+                <p class="text-muted">{{ __('Nenhum agendamento neste ano.', 'reservafrota') }}</p>
+            {% else %}
+                {% set last_month = 0 %}
+                <div class="reservafrota-year-list">
+                {% for b in year_bookings %}
+                    {% if b.month != last_month %}
+                        {% set last_month = b.month %}
+                        <div class="reservafrota-year-month">{{ meses[b.month] }}</div>
+                    {% endif %}
+                    <div class="reservafrota-year-row s-{{ b.status }}">
+                        <span class="reservafrota-year-date">{{ b.departure|slice(8,2) }}/{{ b.departure|slice(5,2) }}</span>
+                        <span class="reservafrota-year-time">{{ b.departure|slice(11,5) }}{% if b.arrival %} &rarr; {{ b.arrival|slice(11,5) }}{% endif %}</span>
+                        <strong class="reservafrota-year-car">{{ b.car }}</strong>
+                        <span class="reservafrota-year-user"><i class="ti ti-user"></i> {{ b.user }}</span>
+                        <span class="reservafrota-pill"><i class="ti ti-steering-wheel"></i> {{ b.driver ?: '—' }}</span>
+                        <span class="reservafrota-chip status-{{ b.status == 2 ? 'approved' : (b.status == 3 ? 'rejected' : 'pending') }}">{{ b.status_label }}</span>
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,36 @@
+<root>
+   <name>Reserva de Frota</name>
+   <key>reservafrota</key>
+   <state>stable</state>
+   <description>
+      <short>
+         <pt_BR>Reserva de veiculos da frota com aprovação do administrador.</pt_BR>
+         <en>Fleet car booking with administrator approval.</en>
+      </short>
+      <long>
+         <pt_BR>Permite que os usuários solicitem o uso de carros da frota, vejam quais carros estão em uso em cada dia e acompanhem o status. O administrador cadastra os carros (modelo, placa, ano e foto) e aprova ou recusa os agendamentos.</pt_BR>
+         <en>Lets users request fleet cars, see which cars are in use each day and track status. The administrator registers cars (model, plate, year and photo) and approves or rejects bookings.</en>
+      </long>
+   </description>
+   <authors>
+      <author>Fox</author>
+   </authors>
+   <versions>
+      <version>
+         <num>1.0.0</num>
+         <compatibility>~11.0.0</compatibility>
+      </version>
+   </versions>
+   <langs>
+      <lang>pt_BR</lang>
+      <lang>en_GB</lang>
+   </langs>
+   <license>MIT</license>
+   <tags>
+      <pt_BR>
+         <tag>frota</tag>
+         <tag>agendamento</tag>
+         <tag>carros</tag>
+      </pt_BR>
+   </tags>
+</root>

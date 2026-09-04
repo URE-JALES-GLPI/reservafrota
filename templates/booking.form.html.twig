@@ -1,0 +1,187 @@
+{# Formulário do agendamento + painel único de aprovação (somente admin) #}
+{% set is_new = item.isNewItem() %}
+{% set status = item.fields['status'] %}
+{% set editable = is_new or status == 1 or status == 2 %}
+
+<div class="reservafrota-bookingform">
+
+    <div class="reservafrota-formtop">
+        <a class="reservafrota-back" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar para o calendário', 'reservafrota') }}</a>
+    </div>
+
+    <form method="post" action="{{ web_dir }}/front/booking.form.php">
+
+        {% if not is_new %}
+            <input type="hidden" name="id" value="{{ item.fields['id'] }}">
+        {% endif %}
+        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+
+        {# Faixa de status (apenas em edição) #}
+        {% if not is_new %}
+            {% set chip = {1: 'status-pending', 2: 'status-approved', 3: 'status-rejected', 4: 'status-cancelled', 5: 'status-arrived'} %}
+            <div class="reservafrota-statusbar">
+                <span class="reservafrota-chip {{ chip[status] }}">{{ statuses[status] }}</span>
+                {% if item.fields['date_validation'] %}
+                    <span class="text-muted">{{ __('Analisado em', 'reservafrota') }} {{ item.fields['date_validation'] }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if status == 2 %}
+            <div class="reservafrota-warnbox"><i class="ti ti-alert-triangle"></i> {{ __('Atenção: ao salvar alterações, este agendamento aprovado voltará para Pendente e precisará ser aprovado novamente.', 'reservafrota') }}</div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-car">{{ __('Carro', 'reservafrota') }}</label>
+                <select class="form-select" id="bk-car" name="plugin_reservafrota_cars_id" required {{ is_new ? '' : 'disabled' }} title="{{ is_new ? '' : __('O carro não pode ser alterado.', 'reservafrota') }}">
+                    <option value="">{{ __('Selecione…', 'reservafrota') }}</option>
+                    {% for id, car in cars %}
+                        <option value="{{ id }}" {{ item.fields['plugin_reservafrota_cars_id'] == id ? 'selected' : '' }}>
+                            {{ car.name }}{% if car.plate %} · {{ car.plate }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-dest">{{ __('Destino', 'reservafrota') }}</label>
+                <input type="text" class="form-control" id="bk-dest" name="destination"
+                       value="{{ item.fields['destination'] }}" {{ editable ? '' : 'disabled' }}>
+            </div>
+
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-driver">{{ __('Motorista', 'reservafrota') }}</label>
+                <select class="form-select" id="bk-driver" name="driver" {{ editable ? '' : 'disabled' }}>
+                    <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
+                    {% for uname in users %}
+                        <option value="{{ uname }}" {{ item.fields['driver'] == uname ? 'selected' : '' }}>{{ uname }}</option>
+                    {% endfor %}
+                </select>
+
+                <label class="form-label" for="bk-companion-q" style="margin-top:0.6rem;">{{ __('Vai ter acompanhante?', 'reservafrota') }}</label>
+                <select class="form-select reservafrota-companion-q" id="bk-companion-q" name="has_companion" data-target="bk-companion-wrap" {{ editable ? '' : 'disabled' }}>
+                    <option value="0" {{ not item.fields['has_companion'] ? 'selected' : '' }}>{{ __('Não', 'reservafrota') }}</option>
+                    <option value="1" {{ item.fields['has_companion'] ? 'selected' : '' }}>{{ __('Sim', 'reservafrota') }}</option>
+                </select>
+                <div id="bk-companion-wrap" class="reservafrota-companion-wrap" {{ item.fields['has_companion'] ? '' : 'hidden' }}>
+                    <div class="reservafrota-companion-block">
+                        <label class="form-label" style="margin-top:0.5rem;">{{ __('Quantos acompanhantes? (máx. 4)', 'reservafrota') }}</label>
+                        <select class="form-select reservafrota-companion-count" data-names="bk-companion-names" {{ editable ? '' : 'disabled' }}>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                        <div id="bk-companion-names" class="reservafrota-companion-names"></div>
+                        <input type="hidden" name="companion" class="reservafrota-companion-value" value="{{ item.fields['companion'] }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-dep">{{ __('Saída da SEDUC', 'reservafrota') }}</label>
+                <input type="datetime-local" class="form-control" id="bk-dep" name="date_departure"
+                       value="{{ item.fields['date_departure'] ? item.fields['date_departure']|replace({' ': 'T'})|slice(0, 16) : '' }}" required {{ editable ? '' : 'disabled' }}>
+            </div>
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-arr">
+                    {{ __('Chegada', 'reservafrota') }} <span class="reservafrota-optional">{{ __('(opcional)', 'reservafrota') }}</span>
+                </label>
+                <input type="datetime-local" class="form-control" id="bk-arr" name="date_arrival"
+                       value="{{ item.fields['date_arrival'] ? item.fields['date_arrival']|replace({' ': 'T'})|slice(0, 16) : '' }}" {{ editable ? '' : 'disabled' }}>
+            </div>
+
+            <div class="col-12 mb-3">
+                <label class="form-label" for="bk-reason">{{ __('Motivo', 'reservafrota') }}</label>
+                <textarea class="form-control" id="bk-reason" name="reason" rows="2" {{ editable ? '' : 'disabled' }}>{{ item.fields['reason'] }}</textarea>
+            </div>
+        </div>
+
+        {% if can_approve and status == 5 %}
+        <div class="reservafrota-sheetbox">
+            <label class="form-label">{{ __('Folha de agendamento', 'reservafrota') }}</label>
+            {% if item.fields['arrival_sheet'] %}
+                {% set sheet_ext = item.fields['arrival_sheet']|split('.')|last|lower %}
+                {% set sheet_src = web_dir ~ '/front/sheet.php?id=' ~ item.fields['id'] ~ '&inline=1' %}
+                <div class="reservafrota-sheet-preview">
+                    {% if sheet_ext in ['png', 'jpg', 'jpeg', 'gif', 'webp'] %}
+                        <a href="{{ sheet_src }}" target="_blank" rel="noopener"><img src="{{ sheet_src }}" alt="{{ __('Folha anexada', 'reservafrota') }}"></a>
+                    {% elseif sheet_ext == 'pdf' %}
+                        <iframe src="{{ sheet_src }}" title="{{ __('Folha anexada', 'reservafrota') }}"></iframe>
+                    {% else %}
+                        <div class="reservafrota-sheet-file"><i class="ti ti-file-text"></i> {{ __('Arquivo', 'reservafrota') }}: {{ sheet_ext|upper }}</div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            <div class="reservafrota-sheetbox__row">
+                {% if item.fields['arrival_sheet'] %}
+                    <span class="reservafrota-sheet-ok"><i class="ti ti-paperclip"></i> {{ __('Folha anexada', 'reservafrota') }}</span>
+                    <a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ item.fields['id'] }}"><i class="ti ti-download"></i> {{ __('Baixar folha', 'reservafrota') }}</a>
+                    <button type="button" class="reservafrota-btn-info" data-cb-attach data-id="{{ item.fields['id'] }}" data-bform="{{ web_dir }}/front/booking.form.php" data-csrf="{{ csrf_token() }}"><i class="ti ti-replace"></i> {{ __('Trocar folha', 'reservafrota') }}</button>
+                {% else %}
+                    <span class="text-muted">{{ __('Nenhuma folha anexada.', 'reservafrota') }}</span>
+                    <button type="button" class="reservafrota-btn-info" data-cb-attach data-id="{{ item.fields['id'] }}" data-bform="{{ web_dir }}/front/booking.form.php" data-csrf="{{ csrf_token() }}"><i class="ti ti-paperclip"></i> {{ __('Anexar folha', 'reservafrota') }}</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="reservafrota-formactions">
+            {% if is_new %}
+                <button type="submit" name="add" value="1" class="btn btn-primary">
+                    <i class="ti ti-plus"></i> {{ _x('button', 'Add') }}
+                </button>
+            {% else %}
+                {% if editable %}
+                <button type="submit" name="update" value="1" class="btn btn-primary">
+                    <i class="ti ti-device-floppy"></i> {{ _x('button', 'Save') }}
+                </button>
+                <button type="submit" name="purge" value="1" class="btn btn-outline-danger"
+                        onclick="return confirm('{{ __('Excluir definitivamente?', 'reservafrota') }}');">
+                    <i class="ti ti-trash"></i> {{ _x('button', 'Delete permanently') }}
+                </button>
+                {% else %}
+                <span class="reservafrota-noedit"><i class="ti ti-lock"></i> {{ __('Somente agendamentos pendentes podem ser editados.', 'reservafrota') }}</span>
+                {% endif %}
+            {% endif %}
+        </div>
+    </form>
+
+    {# ---------- Painel único de aprovação (somente quem tem o direito) ---------- #}
+    {% if can_approve and not is_new and status not in [3,4,5] %}
+    <div class="reservafrota-approval">
+
+            {# Resumo do pedido para o aprovador #}
+            <div class="reservafrota-approval__summary">
+                <div><span class="lbl"><i class="ti ti-user"></i> {{ __('Solicitante', 'reservafrota') }}</span>
+                     <strong>{{ requester_name ?: '—' }}</strong></div>
+                <div><span class="lbl"><i class="ti ti-steering-wheel"></i> {{ __('Motorista', 'reservafrota') }}</span>
+                     <strong>{{ item.fields['driver'] ?: '—' }}</strong>
+                     {% if item.fields['has_companion'] %}{% set ccount = item.fields['companion'] ? item.fields['companion']|split(',')|length : 1 %}<span class="text-muted"> · {{ ccount }} {{ __('acompanhante(s)', 'reservafrota') }}{% if item.fields['companion'] %}: {{ item.fields['companion'] }}{% endif %}</span>{% endif %}</div>
+                <div><span class="lbl"><i class="ti ti-car"></i> {{ __('Carro', 'reservafrota') }}</span>
+                     {% set carrow = cars[item.fields['plugin_reservafrota_cars_id']] %}
+                     <strong>{{ carrow ? carrow.name ~ (carrow.plate ? ' · ' ~ carrow.plate : '') : '—' }}</strong></div>
+                <div><span class="lbl"><i class="ti ti-map-pin"></i> {{ __('Destino', 'reservafrota') }}</span>
+                     <strong>{{ item.fields['destination'] ?: '—' }}</strong></div>
+                <div><span class="lbl"><i class="ti ti-logout"></i> {{ __('Saída', 'reservafrota') }}</span>
+                     <strong>{{ item.fields['date_departure'] ?: '—' }}</strong></div>
+                <div><span class="lbl"><i class="ti ti-login"></i> {{ __('Chegada', 'reservafrota') }}</span>
+                     <strong>{{ item.fields['date_arrival'] ?: __('Não informada', 'reservafrota') }}</strong></div>
+                <div class="full"><span class="lbl"><i class="ti ti-note"></i> {{ __('Motivo', 'reservafrota') }}</span>
+                     <strong>{{ item.fields['reason'] ?: '—' }}</strong></div>
+            </div>
+
+            <form method="post" action="{{ web_dir }}/front/booking.form.php">
+                <input type="hidden" name="id" value="{{ item.fields['id'] }}">
+                <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+
+                <label class="form-label" for="bk-cv">{{ __('Comentário (opcional)', 'reservafrota') }}</label>
+                <textarea class="form-control" id="bk-cv" name="comment_validation" rows="2">{{ item.fields['comment_validation'] }}</textarea>
+
+          
+                   
+                
+            </form>
+        </div>
+    {% endif %}
+</div>

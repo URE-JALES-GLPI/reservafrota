@@ -1,0 +1,127 @@
+{# Lista de agendamentos por status + tabela de chegadas (sem macro) #}
+
+<div id="reservafrota-booking-list" class="reservafrota-agenda">
+
+    {# ---------- Abas ---------- #}
+    <div class="reservafrota-tabs">
+        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        <span class="reservafrota-tab is-active"><i class="ti ti-list-check"></i> {{ __('Agendamentos', 'reservafrota') }}</span>
+        {% if can_manage_cars %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+        {% endif %}
+        {% if can_view_analytics %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
+        {% endif %}
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+        <span class="reservafrota-build">v1.0.68</span>
+    </div>
+
+    {# ---------- Como funciona (passo a passo simples) ---------- #}
+    <div class="reservafrota-help">
+        <span class="reservafrota-help__step"><b>1</b> {{ __('Pendentes esperam aprovação', 'reservafrota') }}</span>
+        <i class="ti ti-arrow-right"></i>
+        <span class="reservafrota-help__step"><b>2</b> {{ __('Aprovados estão liberados', 'reservafrota') }}</span>
+        <i class="ti ti-arrow-right"></i>
+        <span class="reservafrota-help__step"><b>3</b> {{ __('Ao voltar, marque a chegada', 'reservafrota') }}</span>
+    </div>
+
+    {# ---------- Notificação para o aprovador ---------- #}
+    {% if can_approve and pending_count > 0 %}
+        <div class="reservafrota-notify">
+            <i class="ti ti-bell-ringing"></i>
+            <span>{{ pending_count }}
+                {{ pending_count == 1
+                    ? __('agendamento pendente aguardando sua aprovação.', 'reservafrota')
+                    : __('agendamentos pendentes aguardando sua aprovação.', 'reservafrota') }}</span>
+        </div>
+    {% endif %}
+
+    {# ---------- Três listas por status ---------- #}
+    <div class="reservafrota-blist-cols">
+
+        <section class="reservafrota-blist-col col-pending">
+            <header class="reservafrota-blist-head"><i class="ti ti-clock"></i> {{ __('Pendentes', 'reservafrota') }} <span class="reservafrota-blist-count">{{ groups.pending|length }}</span></header>
+            {% if groups.pending is empty %}
+                <p class="reservafrota-blist-empty">{{ __('Nenhum pendente.', 'reservafrota') }}</p>
+            {% else %}
+                {% for b in groups.pending %}{% include '@reservafrota/booking.row.html.twig' with {'b': b, 'web_dir': web_dir, 'can_approve': can_approve, 'csrf': csrf} %}{% endfor %}
+            {% endif %}
+        </section>
+
+        <section class="reservafrota-blist-col col-approved">
+            <header class="reservafrota-blist-head"><i class="ti ti-circle-check"></i> {{ __('Aprovados', 'reservafrota') }} <span class="reservafrota-blist-count">{{ groups.approved|length }}</span></header>
+            {% if groups.approved is empty %}
+                <p class="reservafrota-blist-empty">{{ __('Nenhum aprovado.', 'reservafrota') }}</p>
+            {% else %}
+                {% for b in groups.approved %}{% include '@reservafrota/booking.row.html.twig' with {'b': b, 'web_dir': web_dir, 'can_approve': can_approve, 'csrf': csrf} %}{% endfor %}
+            {% endif %}
+        </section>
+
+        <section class="reservafrota-blist-col col-rejected">
+            <header class="reservafrota-blist-head"><i class="ti ti-circle-x"></i> {{ __('Recusados / Cancelados', 'reservafrota') }} <span class="reservafrota-blist-count">{{ groups.rejected|length + groups.cancelled|length }}</span></header>
+            {% if groups.rejected is empty and groups.cancelled is empty %}
+                <p class="reservafrota-blist-empty">{{ __('Nada aqui.', 'reservafrota') }}</p>
+            {% else %}
+                {% for b in groups.rejected %}{% include '@reservafrota/booking.row.html.twig' with {'b': b, 'web_dir': web_dir, 'can_approve': can_approve, 'csrf': csrf} %}{% endfor %}
+                {% for b in groups.cancelled %}{% include '@reservafrota/booking.row.html.twig' with {'b': b, 'web_dir': web_dir, 'can_approve': can_approve, 'csrf': csrf} %}{% endfor %}
+            {% endif %}
+        </section>
+
+    </div>
+
+    {# ---------- Tabela de chegadas ---------- #}
+    <section id="reservafrota-arrived-section" class="reservafrota-arrived-section">
+        <header class="reservafrota-blist-head reservafrota-arrived-head">
+            <i class="ti ti-flag-check"></i> {{ __('Concluídos', 'reservafrota') }}
+            <span class="reservafrota-blist-count">{{ groups.arrived|length }}</span>
+        </header>
+        {% if groups.arrived is empty %}
+            <p class="reservafrota-blist-empty">{{ __('Nenhuma chegada registrada.', 'reservafrota') }}</p>
+        {% else %}
+            <div class="reservafrota-tablefilter">
+            <div class="reservafrota-filters">
+                <label>{{ __('Data', 'reservafrota') }}<input type="date" class="cb-f-date form-control"></label>
+                <label>{{ __('A partir da hora', 'reservafrota') }}<input type="time" class="cb-f-time form-control"></label>
+                <button type="button" class="reservafrota-clearbtn cb-f-clear" style="align-self:flex-end;"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</button>
+            </div>
+            <table class="reservafrota-arrived-table">
+                <thead>
+                    <tr>
+                        <th>{{ __('Data saída', 'reservafrota') }}</th>
+                        <th>{{ __('Carro', 'reservafrota') }}</th>
+                        <th>{{ __('Solicitante', 'reservafrota') }}</th>
+                        <th>{{ __('Setor', 'reservafrota') }}</th>
+                        <th>{{ __('Destino', 'reservafrota') }}</th>
+                        <th>{{ __('Chegada', 'reservafrota') }}</th>
+                        <th>{{ __('Folha', 'reservafrota') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for b in groups.arrived %}
+                    <tr data-date="{{ b.departure|slice(0,10) }}" data-time="{{ b.departure|slice(11,5) }}" data-status="{{ b.status }}">
+                        <td><b>{{ b.departure|slice(8,2) }}/{{ b.departure|slice(5,2) }}</b> {{ b.departure|slice(11,5) }}</td>
+                        <td>{{ b.car }}</td>
+                        <td>{{ b.user }}</td>
+                        <td>{{ b.sector }}</td>
+                        <td>{{ b.destination ?: '—' }}</td>
+                        <td class="ok">
+                            {% if b.returned_at %}
+                                <i class="ti ti-circle-check"></i>
+                                {{ b.returned_at|slice(8,2) }}/{{ b.returned_at|slice(5,2) }} {{ b.returned_at|slice(11,5) }}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if b.has_sheet %}
+                                <a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ b.id }}"><i class="ti ti-download"></i> {{ __('Baixar', 'reservafrota') }}</a>
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        {% endif %}
+    </section>
+
+</div>
