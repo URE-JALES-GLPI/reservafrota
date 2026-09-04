@@ -1351,3 +1351,34 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-analyze-card__tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #475467; margin-bottom: 0.4rem; }
 .reservafrota-analyze-card.is-new .reservafrota-analyze-card__tag { color: #3b5bdb; }
 .reservafrota-analyze-card__actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+
+/* ---------- Botão Nova Reserva no calendário ---------- */
+.reservafrota-new-booking {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.5rem 1.1rem; border-radius: 11px; font-weight: 700; font-size: 0.88rem;
+    border: none; cursor: pointer; color: #fff;
+    background: linear-gradient(135deg, #4263eb, #6366f1);
+    box-shadow: 0 8px 18px -8px rgba(66, 99, 235, 0.8);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.reservafrota-new-booking:hover { transform: translateY(-2px); box-shadow: 0 12px 22px -8px rgba(66,99,235,0.9); }
+.reservafrota-cal-hint {
+    display: flex; align-items: center; gap: 0.45rem;
+    padding: 0.6rem 0.85rem; margin: -0.4rem 0 0.9rem;
+    background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.14);
+    border-radius: 10px; font-size: 0.82rem; color: var(--cb-muted);
+}
+.reservafrota-cell.is-other-month { background: #f8fafc; }
+.reservafrota-cell__num.is-other { color: #94a3b8; font-weight: 500; }
+.reservafrota-evt.s-empty {
+    background: rgba(148,163,184,0.12); border-left-color: #94a3b8; color: #64748b;
+    font-size: 0.68rem; font-style: italic;
+}
+.reservafrota-car-availability { margin: 0.4rem 0 0.6rem; padding: 0.45rem 0.6rem; border-radius: 8px; font-size: 0.78rem; font-weight: 600; }
+.reservafrota-car-availability.is-ok { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); color: #059669; }
+.reservafrota-car-availability.is-error { background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.3); color: #b91c1c; }
+@media (max-width: 760px) {
+    .reservafrota-cal-bar { flex-wrap: wrap; }
+    .reservafrota-new-booking { width: 100%; justify-content: center; margin-left: 0; }
+}

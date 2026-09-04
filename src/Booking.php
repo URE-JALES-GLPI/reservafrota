@@ -145,10 +145,14 @@ class Booking extends CommonDBTM
             $input['name'] = $who . ' — ' . Html::convDateTime($input['date_departure']);
         }
 
-        // Aviso (não bloqueante) de conflito só se um carro já estiver
-        // definido (ex.: agendamento criado pelo próprio gestor com carro).
+        // Validação de veículo: verifica manutenção (is_active) e conflito de horário
         $carId = (int) ($input['plugin_reservafrota_cars_id'] ?? 0);
         if ($carId > 0) {
+            $car = new Car();
+            if ($car->getFromDB($carId) && !(int) $car->fields['is_active']) {
+                Session::addMessageAfterRedirect(__('Este veículo está em manutenção (inativo) e não pode ser reservado.', 'reservafrota'), false, ERROR);
+                return false;
+            }
             $day = substr($input['date_departure'], 0, 10);
             $conflicts = self::getBookingsForCarOnDate($carId, $day);
             if (count($conflicts) > 0) {
@@ -164,6 +168,18 @@ class Booking extends CommonDBTM
                     }
                 }
                 if ($overlap !== null) {
+                    if (!self::canApprove()) {
+                        Session::addMessageAfterRedirect(
+                            sprintf(
+                                __('Conflito: este veículo já está reservado neste horário (%s). Escolha outro veículo ou horário.', 'reservafrota'),
+                                substr((string) $overlap['date_departure'], 11, 5)
+                                . (!empty($overlap['date_arrival']) ? ' → ' . substr((string) $overlap['date_arrival'], 11, 5) : '')
+                            ),
+                            false,
+                            ERROR
+                        );
+                        return false;
+                    }
                     Session::addMessageAfterRedirect(
                         sprintf(
                             __('Conflito: este carro já está agendado neste horário (%s). O pedido foi registrado mesmo assim, mas pode ser recusado.', 'reservafrota'),

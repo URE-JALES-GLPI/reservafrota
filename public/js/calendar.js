@@ -63,6 +63,11 @@
         var canApprove = root.dataset.canapprove === '1';
 
         var grid = document.getElementById('reservafrota-grid');
+        var newBtn = document.getElementById('reservafrota-new-booking-btn');
+        var carSelect = document.getElementById('cb-m-car');
+        var carHint = document.getElementById('cb-m-car-availability');
+        var availabilityUrl = root.dataset.availability || (root.dataset.ajaxMonth ? root.dataset.ajaxMonth.replace('month.php','availability.php') : '');
+        var latestByDay = {};
         var titleEl = document.getElementById('reservafrota-cal-title');
         var modal = document.getElementById('reservafrota-day-modal');
         var modalTitle = document.getElementById('reservafrota-modal-title');
@@ -81,7 +86,8 @@
         var cancelBtn = document.getElementById('cb-m-cancel');
         var arriveBtn = document.getElementById('cb-m-arrive');
         var confirmBtn = document.getElementById('cb-m-confirm');
-        var editingStatus = null; // status do agendamento em edição (null = criando um novo)
+        var editingStatus = null;
+        var editingId = null; // status do agendamento em edição (null = criando um novo)
 
         // Tooltip flutuante (criado uma vez).
         var tip = document.createElement('div');
@@ -144,6 +150,7 @@
         }
 
         function render(byDay) {
+            latestByDay = byDay || {};
             var year = cur.getFullYear();
             var month = cur.getMonth();
             var firstWeekday = new Date(year, month, 1).getDay();   // 0=Dom
@@ -159,9 +166,11 @@
             }
             html += '</div><div class="reservafrota-grid-body">';
 
-            // células do mês anterior (vazias)
+            // Dias do mês anterior (preenche grade para mostrar todos os dias)
+            var prevDays = new Date(year, month, 0).getDate();
             for (var e = 0; e < firstWeekday; e++) {
-                html += '<div class="reservafrota-cell is-empty"></div>';
+                var pd = prevDays - firstWeekday + 1 + e;
+                html += '<div class="reservafrota-cell is-empty is-other-month"><span class="reservafrota-cell__num is-other">' + pd + '</span></div>';
             }
 
             for (var d = 1; d <= daysInMonth; d++) {
@@ -170,16 +179,20 @@
                 var isToday = dateStr === todayStr;
 
                 var chips = '';
-                items.slice(0, 4).forEach(function (b) {
-                    chips += '<span class="reservafrota-evt s-' + (b.status || 1) + (b.conflict ? ' is-conflict' : '') + '"'
-                        + ' title="' + esc(b.car) + '">'
-                        + '<b>' + esc(timeOf(b.departure)) + '</b> '
-                        + esc(b.car) + ' — ' + esc(b.user)
-                        + '</span>';
-                });
-                if (items.length > 4) {
-                    chips += '<span class="reservafrota-evt-more">+' + (items.length - 4) + ' '
-                        + (items.length - 4 === 1 ? 'outro' : 'outros') + '</span>';
+                if (items.length === 0) {
+                    chips = '<span class="reservafrota-evt s-empty" title="Clique para reservar"><i class="ti ti-plus" style="font-size:0.7rem;"></i> Disponível</span>';
+                } else {
+                    items.slice(0, 4).forEach(function (b) {
+                        chips += '<span class="reservafrota-evt s-' + (b.status || 1) + (b.conflict ? ' is-conflict' : '') + '"'
+                            + ' title="' + esc(b.car) + '">'
+                            + '<b>' + esc(timeOf(b.departure)) + '</b> '
+                            + esc(b.car) + ' — ' + esc(b.user)
+                            + '</span>';
+                    });
+                    if (items.length > 4) {
+                        chips += '<span class="reservafrota-evt-more">+' + (items.length - 4) + ' '
+                            + (items.length - 4 === 1 ? 'outro' : 'outros') + '</span>';
+                    }
                 }
 
                 var hasAllArrived = items.length > 0 && items.every(function (b) { return (b.status || 1) === 5; });
@@ -196,11 +209,11 @@
                     + '</div>';
             }
 
-            // completa a última linha
+            // Completa última linha com dias do próximo mês
             var totalCells = firstWeekday + daysInMonth;
             var tail = (7 - (totalCells % 7)) % 7;
-            for (var t = 0; t < tail; t++) {
-                html += '<div class="reservafrota-cell is-empty"></div>';
+            for (var t = 1; t <= tail; t++) {
+                html += '<div class="reservafrota-cell is-empty is-other-month"><span class="reservafrota-cell__num is-other">' + t + '</span></div>';
             }
 
             html += '</div>';
@@ -355,6 +368,19 @@
 
                     // Preenche os campos (o carro não é mais escolhido aqui — é
                     // designado pelo gestor ao aprovar; ver "Confirmar" acima).
+                    if (carSelect) {
+                        // Store editing id for availability check (exclude self)
+                        editingId = b.id;
+                        carSelect.value = b.car_id ? String(b.car_id) : '';
+                        // if car no longer active, add option
+                        if (b.car_id && !Array.from(carSelect.options).some(function(o){ return o.value==String(b.car_id); })) {
+                            var opt = document.createElement('option');
+                            opt.value = String(b.car_id);
+                            opt.textContent = b.car + ' (atual)';
+                            carSelect.appendChild(opt);
+                            carSelect.value = String(b.car_id);
+                        }
+                    }
                     var driverInp = document.getElementById('cb-m-driver');
                     if (driverInp) { driverInp.value = b.driver || ''; }
                     var compQ = document.getElementById('cb-m-companion-q');
@@ -393,8 +419,13 @@
             if (mTime && !mTime.value) { mTime.value = '08:00'; }
             if (mADate) { mADate.value = ''; }
             if (mATime) { mATime.value = ''; }
+            if (carSelect) { carSelect.value = ''; }
+            editingId = null;
+            if (carHint) { carHint.hidden = true; carHint.textContent=''; }
 
             modal.hidden = false;
+            // Atualiza disponibilidade após abrir (timeout para garantir valores preenchidos)
+            setTimeout(updateCarAvailability, 120);
             document.body.classList.add('reservafrota-modal-open');
         }
 
@@ -419,6 +450,7 @@
             if (arriveBtn) { arriveBtn.hidden = true; arriveBtn.disabled = false; }
 
             if (modalForm) { modalForm.reset(); }
+            if (carHint) { carHint.hidden=true; }
         }
 
         function statusName(s) {
@@ -451,6 +483,83 @@
                 load();
             });
         });
+
+        // Botão "Reservar veículo" - abre modal de nova reserva
+        if (newBtn) {
+            newBtn.addEventListener('click', function () {
+                if (!canCreate) { return; }
+                var ym = currentYm();
+                var today = todayStr();
+                var targetDay;
+                if (today.substr(0,7) === ym) {
+                    targetDay = parseInt(today.substr(8,2),10);
+                } else {
+                    targetDay = 1;
+                }
+                var items = (latestByDay && latestByDay[targetDay]) ? latestByDay[targetDay] : [];
+                openDay(targetDay, items);
+            });
+        }
+
+        // Disponibilidade de veículos por horário
+        function updateCarAvailability() {
+            if (!carSelect || !availabilityUrl) { return; }
+            if (!mDate || !mTime || !mDate.value || !mTime.value) { return; }
+            var dep = mDate.value + 'T' + mTime.value;
+            var arr = '';
+            if (mADate && mADate.value) {
+                var at = (mATime && mATime.value) ? mATime.value : mTime.value;
+                arr = mADate.value + 'T' + at;
+            }
+            var url = availabilityUrl + '?departure=' + encodeURIComponent(dep);
+            if (arr) { url += '&arrival=' + encodeURIComponent(arr); }
+            if (editingId) { url += '&exclude=' + encodeURIComponent(editingId); }
+            fetch(url, { headers: {'X-Requested-With':'XMLHttpRequest'}, credentials:'same-origin'})
+                .then(function(r){ return r.ok ? r.json() : null; })
+                .then(function(data){
+                    if (!data || !Array.isArray(data.cars)) { return; }
+                    var blockedCount = 0;
+                    Array.prototype.forEach.call(carSelect.options, function(opt){
+                        if (!opt.value) { opt.disabled = false; opt.textContent = opt.textContent.replace(/ \(indisponível\)$/,'').replace(/ \(ocupado.*\)$/,''); return; }
+                        var cid = parseInt(opt.value,10);
+                        var info = null;
+                        for (var i=0;i<data.cars.length;i++){ if (data.cars[i].id===cid){ info=data.cars[i]; break; } }
+                        if (info && info.blocked) {
+                            opt.disabled = true;
+                            if (opt.textContent.indexOf('indisponível')===-1) { opt.textContent += ' (indisponível)'; }
+                            blockedCount++;
+                            if (carSelect.value==String(cid)) { carHint.hidden=false; carHint.textContent='Este veículo já está reservado neste horário. Escolha outro.'; carHint.className='reservafrota-car-availability is-error'; }
+                        } else {
+                            opt.disabled = false;
+                            opt.textContent = opt.textContent.replace(/ \(indisponível\)$/,'');
+                        }
+                    });
+                    if (carHint) {
+                        if (blockedCount>0) {
+                            var free = data.cars.length - blockedCount;
+                            carHint.hidden = false;
+                            carHint.textContent = free + ' veículo(s) disponível(is) neste horário' + (blockedCount ? ' • ' + blockedCount + ' ocupado(s)' : '');
+                            carHint.className = 'reservafrota-car-availability ' + (free===0 ? 'is-error' : 'is-ok');
+                            if (free===0) { carHint.textContent += ' — tente outro horário'; }
+                        } else {
+                            carHint.hidden = false;
+                            carHint.textContent = 'Todos os ' + data.cars.length + ' veículos disponíveis neste horário';
+                            carHint.className = 'reservafrota-car-availability is-ok';
+                        }
+                    }
+                })
+                .catch(function(){});
+        }
+        if (carSelect && mDate) {
+            [mDate, mTime, mADate, mATime].forEach(function(el){
+                if (el) { el.addEventListener('change', updateCarAvailability); el.addEventListener('input', updateCarAvailability); }
+            });
+            if (carSelect) { carSelect.addEventListener('change', function(){
+                if (carHint && carSelect.options[carSelect.selectedIndex] && carSelect.options[carSelect.selectedIndex].disabled) {
+                    carHint.hidden=false; carHint.textContent='Veículo indisponível neste horário'; carHint.className='reservafrota-car-availability is-error';
+                }
+            });}
+        }
 
         // Fechar o popup: botão X, clique no fundo (backdrop) ou tecla ESC.
         if (modal) {

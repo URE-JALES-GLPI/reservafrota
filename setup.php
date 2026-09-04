@@ -84,6 +84,7 @@ function plugin_init_reservafrota()
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/debug\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/ajax/bookinglist\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/ajax/carslot\.php$#', $auth);
+        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/ajax/availability\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/export\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/history\.php$#', $auth);
     }
