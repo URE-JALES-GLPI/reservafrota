@@ -36,6 +36,11 @@ if (!strtotime($departure)) {
 if ($arrival !== null && !strtotime($arrival)) {
     $arrival = null;
 }
+// Chegada deve ser posterior à saída
+if ($arrival !== null && strtotime($arrival) <= strtotime($departure)) {
+    echo json_encode(['cars' => [], 'error' => 'arrival_before_departure']);
+    exit;
+}
 
 $exclude = (int) ($_GET['exclude'] ?? 0);
 $cars = Booking::getCarAvailabilityForSlot($departure, $arrival, $exclude);

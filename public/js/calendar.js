@@ -406,6 +406,7 @@
                     
                     if (mADate) { mADate.value = b.arrival ? b.arrival.substr(0, 10) : ''; }
                     if (mATime) { mATime.value = b.arrival ? b.arrival.substr(11, 5) : ''; }
+                    if (mADate && mDate) { mADate.min = mDate.value; }
                     
                     var destInput = document.getElementById('cb-m-dest');
                     if (destInput) { destInput.value = b.destination || ''; }
@@ -425,7 +426,10 @@
                 mDate.value = dateStr;
             }
             if (mTime && !mTime.value) { mTime.value = '08:00'; }
-            if (mADate) { mADate.value = ''; }
+            if (mADate) {
+                mADate.min = mDate ? mDate.value : todayStr();
+                mADate.value = '';
+            }
             if (mATime) { mATime.value = ''; }
             if (carSelect) { carSelect.value = ''; carSelect.disabled = false; }
             editingId = null;
@@ -569,6 +573,27 @@
                 }
             });}
         }
+        // Mantém chegada sempre >= saída: atualiza min da chegada ao mudar saída
+        if (mDate && mADate) {
+            mDate.addEventListener('change', function(){
+                if (!mDate.value) { return; }
+                mADate.min = mDate.value;
+                if (mADate.value && mADate.value < mDate.value) {
+                    mADate.value = '';
+                    if (mATime) { mATime.value = ''; }
+                }
+                // Se já tem horário, revalida que chegada > saída
+                if (mADate.value && mTime && mTime.value) {
+                    var at = (mATime && mATime.value) ? mATime.value : mTime.value;
+                    var depDt = new Date(mDate.value + 'T' + mTime.value);
+                    var arrDt = new Date(mADate.value + 'T' + at);
+                    if (arrDt <= depDt) {
+                        mADate.value = '';
+                        if (mATime) { mATime.value = ''; }
+                    }
+                }
+            });
+        }
 
         // Fechar o popup: botão X, clique no fundo (backdrop) ou tecla ESC.
         if (modal) {
@@ -653,11 +678,27 @@
                 // Chegada: basta escolher o DIA. Se não informar a hora,
                 // herda a hora da saída — assim o intervalo (saída → chegada)
                 // é preenchido no calendário mesmo sem digitar horário.
+                // Validação: chegada deve ser posterior à saída e não pode ser no passado.
                 if (modalArr) {
                     if (mADate && mADate.value) {
                         var at = (mATime && mATime.value)
                             ? mATime.value
                             : (mTime && mTime.value ? mTime.value : '18:00');
+                        var todayA = todayStr();
+                        if (mADate.value < todayA) {
+                            alert('A data de chegada não pode ser anterior a hoje.');
+                            return;
+                        }
+                        if (mADate.value < mDate.value) {
+                            alert('A data de chegada não pode ser anterior à data de saída.');
+                            return;
+                        }
+                        var depDt = new Date(mDate.value + 'T' + mTime.value);
+                        var arrDt = new Date(mADate.value + 'T' + at);
+                        if (arrDt <= depDt) {
+                            alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
+                            return;
+                        }
                         modalArr.value = mADate.value + 'T' + at;
                     } else {
                         modalArr.value = '';

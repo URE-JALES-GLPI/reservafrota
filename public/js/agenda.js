@@ -213,6 +213,26 @@
         var cs = overlay.querySelector('.reservafrota-companion-count');
         if (cs && parseInt(b.has_companion, 10) === 1) { cbInitComp(cs); }
 
+        // Mantém chegada >= saída e bloqueia passado: define min e sincroniza.
+        (function(){
+            var depInput = overlay.querySelector('input[name="date_departure"]');
+            var arrInput = overlay.querySelector('input[name="date_arrival"]');
+            function todayStr2(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); }
+            if (depInput) {
+                var todayDT = todayStr2() + 'T00:00';
+                depInput.min = todayDT;
+                if (arrInput) {
+                    arrInput.min = depInput.value || todayDT;
+                    depInput.addEventListener('change', function(){
+                        arrInput.min = depInput.value || todayDT;
+                        if (arrInput.value && depInput.value && arrInput.value <= depInput.value) {
+                            arrInput.value = '';
+                        }
+                    });
+                }
+            }
+        })();
+
         function close() { overlay.remove(); document.body.classList.remove('reservafrota-modal-open'); }
         overlay.querySelectorAll('[data-x]').forEach(function (el) { el.addEventListener('click', close); });
 
@@ -240,8 +260,38 @@
             arriveBtn.addEventListener('click', function () { close(); openArriveModal(b.id, bform, csrf); });
         }
 
-        // Avisa que volta para Pendente ao salvar uma edição aprovada.
+        // Validação de datas: chegada deve ser depois da saída e não pode ser no passado.
+        // + aviso que volta para Pendente ao salvar uma edição aprovada.
         form.addEventListener('submit', function (e) {
+            var depInput = form.querySelector('input[name="date_departure"]');
+            var arrInput = form.querySelector('input[name="date_arrival"]');
+            if (depInput && depInput.value && arrInput && arrInput.value) {
+                var depTs = new Date(depInput.value).getTime();
+                var arrTs = new Date(arrInput.value).getTime();
+                if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
+                    e.preventDefault();
+                    alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
+                    return;
+                }
+            }
+            if (arrInput && arrInput.value) {
+                var todayStr = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
+                var arrDate = arrInput.value.substr(0,10);
+                if (arrDate < todayStr) {
+                    e.preventDefault();
+                    alert('A data de chegada não pode ser anterior a hoje.');
+                    return;
+                }
+            }
+            if (depInput && depInput.value) {
+                var todayStr2 = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
+                var depDate = depInput.value.substr(0,10);
+                if (depDate < todayStr2) {
+                    e.preventDefault();
+                    alert('Não é possível agendar em data passada.');
+                    return;
+                }
+            }
             if (status === 2) {
                 if (!window.confirm('Ao salvar, este agendamento aprovado voltará para Pendente e precisará ser aprovado novamente. Deseja continuar?')) {
                     e.preventDefault();
@@ -345,6 +395,63 @@
             if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
         });
     });
+
+    /* Validação genérica de datas para qualquer formulário de agendamento (booking.form.php) */
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!(form instanceof HTMLFormElement)) { return; }
+        var dep = form.querySelector('input[name="date_departure"]');
+        if (!dep) { return; }
+        // Evita duplicar validação de modais que já tratam chegada/saída manualmente
+        // (calendar modal usa IDs cb-m-date/cb-m-adate). Para esses, o handler dedicado
+        // em calendar.js já valida; aqui só cobre forms com inputs datetime-local.
+        if (form.id === 'reservafrota-modal-form') { return; }
+        var arr = form.querySelector('input[name="date_arrival"]');
+        // Chegada deve ser depois da saída
+        if (dep.value && arr && arr.value) {
+            var depTs = new Date(dep.value).getTime();
+            var arrTs = new Date(arr.value).getTime();
+            if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
+                e.preventDefault();
+                alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
+                return;
+            }
+        }
+        // Datas passadas bloqueadas (usa data local)
+        function todayStr3(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); }
+        var today = todayStr3();
+        if (dep.value && dep.value.substr(0,10) < today) {
+            e.preventDefault();
+            alert('Não é possível agendar em data anterior a hoje.');
+            return;
+        }
+        if (arr && arr.value && arr.value.substr(0,10) < today) {
+            e.preventDefault();
+            alert('A data de chegada não pode ser anterior a hoje.');
+            return;
+        }
+        if (arr && arr.value && dep.value && arr.value.substr(0,10) < dep.value.substr(0,10)) {
+            e.preventDefault();
+            alert('A data de chegada não pode ser anterior à data de saída.');
+            return;
+        }
+    });
+    // Define min dinâmico para inputs datetime-local de agendamento (booking.form.html.twig)
+    (function initBookingFormMins(){
+        function run(){
+            var dep = document.querySelector('form input[name="date_departure"]');
+            var arr = document.querySelector('form input[name="date_arrival"]');
+            if (!dep) { return; }
+            function todayDT(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+'T00:00'; }
+            var today = todayDT();
+            if (!dep.min || dep.min < today) { dep.min = today; }
+            if (arr) {
+                arr.min = dep.value || today;
+                dep.addEventListener('change', function(){ arr.min = dep.value || today; if (arr.value && arr.value <= dep.value) { arr.value = ''; } });
+            }
+        }
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', run); } else { run(); }
+    })();
 
     /* Linhas expansíveis (ex.: Retornos com observação). */
     document.addEventListener('click', function (e) {
