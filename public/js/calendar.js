@@ -587,34 +587,35 @@
                     alert('Informe o dia e a hora da saída.');
                     return;
                 }
-                // Chegada: basta escolher o DIA. Se não informar a hora,
-                // herda a hora da saída — assim o intervalo (saída → chegada)
-                // é preenchido no calendário mesmo sem digitar horário.
-                // Validação: chegada deve ser posterior à saída e não pode ser no passado.
+                // Chegada é obrigatória (ida e volta).
                 if (modalArr) {
-                    if (mADate && mADate.value) {
-                        var at = (mATime && mATime.value)
-                            ? mATime.value
-                            : (mTime && mTime.value ? mTime.value : '18:00');
-                        var todayA = todayStr();
-                        if (mADate.value < todayA) {
-                            alert('A data de chegada não pode ser anterior a hoje.');
-                            return;
-                        }
-                        if (mADate.value < mDate.value) {
-                            alert('A data de chegada não pode ser anterior à data de saída.');
-                            return;
-                        }
-                        var depDt = new Date(mDate.value + 'T' + mTime.value);
-                        var arrDt = new Date(mADate.value + 'T' + at);
-                        if (arrDt <= depDt) {
-                            alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
-                            return;
-                        }
-                        modalArr.value = mADate.value + 'T' + at;
-                    } else {
-                        modalArr.value = '';
+                    if (!mADate || !mADate.value) {
+                        alert('Informe o dia da chegada (volta).');
+                        if (mADate) { mADate.focus(); }
+                        return;
                     }
+                    if (!mATime || !mATime.value) {
+                        alert('Informe a hora da chegada (volta).');
+                        if (mATime) { mATime.focus(); }
+                        return;
+                    }
+                    var at = mATime.value;
+                    var todayA = todayStr();
+                    if (mADate.value < todayA) {
+                        alert('A data de chegada não pode ser anterior a hoje.');
+                        return;
+                    }
+                    if (mADate.value < mDate.value) {
+                        alert('A data de chegada não pode ser anterior à data de saída.');
+                        return;
+                    }
+                    var depDt = new Date(mDate.value + 'T' + mTime.value);
+                    var arrDt = new Date(mADate.value + 'T' + at);
+                    if (arrDt <= depDt) {
+                        alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
+                        return;
+                    }
+                    modalArr.value = mADate.value + 'T' + at;
                 }
 
                 // Mostra estado de envio

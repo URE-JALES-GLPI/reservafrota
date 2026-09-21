@@ -188,10 +188,10 @@
           + '<input type="hidden" name="companion" class="reservafrota-companion-value" value="' + esc2(b.companion || '') + '">'
           + '</div>'
           + '</div>'
-          + '<label class="form-label" style="margin-top:0.6rem;">Saída — dia e hora</label>'
+          + '<label class="form-label" style="margin-top:0.6rem;">Saída — dia e hora <span style="color:#d6336c;">*</span></label>'
           + '<input type="datetime-local" class="form-control" name="date_departure" value="' + dtLocal(b.departure) + '" step="1800" required>'
-          + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora (opcional)</label>'
-          + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="1800">'
+          + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora <span style="color:#d6336c;">*</span></label>'
+          + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="1800" required>'
           + '<label class="form-label" style="margin-top:0.6rem;">Destino</label>'
           + '<input type="text" class="form-control" name="destination" value="' + esc2(b.destination) + '">'
           + '<div class="reservafrota-confirm-actions">'
@@ -258,37 +258,37 @@
             arriveBtn.addEventListener('click', function () { close(); openArriveModal(b.id, bform, csrf); });
         }
 
-        // Validação de datas: chegada deve ser depois da saída e não pode ser no passado.
-        // + aviso que volta para Pendente ao salvar uma edição aprovada.
+        // Validação de datas: ida e volta são obrigatórias; chegada > saída; nada no passado.
         form.addEventListener('submit', function (e) {
             var depInput = form.querySelector('input[name="date_departure"]');
             var arrInput = form.querySelector('input[name="date_arrival"]');
-            if (depInput && depInput.value && arrInput && arrInput.value) {
-                var depTs = new Date(depInput.value).getTime();
-                var arrTs = new Date(arrInput.value).getTime();
-                if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
-                    e.preventDefault();
-                    alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
-                    return;
-                }
+            if (!depInput || !depInput.value) {
+                e.preventDefault();
+                alert('Informe a data e hora de saída (ida).');
+                return;
             }
-            if (arrInput && arrInput.value) {
-                var todayStr = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
-                var arrDate = arrInput.value.substr(0,10);
-                if (arrDate < todayStr) {
-                    e.preventDefault();
-                    alert('A data de chegada não pode ser anterior a hoje.');
-                    return;
-                }
+            if (!arrInput || !arrInput.value) {
+                e.preventDefault();
+                alert('Informe a data e hora de chegada (volta).');
+                return;
             }
-            if (depInput && depInput.value) {
-                var todayStr2 = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
-                var depDate = depInput.value.substr(0,10);
-                if (depDate < todayStr2) {
-                    e.preventDefault();
-                    alert('Não é possível agendar em data passada.');
-                    return;
-                }
+            var depTs = new Date(depInput.value).getTime();
+            var arrTs = new Date(arrInput.value).getTime();
+            if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
+                e.preventDefault();
+                alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
+                return;
+            }
+            var todayStr = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
+            if (arrInput.value.substr(0,10) < todayStr) {
+                e.preventDefault();
+                alert('A data de chegada não pode ser anterior a hoje.');
+                return;
+            }
+            if (depInput.value.substr(0,10) < todayStr) {
+                e.preventDefault();
+                alert('Não é possível agendar em data passada.');
+                return;
             }
             if (status === 2) {
                 if (!window.confirm('Ao salvar, este agendamento aprovado voltará para Pendente e precisará ser aprovado novamente. Deseja continuar?')) {
@@ -405,8 +405,19 @@
         // em calendar.js já valida; aqui só cobre forms com inputs datetime-local.
         if (form.id === 'reservafrota-modal-form') { return; }
         var arr = form.querySelector('input[name="date_arrival"]');
+        // Ida e volta são obrigatórias
+        if (!dep.value) {
+            e.preventDefault();
+            alert('Informe a data e hora de saída (ida).');
+            return;
+        }
+        if (!arr || !arr.value) {
+            e.preventDefault();
+            alert('Informe a data e hora de chegada (volta).');
+            return;
+        }
         // Chegada deve ser depois da saída
-        if (dep.value && arr && arr.value) {
+        if (dep.value && arr.value) {
             var depTs = new Date(dep.value).getTime();
             var arrTs = new Date(arr.value).getTime();
             if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
@@ -418,17 +429,17 @@
         // Datas passadas bloqueadas (usa data local)
         function todayStr3(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); }
         var today = todayStr3();
-        if (dep.value && dep.value.substr(0,10) < today) {
+        if (dep.value.substr(0,10) < today) {
             e.preventDefault();
             alert('Não é possível agendar em data anterior a hoje.');
             return;
         }
-        if (arr && arr.value && arr.value.substr(0,10) < today) {
+        if (arr.value.substr(0,10) < today) {
             e.preventDefault();
             alert('A data de chegada não pode ser anterior a hoje.');
             return;
         }
-        if (arr && arr.value && dep.value && arr.value.substr(0,10) < dep.value.substr(0,10)) {
+        if (arr.value.substr(0,10) < dep.value.substr(0,10)) {
             e.preventDefault();
             alert('A data de chegada não pode ser anterior à data de saída.');
             return;

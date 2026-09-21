@@ -115,14 +115,18 @@ class Booking extends CommonDBTM
             $input['users_id'] = (int) Session::getLoginUserID();
         }
 
-        // Datas.
+        // Datas — ambas obrigatórias (ida e volta).
         $input['date_departure'] = self::normalizeDatetime($input['date_departure'] ?? null);
-        $input['date_arrival']   = self::normalizeDatetime($input['date_arrival'] ?? null); // opcional
+        $input['date_arrival']   = self::normalizeDatetime($input['date_arrival'] ?? null);
 
         // Validações obrigatórias. O carro NÃO é mais escolhido pelo
         // solicitante — quem designa o carro é o gestor, ao aprovar.
         if (empty($input['date_departure'])) {
-            Session::addMessageAfterRedirect(__('Informe a data e hora de saída.', 'reservafrota'), false, ERROR);
+            Session::addMessageAfterRedirect(__('Informe a data e hora de saída (ida).', 'reservafrota'), false, ERROR);
+            return false;
+        }
+        if (empty($input['date_arrival'])) {
+            Session::addMessageAfterRedirect(__('Informe a data e hora de chegada (volta).', 'reservafrota'), false, ERROR);
             return false;
         }
 
@@ -132,20 +136,17 @@ class Booking extends CommonDBTM
             Session::addMessageAfterRedirect(__('Não é possível agendar em uma data anterior a hoje.', 'reservafrota'), false, ERROR);
             return false;
         }
+        if (!self::canApprove() && substr($input['date_arrival'], 0, 10) < date('Y-m-d')) {
+            Session::addMessageAfterRedirect(__('A data de chegada não pode ser anterior a hoje.', 'reservafrota'), false, ERROR);
+            return false;
+        }
 
-        // Chegada, se informada, não pode ser anterior ou igual à saída.
-        if (!empty($input['date_arrival'])) {
-            $depTs = strtotime($input['date_departure']);
-            $arrTs = strtotime($input['date_arrival']);
-            if ($arrTs === false || $depTs === false || $arrTs <= $depTs) {
-                Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
-                return false;
-            }
-            // Chegada também não pode ser no passado para solicitante não-gestor.
-            if (!self::canApprove() && substr($input['date_arrival'], 0, 10) < date('Y-m-d')) {
-                Session::addMessageAfterRedirect(__('A data de chegada não pode ser anterior a hoje.', 'reservafrota'), false, ERROR);
-                return false;
-            }
+        // Chegada deve ser posterior à saída.
+        $depTs = strtotime($input['date_departure']);
+        $arrTs = strtotime($input['date_arrival']);
+        if ($arrTs === false || $depTs === false || $arrTs <= $depTs) {
+            Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
+            return false;
         }
 
         // Novo agendamento sempre começa pendente.
@@ -233,28 +234,39 @@ class Booking extends CommonDBTM
             $input['date_arrival'] = self::normalizeDatetime($input['date_arrival']);
         }
 
-        // Validação de datas na edição (chegada deve ser depois da saída; passado bloqueado para não-gestor).
+        // Validação de datas na edição — ida e volta continuam obrigatórias.
         // Determina valores finais (considera o que está sendo alterado + o que já existe no BD).
         $finalDep = $input['date_departure'] ?? ($this->fields['date_departure'] ?? null);
         $finalArr = array_key_exists('date_arrival', $input) ? $input['date_arrival'] : ($this->fields['date_arrival'] ?? null);
 
-        if (isset($input['date_departure']) && !empty($finalDep)) {
-            if (!self::canApprove() && substr($finalDep, 0, 10) < date('Y-m-d')) {
-                Session::addMessageAfterRedirect(__('Não é possível agendar em uma data anterior a hoje.', 'reservafrota'), false, ERROR);
-                return false;
-            }
+        // Se a edição está alterando data, não pode deixar nenhuma vazia.
+        if (array_key_exists('date_departure', $input) && empty($finalDep)) {
+            Session::addMessageAfterRedirect(__('Informe a data e hora de saída (ida).', 'reservafrota'), false, ERROR);
+            return false;
+        }
+        if (array_key_exists('date_arrival', $input) && empty($finalArr)) {
+            Session::addMessageAfterRedirect(__('Informe a data e hora de chegada (volta).', 'reservafrota'), false, ERROR);
+            return false;
+        }
+        // Se o registro já existe sem chegada (legado), exige preencher agora em qualquer edição de data.
+        if ((isset($input['date_departure']) || array_key_exists('date_arrival', $input)) && (empty($finalDep) || empty($finalArr))) {
+            Session::addMessageAfterRedirect(__('Informe a data e hora de saída e de chegada (volta).', 'reservafrota'), false, ERROR);
+            return false;
+        }
+
+        if (!empty($finalDep) && !self::canApprove() && substr($finalDep, 0, 10) < date('Y-m-d')) {
+            Session::addMessageAfterRedirect(__('Não é possível agendar em uma data anterior a hoje.', 'reservafrota'), false, ERROR);
+            return false;
+        }
+        if (!empty($finalArr) && !self::canApprove() && substr($finalArr, 0, 10) < date('Y-m-d')) {
+            Session::addMessageAfterRedirect(__('A data de chegada não pode ser anterior a hoje.', 'reservafrota'), false, ERROR);
+            return false;
         }
         if (!empty($finalArr) && !empty($finalDep)) {
             $depTs = strtotime($finalDep);
             $arrTs = strtotime($finalArr);
             if ($arrTs !== false && $depTs !== false && $arrTs <= $depTs) {
                 Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
-                return false;
-            }
-        }
-        if (array_key_exists('date_arrival', $input) && !empty($finalArr)) {
-            if (!self::canApprove() && substr($finalArr, 0, 10) < date('Y-m-d')) {
-                Session::addMessageAfterRedirect(__('A data de chegada não pode ser anterior a hoje.', 'reservafrota'), false, ERROR);
                 return false;
             }
         }
