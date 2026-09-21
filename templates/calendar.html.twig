@@ -43,7 +43,7 @@
         {% endif %}
     </div>
     <div class="reservafrota-cal-hint">
-        <i class="ti ti-info-circle"></i> {{ __('Clique em qualquer dia para ver reservas e solicitar um veículo. Veículos em manutenção (inativos) não aparecem como disponíveis.', 'reservafrota') }}
+        <i class="ti ti-info-circle"></i> {{ __('Clique em qualquer dia para ver reservas e solicitar um veículo. O gestor escolhe o carro ao aprovar.', 'reservafrota') }}
     </div>
 
     {# ---------- Legenda de cores ---------- #}
@@ -88,20 +88,10 @@
                     <div id="reservafrota-modal-existing" class="reservafrota-day-list"></div>
                 </div>
 
-                {# Coluna 2: formulário de novo agendamento #}
+                {# Coluna 2: formulário de novo agendamento.
+                   O solicitante NÃO escolhe o veículo — o gestor designa o carro ao aprovar. #}
                 <div class="reservafrota-modal__col-form">
                 {% if can_create %}
-                    {% if cars is empty %}
-                        <div class="reservafrota-empty">
-                            <i class="ti ti-car-off"></i>
-                            <p>{{ __('Nenhum veículo cadastrado ou ativo.', 'reservafrota') }}</p>
-                            {% if can_manage_cars %}
-                                <a href="{{ web_dir }}/front/car.form.php" class="reservafrota-export-btn" style="margin-top:0.6rem;"><i class="ti ti-plus"></i> {{ __('Cadastrar veículo', 'reservafrota') }}</a>
-                            {% else %}
-                                <p class="reservafrota-hint">{{ __('Solicite ao administrador que cadastre veículos ativos para a frota.', 'reservafrota') }}</p>
-                            {% endif %}
-                        </div>
-                    {% else %}
                         <form method="post" action="{{ web_dir }}/front/booking.form.php" class="reservafrota-form" id="reservafrota-modal-form">
                             <input type="hidden" name="add" value="1" id="cb-m-action-add">
                             <input type="hidden" name="update" value="1" id="cb-m-action-update" disabled>
@@ -115,18 +105,9 @@
                             <input type="hidden" name="date_arrival" id="cb-m-arr">
 
                             <h4 class="reservafrota-modal__formtitle" id="cb-m-form-title"><i class="ti ti-calendar-plus"></i> {{ __('Novo agendamento', 'reservafrota') }}</h4>
-                            <p class="reservafrota-hint" id="cb-m-hint">{{ __('Escolha o veículo desejado, motorista e horário. Veículos em manutenção não aparecem; datas passadas ficam indisponíveis.', 'reservafrota') }}</p>
+                            <p class="reservafrota-hint" id="cb-m-hint">{{ __('Informe motorista e horário. O veículo será escolhido pelo gestor ao aprovar; datas passadas ficam indisponíveis.', 'reservafrota') }}</p>
 
-                            <label class="form-label" for="cb-m-car">1. {{ __('Veículo', 'reservafrota') }} <span class="reservafrota-optional" style="color:#059669;">{{ __('* escolha entre os disponíveis', 'reservafrota') }}</span></label>
-                            <select class="form-select" id="cb-m-car" name="plugin_reservafrota_cars_id" required>
-                                <option value="">{{ __('— Selecione o veículo —', 'reservafrota') }}</option>
-                                {% for id, car in cars %}
-                                    <option value="{{ id }}">{{ car.name }}{% if car.plate %} — {{ car.plate }}{% endif %}{% if car.model_year %} ({{ car.model_year }}){% endif %}</option>
-                                {% endfor %}
-                            </select>
-                            <div id="cb-m-car-availability" class="reservafrota-car-availability" hidden></div>
-
-                            <label class="form-label" for="cb-m-driver">2. {{ __('Motorista', 'reservafrota') }}</label>
+                            <label class="form-label" for="cb-m-driver">1. {{ __('Motorista', 'reservafrota') }}</label>
                             <select class="form-select" id="cb-m-driver" name="driver">
                                 <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
                                 {% for uname in users %}
@@ -138,7 +119,7 @@
                                 <input type="hidden" name="has_companion" value="0">
                                 <input class="form-check-input reservafrota-companion-q" type="checkbox" role="switch"
                                        id="cb-m-companion-q" name="has_companion" value="1" data-target="cb-m-companion-wrap">
-                                <label class="form-check-label" for="cb-m-companion-q">3. {{ __('Acompanhante', 'reservafrota') }}</label>
+                                <label class="form-check-label" for="cb-m-companion-q">2. {{ __('Acompanhante', 'reservafrota') }}</label>
                             </div>
                             <div id="cb-m-companion-wrap" class="reservafrota-companion-wrap" hidden>
                                 <div class="reservafrota-companion-block">
@@ -154,19 +135,19 @@
                                 </div>
                             </div>
 
-                            <label class="form-label">4. {{ __('Saída — dia e hora', 'reservafrota') }}</label>
+                            <label class="form-label">3. {{ __('Saída — dia e hora', 'reservafrota') }}</label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-date" aria-label="{{ __('Dia da saída', 'reservafrota') }}" required>
                                 <input type="time" class="form-control" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" value="08:00" step="1800" required>
                             </div>
 
-                            <label class="form-label">5. {{ __('Chegada — dia e hora', 'reservafrota') }} <span class="reservafrota-optional">{{ __('(opcional — preenche o intervalo até a volta)', 'reservafrota') }}</span></label>
+                            <label class="form-label">4. {{ __('Chegada — dia e hora', 'reservafrota') }} <span class="reservafrota-optional">{{ __('(opcional — preenche o intervalo até a volta)', 'reservafrota') }}</span></label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-adate" aria-label="{{ __('Dia da chegada', 'reservafrota') }}">
                                 <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="1800">
                             </div>
 
-                            <label class="form-label" for="cb-m-dest">6. {{ __('Destino', 'reservafrota') }}</label>
+                            <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }}</label>
                             <input type="text" class="form-control" id="cb-m-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}">
 
                             <div class="reservafrota-formactions">
@@ -186,9 +167,8 @@
                                     <i class="ti ti-send"></i> {{ __('Solicitar agendamento', 'reservafrota') }}
                                 </button>
                             </div>
-                            <p class="reservafrota-hint">{{ __('O pedido fica pendente até a aprovação do administrador.', 'reservafrota') }}</p>
+                            <p class="reservafrota-hint">{{ __('O pedido fica pendente até a aprovação do gestor, que escolherá o veículo.', 'reservafrota') }}</p>
                         </form>
-                    {% endif %}
                 {% else %}
                     <div class="reservafrota-empty">
                         <i class="ti ti-lock"></i>

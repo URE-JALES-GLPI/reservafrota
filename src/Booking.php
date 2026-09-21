@@ -160,11 +160,14 @@ class Booking extends CommonDBTM
             $input['name'] = $who . ' — ' . Html::convDateTime($input['date_departure']);
         }
 
-        // Validação de veículo: obrigatório para usuário comum, verifica manutenção e conflito
+        // Veículo: o solicitante NÃO escolhe — o carro é designado pelo
+        // gestor/aprovador no momento da aprovação. Qualquer valor enviado
+        // por quem não pode aprovar é descartado (evita burla via POST).
+        // Para o gestor, o carro na criação é opcional (pode designar depois).
         $carId = (int) ($input['plugin_reservafrota_cars_id'] ?? 0);
-        if ($carId === 0 && !self::canApprove()) {
-            Session::addMessageAfterRedirect(__('Selecione o veículo que deseja reservar.', 'reservafrota'), false, ERROR);
-            return false;
+        if (!self::canApprove()) {
+            $carId = 0;
+            $input['plugin_reservafrota_cars_id'] = 0;
         }
         if ($carId > 0) {
             $car = new Car();
@@ -766,7 +769,7 @@ class Booking extends CommonDBTM
             $sector = ($row['sector'] !== null && $row['sector'] !== '')
                 ? $row['sector'] : __('Sem setor', 'reservafrota');
             $car = ($row['car'] !== null && $row['car'] !== '')
-                ? $row['car'] : __('Sem carro', 'reservafrota');
+                ? $row['car'] : __('A designar', 'reservafrota');
 
             $by_sector[$sector] = ($by_sector[$sector] ?? 0) + 1;
             $by_car[$car]       = ($by_car[$car] ?? 0) + 1;
@@ -872,7 +875,7 @@ class Booking extends CommonDBTM
 
             $base = [
                 'id'           => (int) $row['id'],
-                'car'          => $row['car'] ?: __('Sem carro', 'reservafrota'),
+                'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'user'         => $name,
                 'sector'       => $row['sector'] ?: __('Sem setor', 'reservafrota'),
                 'driver'       => $row['driver'] ?? '',
@@ -980,7 +983,7 @@ class Booking extends CommonDBTM
                 'id'           => (int) $row['id'],
                 'date'         => substr($dep, 0, 10),
                 'month'        => (int) substr($dep, 5, 2),
-                'car'          => $row['car'] ?: __('Sem carro', 'reservafrota'),
+                'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'user'         => $name,
                 'sector'       => $row['sector'] ?: __('Sem setor', 'reservafrota'),
                 'driver'       => $row['driver'] ?? '',
@@ -1056,7 +1059,7 @@ class Booking extends CommonDBTM
             if ($nm === '') { $nm = $row['user_login'] ?? ''; }
             $byId[(int) $row['id']] = [
                 'id'           => (int) $row['id'],
-                'car'          => $row['car'] ?: __('Sem carro', 'reservafrota'),
+                'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'user'         => $nm,
                 'driver'       => $row['driver'] ?? '',
                 'has_companion'=> (int) ($row['has_companion'] ?? 0),
@@ -1087,7 +1090,7 @@ class Booking extends CommonDBTM
             $item = [
                 'id'           => (int) $row['id'],
                 'date'         => substr($dep, 0, 10),
-                'car'          => $row['car'] ?: __('Sem carro', 'reservafrota'),
+                'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'car_id'       => (int) $row['car_id'],
                 'user'         => $name,
                 'sector'       => $row['sector'] ?: __('Sem setor', 'reservafrota'),
@@ -1205,7 +1208,7 @@ class Booking extends CommonDBTM
                 'driver'       => $row['driver'] ?? '',
                 'has_companion'=> (int) ($row['has_companion'] ?? 0),
                 'companion'    => $row['companion'] ?? '',
-                'car'          => $row['car'] ?: __('Sem carro', 'reservafrota'),
+                'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'status'       => $st,
                 'status_label' => self::getStatusName($st),
                 'returned_at'  => $row['date_returned'],

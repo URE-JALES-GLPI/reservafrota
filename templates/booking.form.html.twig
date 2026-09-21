@@ -34,14 +34,13 @@
         <div class="row">
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-car">{{ __('Carro', 'reservafrota') }}</label>
-                <select class="form-select" id="bk-car" name="plugin_reservafrota_cars_id" required {{ is_new ? '' : 'disabled' }} title="{{ is_new ? '' : __('O carro não pode ser alterado.', 'reservafrota') }}">
-                    <option value="">{{ __('Selecione…', 'reservafrota') }}</option>
-                    {% for id, car in cars %}
-                        <option value="{{ id }}" {{ item.fields['plugin_reservafrota_cars_id'] == id ? 'selected' : '' }}>
-                            {{ car.name }}{% if car.plate %} · {{ car.plate }}{% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
+                {% if is_new %}
+                    {# O solicitante não escolhe o veículo — o gestor designa ao aprovar. #}
+                    <div class="alert alert-info mb-0"><i class="ti ti-info-circle"></i> {{ __('O veículo será escolhido pelo gestor ao aprovar a viagem.', 'reservafrota') }}</div>
+                {% else %}
+                    {% set carrow2 = cars[item.fields['plugin_reservafrota_cars_id']] %}
+                    <input type="text" class="form-control" id="bk-car" value="{{ carrow2 ? carrow2.name ~ (carrow2.plate ? ' · ' ~ carrow2.plate : '') : __('A designar pelo gestor', 'reservafrota') }}" disabled title="{{ __('O carro é definido pelo gestor na aprovação.', 'reservafrota') }}">
+                {% endif %}
             </div>
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-dest">{{ __('Destino', 'reservafrota') }}</label>
@@ -160,7 +159,7 @@
                      {% if item.fields['has_companion'] %}{% set ccount = item.fields['companion'] ? item.fields['companion']|split(',')|length : 1 %}<span class="text-muted"> · {{ ccount }} {{ __('acompanhante(s)', 'reservafrota') }}{% if item.fields['companion'] %}: {{ item.fields['companion'] }}{% endif %}</span>{% endif %}</div>
                 <div><span class="lbl"><i class="ti ti-car"></i> {{ __('Carro', 'reservafrota') }}</span>
                      {% set carrow = cars[item.fields['plugin_reservafrota_cars_id']] %}
-                     <strong>{{ carrow ? carrow.name ~ (carrow.plate ? ' · ' ~ carrow.plate : '') : '—' }}</strong></div>
+                     <strong>{{ carrow ? carrow.name ~ (carrow.plate ? ' · ' ~ carrow.plate : '') : __('A designar', 'reservafrota') }}</strong></div>
                 <div><span class="lbl"><i class="ti ti-map-pin"></i> {{ __('Destino', 'reservafrota') }}</span>
                      <strong>{{ item.fields['destination'] ?: '—' }}</strong></div>
                 <div><span class="lbl"><i class="ti ti-logout"></i> {{ __('Saída', 'reservafrota') }}</span>
@@ -175,12 +174,29 @@
                 <input type="hidden" name="id" value="{{ item.fields['id'] }}">
                 <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
 
+                <label class="form-label" for="bk-approve-car"><i class="ti ti-car"></i> {{ __('Escolha o carro para esta viagem', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                <select class="form-select" id="bk-approve-car" name="plugin_reservafrota_cars_id" required>
+                    <option value="">{{ __('— Selecione o veículo —', 'reservafrota') }}</option>
+                    {% for id, car in cars %}
+                        <option value="{{ id }}" {{ item.fields['plugin_reservafrota_cars_id'] == id ? 'selected' : '' }}>
+                            {{ car.name }}{% if car.plate %} · {{ car.plate }}{% endif %}{% if car.model_year %} ({{ car.model_year }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="reservafrota-hint">{{ __('Somente veículos ativos são listados. Verifique no calendário se o carro já está reservado neste horário.', 'reservafrota') }}</p>
+
                 <label class="form-label" for="bk-cv">{{ __('Comentário (opcional)', 'reservafrota') }}</label>
                 <textarea class="form-control" id="bk-cv" name="comment_validation" rows="2">{{ item.fields['comment_validation'] }}</textarea>
 
-          
-                   
-                
+                <div class="reservafrota-formactions" style="margin-top:0.8rem;">
+                    <button type="submit" name="approve" value="1" class="reservafrota-btn-approve">
+                        <i class="ti ti-check"></i> {{ __('Aprovar com este carro', 'reservafrota') }}
+                    </button>
+                    <button type="submit" name="reject" value="1" class="reservafrota-back" style="color:#c92a2a;border-color:#f3b6b6;"
+                            onclick="return confirm('{{ __('Recusar este agendamento?', 'reservafrota') }}');">
+                        <i class="ti ti-x"></i> {{ __('Recusar', 'reservafrota') }}
+                    </button>
+                </div>
             </form>
         </div>
     {% endif %}

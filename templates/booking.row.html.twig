@@ -7,7 +7,7 @@
      data-can-approve="{{ can_approve ? '1' : '0' }}"
      data-can-cancel="{{ b.can_cancel ? '1' : '0' }}"
      data-cb-edit
-     data-booking="{{ {'id': b.id, 'car': b.car, 'driver': b.driver, 'has_companion': b.has_companion, 'companion': b.companion, 'departure': b.departure, 'arrival': b.arrival, 'destination': b.destination, 'status': b.status, 'can_cancel': b.can_cancel, 'returned_at': b.returned_at}|json_encode|e('html_attr') }}"
+     data-booking="{{ {'id': b.id, 'car': b.car, 'car_id': b.car_id, 'driver': b.driver, 'has_companion': b.has_companion, 'companion': b.companion, 'departure': b.departure, 'arrival': b.arrival, 'destination': b.destination, 'status': b.status, 'can_cancel': b.can_cancel, 'returned_at': b.returned_at}|json_encode|e('html_attr') }}"
      {% if b.status in [1, 2] %}draggable="true"{% endif %}
      style="cursor:pointer;">
     <div class="reservafrota-blist-item__date">
@@ -15,7 +15,11 @@
         <span class="reservafrota-blist-time">{{ b.departure|slice(11,5) }}{% if b.arrival %} &rarr; {{ b.arrival|slice(11,5) }}{% endif %}</span>
     </div>
     <div class="reservafrota-blist-item__body">
-        <strong>{{ b.car }}</strong>
+        {% if b.car_id == 0 %}
+            <strong class="text-muted"><i class="ti ti-car"></i> {{ __('A designar pelo gestor', 'reservafrota') }}</strong>
+        {% else %}
+            <strong>{{ b.car }}</strong>
+        {% endif %}
         <div class="reservafrota-blist-meta"><i class="ti ti-user"></i> {{ b.user }} &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> {{ b.driver ?: '—' }}{% if b.has_companion %}{% set ccount = b.companion ? b.companion|split(',')|length : 1 %} <span class="text-muted" title="{{ b.companion }}">+ {{ ccount }} {{ __('acompanhante(s)', 'reservafrota') }}</span>{% endif %}</div>
         {% if b.destination %}<div class="reservafrota-blist-meta"><i class="ti ti-map-pin"></i> {{ b.destination }}</div>{% endif %}
         {% if b.returned_at %}<div class="reservafrota-blist-meta ok"><i class="ti ti-circle-check"></i> {{ __('Concluído em', 'reservafrota') }} {{ b.returned_at|slice(8,2) }}/{{ b.returned_at|slice(5,2) }} {{ b.returned_at|slice(11,5) }}</div>{% endif %}

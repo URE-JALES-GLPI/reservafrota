@@ -64,9 +64,6 @@
 
         var grid = document.getElementById('reservafrota-grid');
         var newBtn = document.getElementById('reservafrota-new-booking-btn');
-        var carSelect = document.getElementById('cb-m-car');
-        var carHint = document.getElementById('cb-m-car-availability');
-        var availabilityUrl = root.dataset.availability || (root.dataset.ajaxMonth ? root.dataset.ajaxMonth.replace('month.php','availability.php') : '');
         var latestByDay = {};
         var titleEl = document.getElementById('reservafrota-cal-title');
         var modal = document.getElementById('reservafrota-day-modal');
@@ -87,7 +84,6 @@
         var arriveBtn = document.getElementById('cb-m-arrive');
         var confirmBtn = document.getElementById('cb-m-confirm');
         var editingStatus = null;
-        var editingId = null; // status do agendamento em edição (null = criando um novo)
 
         // Tooltip flutuante (criado uma vez).
         var tip = document.createElement('div');
@@ -317,7 +313,7 @@
                     + '<span class="reservafrota-chip status-' + (b.conflict ? 'conflict' : statusName(b.status)) + '">'
                     + (b.conflict ? 'Conflito' : esc(b.status_label)) + '</span>'
                     + (hasObs ? '<span class="reservafrota-obsdot" title="Tem observação"></span> ' : '')
-                    + '<strong>' + esc(b.car) + '</strong></div>'
+                    + '<strong>' + esc(b.car_id ? b.car : (b.car && b.car !== 'A designar' ? b.car : 'A designar pelo gestor')) + '</strong></div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(b.user)
                     + ' &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—') + '</div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + esc(period)
@@ -372,23 +368,8 @@
                         arriveBtn.setAttribute('data-id', b.id);
                     }
 
-                    // Preenche os campos (o carro não é mais escolhido aqui — é
-                    // designado pelo gestor ao aprovar; ver "Confirmar" acima).
-                    if (carSelect) {
-                        // Store editing id for availability check (exclude self)
-                        editingId = b.id;
-                        carSelect.value = b.car_id ? String(b.car_id) : '';
-                        // No agendamento o veiculo nao pode ser alterado na edicao - desabilita para evitar confusao
-                        carSelect.disabled = true;
-                        // if car no longer active, add option
-                        if (b.car_id && !Array.from(carSelect.options).some(function(o){ return o.value==String(b.car_id); })) {
-                            var opt = document.createElement('option');
-                            opt.value = String(b.car_id);
-                            opt.textContent = b.car + ' (atual)';
-                            carSelect.appendChild(opt);
-                            carSelect.value = String(b.car_id);
-                        }
-                    }
+                    // Preenche os campos. O carro não é escolhido aqui — é
+                    // designado pelo gestor ao aprovar (botão "Confirmar").
                     var driverInp = document.getElementById('cb-m-driver');
                     if (driverInp) { driverInp.value = b.driver || ''; }
                     var compQ = document.getElementById('cb-m-companion-q');
@@ -431,13 +412,8 @@
                 mADate.value = '';
             }
             if (mATime) { mATime.value = ''; }
-            if (carSelect) { carSelect.value = ''; carSelect.disabled = false; }
-            editingId = null;
-            if (carHint) { carHint.hidden = true; carHint.textContent=''; }
 
             modal.hidden = false;
-            // Atualiza disponibilidade após abrir (timeout para garantir valores preenchidos)
-            setTimeout(updateCarAvailability, 120);
             document.body.classList.add('reservafrota-modal-open');
         }
 
@@ -455,15 +431,12 @@
             document.getElementById('cb-m-submit').innerHTML = '<i class="ti ti-send"></i> Solicitar agendamento';
 
             editingStatus = null;
-            editingId = null;
-            if (carSelect) { carSelect.disabled = false; }
             if (submitBtn) { submitBtn.disabled = false; }
             if (cancelBtn) { cancelBtn.hidden = true; cancelBtn.disabled = false; }
             if (confirmBtn) { confirmBtn.hidden = true; confirmBtn.disabled = false; }
             if (arriveBtn) { arriveBtn.hidden = true; arriveBtn.disabled = false; }
 
             if (modalForm) { modalForm.reset(); }
-            if (carHint) { carHint.hidden=true; }
         }
 
         function statusName(s) {
@@ -514,65 +487,6 @@
             });
         }
 
-        // Disponibilidade de veículos por horário
-        function updateCarAvailability() {
-            if (!carSelect || !availabilityUrl) { return; }
-            if (!mDate || !mTime || !mDate.value || !mTime.value) { return; }
-            var dep = mDate.value + 'T' + mTime.value;
-            var arr = '';
-            if (mADate && mADate.value) {
-                var at = (mATime && mATime.value) ? mATime.value : mTime.value;
-                arr = mADate.value + 'T' + at;
-            }
-            var url = availabilityUrl + '?departure=' + encodeURIComponent(dep);
-            if (arr) { url += '&arrival=' + encodeURIComponent(arr); }
-            if (editingId) { url += '&exclude=' + encodeURIComponent(editingId); }
-            fetch(url, { headers: {'X-Requested-With':'XMLHttpRequest'}, credentials:'same-origin'})
-                .then(function(r){ return r.ok ? r.json() : null; })
-                .then(function(data){
-                    if (!data || !Array.isArray(data.cars)) { return; }
-                    var blockedCount = 0;
-                    Array.prototype.forEach.call(carSelect.options, function(opt){
-                        if (!opt.value) { opt.disabled = false; opt.textContent = opt.textContent.replace(/ \(indisponível\)$/,'').replace(/ \(ocupado.*\)$/,''); return; }
-                        var cid = parseInt(opt.value,10);
-                        var info = null;
-                        for (var i=0;i<data.cars.length;i++){ if (data.cars[i].id===cid){ info=data.cars[i]; break; } }
-                        if (info && info.blocked) {
-                            opt.disabled = true;
-                            if (opt.textContent.indexOf('indisponível')===-1) { opt.textContent += ' (indisponível)'; }
-                            blockedCount++;
-                            if (carSelect.value==String(cid)) { carHint.hidden=false; carHint.textContent='Este veículo já está reservado neste horário. Escolha outro.'; carHint.className='reservafrota-car-availability is-error'; }
-                        } else {
-                            opt.disabled = false;
-                            opt.textContent = opt.textContent.replace(/ \(indisponível\)$/,'');
-                        }
-                    });
-                    if (carHint) {
-                        if (blockedCount>0) {
-                            var free = data.cars.length - blockedCount;
-                            carHint.hidden = false;
-                            carHint.textContent = free + ' veículo(s) disponível(is) neste horário' + (blockedCount ? ' • ' + blockedCount + ' ocupado(s)' : '');
-                            carHint.className = 'reservafrota-car-availability ' + (free===0 ? 'is-error' : 'is-ok');
-                            if (free===0) { carHint.textContent += ' — tente outro horário'; }
-                        } else {
-                            carHint.hidden = false;
-                            carHint.textContent = 'Todos os ' + data.cars.length + ' veículos disponíveis neste horário';
-                            carHint.className = 'reservafrota-car-availability is-ok';
-                        }
-                    }
-                })
-                .catch(function(){});
-        }
-        if (carSelect && mDate) {
-            [mDate, mTime, mADate, mATime].forEach(function(el){
-                if (el) { el.addEventListener('change', updateCarAvailability); el.addEventListener('input', updateCarAvailability); }
-            });
-            if (carSelect) { carSelect.addEventListener('change', function(){
-                if (carHint && carSelect.options[carSelect.selectedIndex] && carSelect.options[carSelect.selectedIndex].disabled) {
-                    carHint.hidden=false; carHint.textContent='Veículo indisponível neste horário'; carHint.className='reservafrota-car-availability is-error';
-                }
-            });}
-        }
         // Mantém chegada sempre >= saída: atualiza min da chegada ao mudar saída
         if (mDate && mADate) {
             mDate.addEventListener('change', function(){
@@ -658,11 +572,6 @@
                     if (!ok) { return; }
                 }
 
-                if (carSelect && carSelect.hasAttribute('required') && !carSelect.value) {
-                    alert('Selecione o veículo que deseja reservar.');
-                    carSelect.focus();
-                    return;
-                }
                 if (mDate && mTime && mDate.value && mTime.value) {
                     // Valida se data não é passada (todas as datas passadas inativas)
                     var today = todayStr();
