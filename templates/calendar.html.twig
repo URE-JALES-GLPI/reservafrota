@@ -138,13 +138,13 @@
                             <label class="form-label">3. {{ __('Saída — dia e hora', 'reservafrota') }}</label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-date" aria-label="{{ __('Dia da saída', 'reservafrota') }}" required>
-                                <input type="time" class="form-control" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" value="08:00" step="1800" required>
+                                <input type="time" class="form-control" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" value="08:00" step="60" required>
                             </div>
 
                             <label class="form-label">4. {{ __('Chegada — dia e hora', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-adate" aria-label="{{ __('Dia da chegada', 'reservafrota') }}" required>
-                                <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="1800" required>
+                                <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="60" required>
                             </div>
 
                             <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }}</label>
