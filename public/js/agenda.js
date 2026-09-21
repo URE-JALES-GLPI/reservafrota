@@ -13,15 +13,20 @@
         var back = e.target.closest && e.target.closest('.reservafrota-back');
         if (!back) { return; }
         if (back.hasAttribute('data-x')) { return; } // botão de fechar modal: tratado em outro handler
-        e.preventDefault();
-        // Vai direto para o destino do botão (link ou data-home); só usa o
-        // histórico do navegador como último recurso.
-        var dest = back.dataset.home || (back.tagName === 'A' ? back.getAttribute('href') : '');
-        if (dest) {
-            window.location.href = dest;
-        } else if (window.history.length > 1) {
-            window.history.back();
+        // Botões de ação que reutilizam a classe visual reservafrota-back
+        // (Cancelar/Confirmar/Finalizar dentro de modais) não são navegação.
+        if (back.hasAttribute('data-cb-cancel') || back.classList.contains('cb-e-cancel')
+            || back.classList.contains('cb-e-confirm') || back.classList.contains('cb-e-arrive')
+            || back.id === 'cb-m-cancel' || back.id === 'cb-m-confirm' || back.id === 'cb-m-arrive') {
+            return;
         }
+        if (back.closest('.reservafrota-modal') && !back.dataset.home && back.tagName !== 'A') {
+            return;
+        }
+        var dest = back.dataset.home || (back.tagName === 'A' ? back.getAttribute('href') : '');
+        if (!dest) { return; } // sem destino explícito não navega (evita history.back em botões de modal)
+        e.preventDefault();
+        window.location.href = dest;
     });
 
     /* Popup informativo (ex.: ver motivo do agendamento). */
@@ -249,13 +254,13 @@
         form.addEventListener('change', markDirty);
 
         if (cancelBtn) {
-            cancelBtn.addEventListener('click', function () { close(); openCancelModal(b.id, bform, csrf); });
+            cancelBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); close(); openCancelModal(b.id, bform, csrf); });
         }
         if (confirmBtn) {
-            confirmBtn.addEventListener('click', function () { close(); cbOpenApprove(b.id, bform, csrf); });
+            confirmBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); close(); cbOpenApprove(b.id, bform, csrf); });
         }
         if (arriveBtn) {
-            arriveBtn.addEventListener('click', function () { close(); openArriveModal(b.id, bform, csrf); });
+            arriveBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); close(); openArriveModal(b.id, bform, csrf); });
         }
 
         // Validação de datas: ida e volta são obrigatórias; chegada > saída; nada no passado.
@@ -816,6 +821,7 @@
         var btn = e.target.closest && e.target.closest('[data-cb-cancel]');
         if (!btn) { return; }
         e.preventDefault();
+        e.stopPropagation();
         openCancelModal(btn.getAttribute('data-id'), btn.getAttribute('data-bform'), btn.getAttribute('data-csrf'));
     });
 
