@@ -70,30 +70,13 @@
                 <div class="reservafrota-panel__card">
                     <h3><i class="ti ti-calendar-plus"></i> {{ __('Novo agendamento', 'reservafrota') }}</h3>
 
-                    {% if cars is empty %}
-                        <div class="reservafrota-empty">
-                            <i class="ti ti-car-off"></i>
-                            <p>{{ __('Nenhum carro cadastrado ainda.', 'reservafrota') }}</p>
-                            <a class="btn btn-outline-primary" href="{{ cars_url }}">{{ __('Cadastrar carro', 'reservafrota') }}</a>
-                        </div>
-                    {% else %}
+                        {# Tela antiga (front/agenda.php hoje redireciona ao calendário).
+                           Veículo removido da solicitação — só o gestor escolhe, na aprovação. #}
                         <form method="post" action="{{ web_dir }}/front/booking.form.php" class="reservafrota-form">
                             <input type="hidden" name="add" value="1">
                             <input type="hidden" name="_from_agenda" value="1">
                             <input type="hidden" name="_agenda_date" id="reservafrota-form-date" value="{{ date }}">
                             <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
-
-                            <label class="form-label" for="cb-car">{{ __('Carro', 'reservafrota') }}</label>
-                            <select class="form-select" id="cb-car" name="plugin_reservafrota_cars_id" required>
-                                <option value="">{{ __('Selecione…', 'reservafrota') }}</option>
-                                {% for id, car in cars %}
-                                    <option value="{{ id }}">{{ car.name }}{% if car.plate %} · {{ car.plate }}{% endif %}</option>
-                                {% endfor %}
-                            </select>
-
-                            <div id="reservafrota-conflict" class="reservafrota-conflict" hidden>
-                                <i class="ti ti-alert-triangle"></i><span></span>
-                            </div>
 
                             <label class="form-label" for="cb-sector">{{ __('Setor', 'reservafrota') }}</label>
                             <select class="form-select" id="cb-sector" name="groups_id">
@@ -120,9 +103,8 @@
                             <button type="submit" class="reservafrota-submit">
                                 <i class="ti ti-send"></i> {{ __('Solicitar agendamento', 'reservafrota') }}
                             </button>
-                            <p class="reservafrota-hint">{{ __('O pedido fica pendente até a aprovação do administrador.', 'reservafrota') }}</p>
+                            <p class="reservafrota-hint">{{ __('O pedido fica pendente até a aprovação do gestor, que escolherá o veículo.', 'reservafrota') }}</p>
                         </form>
-                    {% endif %}
                 </div>
             </aside>
         {% endif %}
