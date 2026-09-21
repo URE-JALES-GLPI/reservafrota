@@ -31,18 +31,10 @@
             <div class="reservafrota-warnbox"><i class="ti ti-alert-triangle"></i> {{ __('Atenção: ao salvar alterações, este agendamento aprovado voltará para Pendente e precisará ser aprovado novamente.', 'reservafrota') }}</div>
         {% endif %}
 
+        {# Veículo removido da parte de agendamento — aparece somente na
+           aprovação do gestor (painel abaixo / modal de confirmação). #}
         <div class="row">
-            <div class="col-12 col-md-6 mb-3">
-                <label class="form-label" for="bk-car">{{ __('Carro', 'reservafrota') }}</label>
-                {% if is_new %}
-                    {# O solicitante não escolhe o veículo — o gestor designa ao aprovar. #}
-                    <div class="alert alert-info mb-0"><i class="ti ti-info-circle"></i> {{ __('O veículo será escolhido pelo gestor ao aprovar a viagem.', 'reservafrota') }}</div>
-                {% else %}
-                    {% set carrow2 = cars[item.fields['plugin_reservafrota_cars_id']] %}
-                    <input type="text" class="form-control" id="bk-car" value="{{ carrow2 ? carrow2.name ~ (carrow2.plate ? ' · ' ~ carrow2.plate : '') : __('A designar pelo gestor', 'reservafrota') }}" disabled title="{{ __('O carro é definido pelo gestor na aprovação.', 'reservafrota') }}">
-                {% endif %}
-            </div>
-            <div class="col-12 col-md-6 mb-3">
+            <div class="col-12 mb-3">
                 <label class="form-label" for="bk-dest">{{ __('Destino', 'reservafrota') }}</label>
                 <input type="text" class="form-control" id="bk-dest" name="destination"
                        value="{{ item.fields['destination'] }}" {{ editable ? '' : 'disabled' }}>

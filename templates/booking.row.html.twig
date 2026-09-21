@@ -15,10 +15,8 @@
         <span class="reservafrota-blist-time">{{ b.departure|slice(11,5) }}{% if b.arrival %} &rarr; {{ b.arrival|slice(11,5) }}{% endif %}</span>
     </div>
     <div class="reservafrota-blist-item__body">
-        {% if b.car_id == 0 %}
-            <strong class="text-muted"><i class="ti ti-car"></i> {{ __('A designar pelo gestor', 'reservafrota') }}</strong>
-        {% else %}
-            <strong>{{ b.car }}</strong>
+        {% if b.car_id != 0 %}
+            <strong><i class="ti ti-car"></i> {{ b.car }}</strong>
         {% endif %}
         <div class="reservafrota-blist-meta"><i class="ti ti-user"></i> {{ b.user }} &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> {{ b.driver ?: '—' }}{% if b.has_companion %}{% set ccount = b.companion ? b.companion|split(',')|length : 1 %} <span class="text-muted" title="{{ b.companion }}">+ {{ ccount }} {{ __('acompanhante(s)', 'reservafrota') }}</span>{% endif %}</div>
         {% if b.destination %}<div class="reservafrota-blist-meta"><i class="ti ti-map-pin"></i> {{ b.destination }}</div>{% endif %}

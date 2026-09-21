@@ -183,10 +183,12 @@
                     chips = '<span class="reservafrota-evt s-empty" title="Clique para reservar"><i class="ti ti-plus" style="font-size:0.7rem;"></i> Disponível</span>';
                 } else {
                     items.slice(0, 4).forEach(function (b) {
+                        var hasCar = b.car_id && b.car && b.car !== 'A designar';
+                        var label = hasCar ? esc(b.car) + ' — ' + esc(b.user) : esc(b.user);
                         chips += '<span class="reservafrota-evt s-' + (b.status || 1) + (b.conflict ? ' is-conflict' : '') + '"'
-                            + ' title="' + esc(b.car) + '">'
+                            + ' title="' + esc(hasCar ? b.car : '') + '">'
                             + '<b>' + esc(timeOf(b.departure)) + '</b> '
-                            + esc(b.car) + ' — ' + esc(b.user)
+                            + label
                             + '</span>';
                     });
                     if (items.length > 4) {
@@ -241,8 +243,9 @@
             var period = b.arrival
                 ? timeOf(b.departure) + ' → ' + timeOf(b.arrival)
                 : timeOf(b.departure);
+            var hasCar = b.car_id && b.car && b.car !== 'A designar';
             return '<div class="reservafrota-tip__item s-' + (b.status || 1) + '">'
-                + '<div class="reservafrota-tip__line"><b>' + esc(period) + '</b> · ' + esc(b.car) + '</div>'
+                + '<div class="reservafrota-tip__line"><b>' + esc(period) + '</b>' + (hasCar ? ' · ' + esc(b.car) : '') + '</div>'
                 + '<div class="reservafrota-tip__sub"><i class="ti ti-user"></i> ' + esc(b.user)
                 + ' · <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—')
                 + ' · ' + esc(b.status_label) + '</div>'
@@ -313,7 +316,7 @@
                     + '<span class="reservafrota-chip status-' + (b.conflict ? 'conflict' : statusName(b.status)) + '">'
                     + (b.conflict ? 'Conflito' : esc(b.status_label)) + '</span>'
                     + (hasObs ? '<span class="reservafrota-obsdot" title="Tem observação"></span> ' : '')
-                    + '<strong>' + esc(b.car_id ? b.car : (b.car && b.car !== 'A designar' ? b.car : 'A designar pelo gestor')) + '</strong></div>'
+                    + ((b.car_id && b.car && b.car !== 'A designar') ? '<strong>' + esc(b.car) + '</strong>' : '') + '</div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(b.user)
                     + ' &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—') + '</div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + esc(period)
