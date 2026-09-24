@@ -374,7 +374,17 @@
                     // Preenche os campos. O carro não é escolhido aqui — é
                     // designado pelo gestor ao aprovar (botão "Confirmar").
                     var driverInp = document.getElementById('cb-m-driver');
-                    if (driverInp) { driverInp.value = b.driver || ''; }
+                    if (driverInp) {
+                        if (b.drivers_id) { driverInp.value = String(b.drivers_id); }
+                        else if (b.driver) {
+                            // tenta achar pelo nome (legado)
+                            var found = false;
+                            for (var di=0; di<driverInp.options.length; di++) {
+                                if (driverInp.options[di].text.trim().indexOf(b.driver) !== -1) { driverInp.value = driverInp.options[di].value; found = true; break; }
+                            }
+                            if (!found) { driverInp.value = ''; }
+                        } else { driverInp.value = ''; }
+                    }
                     var compQ = document.getElementById('cb-m-companion-q');
                     var compWrap = document.getElementById('cb-m-companion-wrap');
                     if (compQ) { compQ.checked = !!b.has_companion; }
@@ -575,6 +585,12 @@
                     if (!ok) { return; }
                 }
 
+                var destVal = document.getElementById('cb-m-dest') ? document.getElementById('cb-m-dest').value.trim() : '';
+                if (!destVal) {
+                    alert('Informe o destino da viagem.');
+                    var di = document.getElementById('cb-m-dest'); if (di) { di.focus(); }
+                    return;
+                }
                 if (mDate && mTime && mDate.value && mTime.value) {
                     // Valida se data não é passada (todas as datas passadas inativas)
                     var today = todayStr();

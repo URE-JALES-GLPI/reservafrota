@@ -158,8 +158,8 @@
         }
         function dtLocal(s) { return s ? ('' + s).replace(' ', 'T').slice(0, 16) : ''; }
 
-        var usersTpl = document.getElementById('reservafrota-users-template');
-        var usersOptions = usersTpl ? usersTpl.innerHTML : '<option value="">—</option>';
+        var driversTpl = document.getElementById('reservafrota-drivers-template');
+        var driversOptions = driversTpl ? driversTpl.innerHTML : (document.getElementById('reservafrota-users-template') ? document.getElementById('reservafrota-users-template').innerHTML : '<option value="">—</option>');
         var hasComp = (parseInt(b.has_companion, 10) === 1);
         var status = parseInt(b.status, 10) || 1;
         var canCancel = !!b.can_cancel;
@@ -179,7 +179,7 @@
           + '<input type="hidden" name="_glpi_csrf_token" value="' + esc2(csrf) + '">'
           + '<input type="hidden" name="_from_calendar" value="1">'
           + '<label class="form-label">Motorista</label>'
-          + '<select class="form-select cb-e-driver" name="driver">' + usersOptions + '</select>'
+          + '<select class="form-select cb-e-driver" name="plugin_reservafrota_drivers_id">' + driversOptions + '</select>'
           + '<input type="hidden" name="has_companion" value="0">'
           + '<div class="form-check form-switch" style="margin-top:0.6rem;">'
           + '<input class="form-check-input reservafrota-companion-q cb-e-compq" type="checkbox" role="switch" id="cb-e-compq" name="has_companion" value="1"' + (hasComp ? ' checked' : '') + ' data-target="cb-e-compwrap">'
@@ -209,9 +209,18 @@
         document.body.classList.add('reservafrota-modal-open');
 
         var form = overlay.querySelector('form');
-        // Pré-seleciona o motorista atual.
+        // Pré-seleciona o motorista atual (por id se houver, senão por nome legado).
         var drv = overlay.querySelector('.cb-e-driver');
-        if (drv) { drv.value = b.driver || ''; }
+        if (drv) {
+            if (b.drivers_id) { drv.value = String(b.drivers_id); }
+            else { drv.value = b.driver || ''; }
+            // fallback: se não achou pelo id, tenta pelo nome
+            if (!drv.value && b.driver) {
+                for (var oi=0; oi<drv.options.length; oi++) {
+                    if (drv.options[oi].text.trim().indexOf(b.driver) !== -1) { drv.value = drv.options[oi].value; break; }
+                }
+            }
+        }
         // Inicializa os campos de acompanhantes (se houver).
         var cs = overlay.querySelector('.reservafrota-companion-count');
         if (cs && parseInt(b.has_companion, 10) === 1) { cbInitComp(cs); }
@@ -263,8 +272,15 @@
             arriveBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); close(); openArriveModal(b.id, bform, csrf); });
         }
 
-        // Validação de datas: ida e volta são obrigatórias; chegada > saída; nada no passado.
+        // Validação de datas: ida e volta + destino são obrigatórios; chegada > saída; nada no passado.
         form.addEventListener('submit', function (e) {
+            var destInput = form.querySelector('input[name="destination"]');
+            if (destInput && !destInput.value.trim()) {
+                e.preventDefault();
+                alert('Informe o destino da viagem.');
+                destInput.focus();
+                return;
+            }
             var depInput = form.querySelector('input[name="date_departure"]');
             var arrInput = form.querySelector('input[name="date_arrival"]');
             if (!depInput || !depInput.value) {
@@ -409,6 +425,13 @@
         // (calendar modal usa IDs cb-m-date/cb-m-adate). Para esses, o handler dedicado
         // em calendar.js já valida; aqui só cobre forms com inputs datetime-local.
         if (form.id === 'reservafrota-modal-form') { return; }
+        var dest = form.querySelector('input[name="destination"]');
+        if (dest && !dest.value.trim()) {
+            e.preventDefault();
+            alert('Informe o destino da viagem.');
+            dest.focus();
+            return;
+        }
         var arr = form.querySelector('input[name="date_arrival"]');
         // Ida e volta são obrigatórias
         if (!dep.value) {
@@ -583,8 +606,10 @@
           + '<div class="reservafrota-modal__head"><h3><i class="ti ti-check"></i> Confirmar agendamento</h3>'
           + '<button type="button" class="reservafrota-modal__close" data-x><i class="ti ti-x"></i></button></div>'
           + '<div class="reservafrota-modal__body">'
-          + '<p>Escolha o carro que será usado neste agendamento.</p>'
+          + '<p>Escolha o carro e confirme o motorista para este agendamento.</p>'
           + '<div class="reservafrota-carchoice-list"><p class="reservafrota-hint">Carregando carros…</p></div>'
+          + '<label class="form-label" style="margin-top:0.8rem;"><i class="ti ti-steering-wheel"></i> Motorista</label>'
+          + '<select class="form-select cb-ap-driver"><option value="">— Manter o sugerido —</option></select>'
           + '<label class="form-label" style="margin-top:0.6rem;">Comentário (opcional)</label>'
           + '<textarea class="form-control cb-ap-comment" rows="2"></textarea>'
           + '<div class="reservafrota-confirm-actions">'
@@ -597,6 +622,7 @@
         overlay.querySelectorAll('[data-x]').forEach(function (el) { el.addEventListener('click', close); });
 
         var list = overlay.querySelector('.reservafrota-carchoice-list');
+        var driverSel = overlay.querySelector('.cb-ap-driver');
         var go = overlay.querySelector('.cb-ap-go');
         var chosen = null;
 
@@ -605,25 +631,40 @@
             .then(function (data) {
                 if (!data || !data.cars || !data.cars.length) {
                     list.innerHTML = '<p class="reservafrota-hint">Nenhum carro cadastrado.</p>';
-                    return;
-                }
-                list.innerHTML = data.cars.map(function (c) {
-                    return '<label class="reservafrota-carchoice' + (c.blocked ? ' is-blocked' : '') + '">'
-                        + '<input type="radio" name="cb-ap-car" value="' + c.id + '"' + (c.blocked ? ' disabled' : '') + '>'
-                        + '<span>' + esc2(c.name) + (c.plate ? ' · ' + esc2(c.plate) : '') + '</span>'
-                        + (c.blocked ? '<small>Já reservado neste horário</small>' : '')
-                        + '</label>';
-                }).join('');
-                if (data.car_id) {
-                    var pre = list.querySelector('input[value="' + data.car_id + '"]');
-                    if (pre && !pre.disabled) { pre.checked = true; chosen = data.car_id; go.disabled = false; }
-                }
-                list.querySelectorAll('input[name="cb-ap-car"]').forEach(function (inp) {
-                    inp.addEventListener('change', function () {
-                        chosen = inp.value;
-                        go.disabled = false;
+                } else {
+                    list.innerHTML = data.cars.map(function (c) {
+                        return '<label class="reservafrota-carchoice' + (c.blocked ? ' is-blocked' : '') + '">'
+                            + '<input type="radio" name="cb-ap-car" value="' + c.id + '"' + (c.blocked ? ' disabled' : '') + '>'
+                            + '<span>' + esc2(c.name) + (c.plate ? ' · ' + esc2(c.plate) : '') + '</span>'
+                            + (c.blocked ? '<small>Já reservado neste horário</small>' : '')
+                            + '</label>';
+                    }).join('');
+                    if (data.car_id) {
+                        var pre = list.querySelector('input[value="' + data.car_id + '"]');
+                        if (pre && !pre.disabled) { pre.checked = true; chosen = data.car_id; go.disabled = false; }
+                    }
+                    list.querySelectorAll('input[name="cb-ap-car"]').forEach(function (inp) {
+                        inp.addEventListener('change', function () {
+                            chosen = inp.value;
+                            go.disabled = false;
+                        });
                     });
-                });
+                }
+                // Motoristas
+                if (data && data.drivers) {
+                    // mantém a opção "Manter sugerido" (value="") e adiciona os cadastrados
+                    var cur = driverSel.value;
+                    // limpa exceto a primeira
+                    while (driverSel.options.length > 1) { driverSel.remove(1); }
+                    data.drivers.forEach(function (d) {
+                        var opt = document.createElement('option');
+                        opt.value = String(d.id);
+                        opt.textContent = d.name + (d.phone ? ' — ' + d.phone : '') + (d.cnh ? ' (CNH: ' + d.cnh + ')' : '');
+                        driverSel.appendChild(opt);
+                    });
+                    if (data.driver_id) { driverSel.value = String(data.driver_id); }
+                    else if (cur) { driverSel.value = cur; }
+                }
             })
             .catch(function () {
                 list.innerHTML = '<p class="reservafrota-hint">Não foi possível carregar os carros.</p>';
@@ -632,6 +673,7 @@
         go.addEventListener('click', function () {
             if (!chosen) { return; }
             var comment = overlay.querySelector('.cb-ap-comment').value;
+            var driverVal = driverSel ? driverSel.value : '';
             var form = document.createElement('form');
             form.method = 'post';
             form.action = bform;
@@ -639,6 +681,7 @@
                 '<input type="hidden" name="id" value="' + esc2(id) + '">'
               + '<input type="hidden" name="approve" value="1">'
               + '<input type="hidden" name="plugin_reservafrota_cars_id" value="' + esc2(chosen) + '">'
+              + (driverVal ? '<input type="hidden" name="plugin_reservafrota_drivers_id" value="' + esc2(driverVal) + '">' : '')
               + '<input type="hidden" name="comment_validation" value="' + esc2(comment) + '">'
               + '<input type="hidden" name="_glpi_csrf_token" value="' + esc2(csrf) + '">';
             document.body.appendChild(form);

@@ -7,6 +7,7 @@
 
 use GlpiPlugin\Reservafrota\Booking;
 use GlpiPlugin\Reservafrota\Car;
+use GlpiPlugin\Reservafrota\Driver;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 
 /**
@@ -37,6 +38,26 @@ function plugin_reservafrota_install()
             `date_mod`      timestamp    NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
             KEY `plate` (`plate`),
+            KEY `is_active` (`is_active`),
+            KEY `is_deleted` (`is_deleted`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+
+    // ---- Tabela de motoristas ----
+    $drivers = Driver::getTable();
+    if (!$DB->tableExists($drivers)) {
+        $DB->doQuery("CREATE TABLE `$drivers` (
+            `id`            int unsigned NOT NULL AUTO_INCREMENT,
+            `name`          varchar(255) NOT NULL DEFAULT '',
+            `cnh`           varchar(20)  NOT NULL DEFAULT '',
+            `phone`         varchar(50)  NOT NULL DEFAULT '',
+            `picture`       varchar(255) DEFAULT NULL,
+            `is_active`     tinyint      NOT NULL DEFAULT 1,
+            `comment`       text         DEFAULT NULL,
+            `is_deleted`    tinyint      NOT NULL DEFAULT 0,
+            `date_creation` timestamp    NULL DEFAULT NULL,
+            `date_mod`      timestamp    NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
             KEY `is_active` (`is_active`),
             KEY `is_deleted` (`is_deleted`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
@@ -118,6 +139,14 @@ function plugin_reservafrota_install()
             ADD COLUMN `km_final` int unsigned DEFAULT NULL AFTER `arrival_obs`");
     }
 
+    // Migração: motorista cadastrado (drivers_id) — novos agendamentos usam
+    // FK para a tabela de motoristas; mantém `driver` legado para compatibilidade.
+    if ($DB->tableExists($bookings) && !$DB->fieldExists($bookings, 'plugin_reservafrota_drivers_id')) {
+        $DB->doQuery("ALTER TABLE `$bookings`
+            ADD COLUMN `plugin_reservafrota_drivers_id` int unsigned NOT NULL DEFAULT 0 AFTER `driver`,
+            ADD KEY `plugin_reservafrota_drivers_id` (`plugin_reservafrota_drivers_id`)");
+    }
+
     $migration->executeMigration();
 
     // ---- Permissões ----
@@ -144,6 +173,12 @@ function plugin_reservafrota_install()
             'name'        => 'reservafrota::car',
         ]);
         $DB->update('glpi_profilerights', [
+            'rights' => ALLSTANDARDRIGHT,
+        ], [
+            'profiles_id' => $current_profile,
+            'name'        => 'reservafrota::driver',
+        ]);
+        $DB->update('glpi_profilerights', [
             'rights' => ALLSTANDARDRIGHT | Booking::APPROVE,
         ], [
             'profiles_id' => $current_profile,
@@ -153,7 +188,8 @@ function plugin_reservafrota_install()
 
     // ---- Colunas padrão exibidas na listagem ----
     $prefs = [
-        Car::class => [2, 3, 4],     // placa, ano, ativo
+        Car::class    => [2, 3, 4],     // placa, ano, ativo
+        Driver::class => [2, 3, 4],     // CNH, telefone, ativo
         Booking::class => [2, 3, 5, 8], // carro, solicitante, saída, status
     ];
     foreach ($prefs as $itemtype => $columns) {
@@ -192,12 +228,12 @@ function plugin_reservafrota_uninstall()
     }
 
     // Remove preferências de exibição.
-    foreach ([Car::class, Booking::class] as $itemtype) {
+    foreach ([Car::class, Driver::class, Booking::class] as $itemtype) {
         $DB->delete('glpi_displaypreferences', ['itemtype' => $itemtype]);
     }
 
     // Remove as tabelas.
-    foreach ([Booking::getTable(), Car::getTable()] as $table) {
+    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable()] as $table) {
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `$table`");
         }

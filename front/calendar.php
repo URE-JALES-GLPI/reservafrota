@@ -3,6 +3,7 @@
 use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Reservafrota\Booking;
 use GlpiPlugin\Reservafrota\Car;
+use GlpiPlugin\Reservafrota\Driver;
 
 
 Session::checkRight(Booking::$rightname, READ);
@@ -38,6 +39,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'can_create'         => Session::haveRight(Booking::$rightname, CREATE),
     'can_delete'         => Session::haveRight(Booking::$rightname, PURGE),
     'cars'               => Car::getActiveCars(),
+    'drivers'            => Driver::getActiveDrivers(),
     'groups'             => Booking::getGroupsList(),
     'users'              => Booking::getUsersList(),
     'current_user_label' => Booking::getCurrentUserLabel(),

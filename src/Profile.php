@@ -56,6 +56,20 @@ class Profile extends CommonDBTM
                 ],
             ],
             [
+                'field'   => 'reservafrota::driver',
+                'label'   => Driver::getTypeName(2),
+                'icon'    => 'ti ti-steering-wheel',
+                'help'    => 'Controla o cadastro e a gestão dos motoristas.',
+                'default' => 0,
+                'levels'  => [
+                    0                                       => '— Sem acesso —',
+                    READ                                    => 'Visualizar motoristas',
+                    READ | CREATE                           => 'Visualizar e cadastrar',
+                    READ | CREATE | UPDATE                  => 'Cadastrar e editar',
+                    READ | CREATE | UPDATE | DELETE | PURGE => 'Acesso total (incl. excluir)',
+                ],
+            ],
+            [
                 'field'   => 'reservafrota::booking',
                 'label'   => Booking::getTypeName(2),
                 'icon'    => 'ti ti-calendar-event',
@@ -229,6 +243,7 @@ class Profile extends CommonDBTM
         // Limpa os direitos antigos da sessão
         unset($_SESSION['glpiactiveprofile']['reservafrota::booking']);
         unset($_SESSION['glpiactiveprofile']['reservafrota::car']);
+        unset($_SESSION['glpiactiveprofile']['reservafrota::driver']);
 
         $active = (int) ($_SESSION['glpiactiveprofile']['id'] ?? 0);
 

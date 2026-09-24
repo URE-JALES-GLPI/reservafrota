@@ -81,12 +81,13 @@ if (isset($_POST['add'])) {
     Html::back();
 
 } elseif (isset($_POST['approve'])) {
-    // Aprovação: exige o direito específico. O carro é designado agora,
-    // pelo gestor (o solicitante não escolhe carro ao pedir).
+    // Aprovação: exige o direito específico. O carro e o motorista são
+    // designados agora pelo gestor (o solicitante sugere o motorista).
     Session::checkRight(Booking::$rightname, Booking::APPROVE);
     if ($booking->getFromDB((int) $_POST['id'])) {
         $carId = !empty($_POST['plugin_reservafrota_cars_id']) ? (int) $_POST['plugin_reservafrota_cars_id'] : null;
-        $booking->approve($_POST['comment_validation'] ?? '', $carId);
+        $driverId = isset($_POST['plugin_reservafrota_drivers_id']) && $_POST['plugin_reservafrota_drivers_id'] !== '' ? (int) $_POST['plugin_reservafrota_drivers_id'] : null;
+        $booking->approve($_POST['comment_validation'] ?? '', $carId, $driverId);
     }
     Html::back();
 

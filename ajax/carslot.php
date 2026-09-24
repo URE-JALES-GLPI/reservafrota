@@ -1,6 +1,7 @@
 <?php
 
 use GlpiPlugin\Reservafrota\Booking;
+use GlpiPlugin\Reservafrota\Driver;
 
 Session::checkRight(Booking::$rightname, Booking::APPROVE);
 
@@ -23,4 +24,8 @@ echo json_encode([
     'arrival'   => $arrival,
     'car_id'    => (int) $booking->fields['plugin_reservafrota_cars_id'],
     'cars'      => Booking::getCarAvailabilityForSlot($departure, $arrival, $id),
+    'driver_id' => (int) ($booking->fields['plugin_reservafrota_drivers_id'] ?? 0),
+    'drivers'   => array_values(array_map(function ($d) {
+        return ['id' => (int) $d['id'], 'name' => $d['name'], 'phone' => $d['phone'] ?? '', 'cnh' => $d['cnh'] ?? ''];
+    }, Driver::getActiveDrivers())),
 ]);

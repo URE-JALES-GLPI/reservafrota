@@ -10,6 +10,7 @@
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Reservafrota\Booking;
 use GlpiPlugin\Reservafrota\Car;
+use GlpiPlugin\Reservafrota\Driver;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 
 define('PLUGIN_RESERVAFROTA_VERSION', '1.0.0');
@@ -45,6 +46,7 @@ function plugin_init_reservafrota()
     // direito na sessão mesmo tendo o valor gravado em glpi_profilerights.
     Plugin::registerClass(Booking::class);
     Plugin::registerClass(Car::class);
+    Plugin::registerClass(Driver::class);
 
     // ESSENCIAL: a cada login/troca de perfil, o GLPI dispara este hook.
     // Ele carrega os direitos do plugin (reservafrota::booking / reservafrota::car)
@@ -80,6 +82,9 @@ function plugin_init_reservafrota()
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/sheet\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/booking\.form\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/car\.picture\.php$#', $auth);
+        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/driver\.php$#', $auth);
+        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/driver\.form\.php$#', $auth);
+        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/driver\.picture\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/profile\.form\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/debug\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/ajax/bookinglist\.php$#', $auth);

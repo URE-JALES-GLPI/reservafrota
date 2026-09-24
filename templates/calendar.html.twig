@@ -65,7 +65,12 @@
     {# ---------- Agendamentos (abaixo do calendário) ---------- #}
     {% include '@reservafrota/booking.lists.html.twig' %}
 
-    {# Template oculto com os usuários — usado pelos modais (Editar/Remarcar). #}
+    {# Template oculto com motoristas cadastrados — usado pelos modais (Editar/Remarcar). #}
+    <select id="reservafrota-drivers-template" hidden>
+        <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
+        {% for id, d in drivers %}<option value="{{ id }}">{{ d.name }}{% if d.phone %} — {{ d.phone }}{% endif %}{% if d.cnh %} (CNH: {{ d.cnh }}){% endif %}</option>{% endfor %}
+    </select>
+    {# Legado: usuários GLPI (mantido para compatibilidade) #}
     <select id="reservafrota-users-template" hidden>
         <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
         {% for uname in users %}<option value="{{ uname }}">{{ uname }}</option>{% endfor %}
@@ -108,12 +113,19 @@
                             <p class="reservafrota-hint" id="cb-m-hint">{{ __('Informe motorista e horário. O veículo será escolhido pelo gestor ao aprovar; datas passadas ficam indisponíveis.', 'reservafrota') }}</p>
 
                             <label class="form-label" for="cb-m-driver">1. {{ __('Motorista', 'reservafrota') }}</label>
-                            <select class="form-select" id="cb-m-driver" name="driver">
-                                <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
-                                {% for uname in users %}
-                                    <option value="{{ uname }}" {{ uname == current_user_label ? 'selected' : '' }}>{{ uname }}</option>
-                                {% endfor %}
-                            </select>
+                            {% if drivers is empty %}
+                                <div class="alert alert-warning py-2" style="font-size:0.85rem;"><i class="ti ti-alert-triangle"></i> {{ __('Nenhum motorista cadastrado. Solicite ao gestor que cadastre motoristas.', 'reservafrota') }}</div>
+                                <select class="form-select" id="cb-m-driver" name="plugin_reservafrota_drivers_id" disabled>
+                                    <option value="">{{ __('— Sem motoristas —', 'reservafrota') }}</option>
+                                </select>
+                            {% else %}
+                                <select class="form-select" id="cb-m-driver" name="plugin_reservafrota_drivers_id">
+                                    <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
+                                    {% for id, d in drivers %}
+                                        <option value="{{ id }}">{{ d.name }}{% if d.phone %} — {{ d.phone }}{% endif %}{% if d.cnh %} (CNH: {{ d.cnh }}){% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
 
                             <div class="form-check form-switch" style="margin-top:0.6rem;">
                                 <input type="hidden" name="has_companion" value="0">
@@ -147,8 +159,8 @@
                                 <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="60" required>
                             </div>
 
-                            <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }}</label>
-                            <input type="text" class="form-control" id="cb-m-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}">
+                            <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                            <input type="text" class="form-control" id="cb-m-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}" required>
 
                             <div class="reservafrota-formactions">
                                 <button type="button" class="reservafrota-back" id="cb-m-cancel" data-cb-cancel

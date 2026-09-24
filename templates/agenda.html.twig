@@ -94,8 +94,8 @@
                             </label>
                             <input type="datetime-local" class="form-control" id="cb-arr" name="date_arrival" required>
 
-                            <label class="form-label" for="cb-dest">{{ __('Destino', 'reservafrota') }}</label>
-                            <input type="text" class="form-control" id="cb-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}">
+                            <label class="form-label" for="cb-dest">{{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                            <input type="text" class="form-control" id="cb-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}" required>
 
                             <label class="form-label" for="cb-reason">{{ __('Motivo', 'reservafrota') }}</label>
                             <textarea class="form-control" id="cb-reason" name="reason" rows="2" placeholder="{{ __('Ex.: transporte de materiais', 'reservafrota') }}"></textarea>
