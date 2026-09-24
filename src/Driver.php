@@ -98,15 +98,22 @@ class Driver extends CommonDBTM
     {
         /** @var \DBmysql $DB */
         global $DB;
+        if (!$DB->tableExists(self::getTable())) {
+            return [];
+        }
         $drivers = [];
-        $iterator = $DB->request([
-            'FROM'  => self::getTable(),
-            'WHERE' => [
-                'is_active'  => 1,
-                'is_deleted' => 0,
-            ],
-            'ORDER' => 'name ASC',
-        ]);
+        try {
+            $iterator = $DB->request([
+                'FROM'  => self::getTable(),
+                'WHERE' => [
+                    'is_active'  => 1,
+                    'is_deleted' => 0,
+                ],
+                'ORDER' => 'name ASC',
+            ]);
+        } catch (\Throwable $e) {
+            return [];
+        }
         foreach ($iterator as $row) {
             $row['picture_url'] = !empty($row['picture'])
                 ? (Plugin::getWebDir('reservafrota') . '/front/driver.picture.php?id=' . (int) $row['id'])
@@ -120,12 +127,19 @@ class Driver extends CommonDBTM
     {
         /** @var \DBmysql $DB */
         global $DB;
+        if (!$DB->tableExists(self::getTable())) {
+            return [];
+        }
         $drivers = [];
-        $iterator = $DB->request([
-            'FROM'  => self::getTable(),
-            'WHERE' => ['is_deleted' => 0],
-            'ORDER' => ['is_active DESC', 'name ASC'],
-        ]);
+        try {
+            $iterator = $DB->request([
+                'FROM'  => self::getTable(),
+                'WHERE' => ['is_deleted' => 0],
+                'ORDER' => ['is_active DESC', 'name ASC'],
+            ]);
+        } catch (\Throwable $e) {
+            return [];
+        }
         foreach ($iterator as $row) {
             $row['picture_url'] = !empty($row['picture'])
                 ? (Plugin::getWebDir('reservafrota') . '/front/driver.picture.php?id=' . (int) $row['id'])

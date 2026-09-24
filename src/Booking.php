@@ -163,38 +163,56 @@ class Booking extends CommonDBTM
 
         // Motorista: o solicitante sugere um motorista cadastrado; o gestor pode
         // trocar na aprovação. Valida se o motorista existe e está ativo.
-        $drvId = (int) ($input['plugin_reservafrota_drivers_id'] ?? 0);
-        // Compatibilidade: se veio `driver` como nome, tenta resolver para id
-        if ($drvId === 0 && !empty($input['driver'])) {
-            $tmp = new Driver();
-            /** @var \DBmysql $DB2 */
+        // Se a tabela de motoristas ainda não existe (migração pendente), ignora.
+        $hasDriver = false;
+        try {
+            /** @var \DBmysql $DBtmp */
             global $DB;
-            $found = $DB->request([
-                'FROM'  => Driver::getTable(),
-                'WHERE' => ['name' => trim((string) $input['driver']), 'is_deleted' => 0],
-                'LIMIT' => 1,
-            ])->current();
-            if (is_array($found) && isset($found['id'])) {
-                $drvId = (int) $found['id'];
-            }
+            $hasDriver = $DB->tableExists(Driver::getTable())
+                && $DB->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id');
+        } catch (\Throwable $e) {
+            $hasDriver = false;
         }
-        if ($drvId > 0) {
-            $drv = new Driver();
-            if (!$drv->getFromDB($drvId)) {
-                Session::addMessageAfterRedirect(__('Motorista não encontrado.', 'reservafrota'), false, ERROR);
-                return false;
+        if ($hasDriver) {
+            $drvId = (int) ($input['plugin_reservafrota_drivers_id'] ?? 0);
+            // Compatibilidade: se veio `driver` como nome, tenta resolver para id
+            if ($drvId === 0 && !empty($input['driver'])) {
+                try {
+                    $found = $DB->request([
+                        'FROM'  => Driver::getTable(),
+                        'WHERE' => ['name' => trim((string) $input['driver']), 'is_deleted' => 0],
+                        'LIMIT' => 1,
+                    ])->current();
+                    if (is_array($found) && isset($found['id'])) {
+                        $drvId = (int) $found['id'];
+                    }
+                } catch (\Throwable $e) {}
             }
-            if (!(int) $drv->fields['is_active']) {
-                Session::addMessageAfterRedirect(__('Este motorista está inativo e não pode ser selecionado.', 'reservafrota'), false, ERROR);
-                return false;
+            if ($drvId > 0) {
+                $drv = new Driver();
+                if (!$drv->getFromDB($drvId)) {
+                    Session::addMessageAfterRedirect(__('Motorista não encontrado.', 'reservafrota'), false, ERROR);
+                    return false;
+                }
+                if (!(int) $drv->fields['is_active']) {
+                    Session::addMessageAfterRedirect(__('Este motorista está inativo e não pode ser selecionado.', 'reservafrota'), false, ERROR);
+                    return false;
+                }
+                $input['plugin_reservafrota_drivers_id'] = $drvId;
+                $input['driver'] = $drv->fields['name'];
+            } else {
+                $input['plugin_reservafrota_drivers_id'] = 0;
+                if (isset($input['driver'])) {
+                    $input['driver'] = trim((string) $input['driver']);
+                }
             }
-            $input['plugin_reservafrota_drivers_id'] = $drvId;
-            $input['driver'] = $drv->fields['name'];
         } else {
-            $input['plugin_reservafrota_drivers_id'] = 0;
-            // mantém `driver` como texto livre para compatibilidade legada
+            // Sem suporte a motoristas cadastrados — mantém `driver` como texto livre
             if (isset($input['driver'])) {
                 $input['driver'] = trim((string) $input['driver']);
+            }
+            if (isset($input['plugin_reservafrota_drivers_id'])) {
+                unset($input['plugin_reservafrota_drivers_id']);
             }
         }
 
@@ -316,32 +334,42 @@ class Booking extends CommonDBTM
         }
 
         // Motorista: se veio drivers_id, valida e sincroniza `driver` (nome).
-        if (array_key_exists('plugin_reservafrota_drivers_id', $input)) {
-            $dId = (int) $input['plugin_reservafrota_drivers_id'];
-            if ($dId > 0) {
-                $drv = new Driver();
-                if (!$drv->getFromDB($dId) || !(int) $drv->fields['is_active']) {
-                    Session::addMessageAfterRedirect(__('Motorista inválido ou inativo.', 'reservafrota'), false, ERROR);
-                    return false;
+        // Se a tabela ainda não existe, ignora o campo.
+        try {
+            $hasDrvUpd = $GLOBALS['DB'] instanceof \DBmysql
+                && $GLOBALS['DB']->tableExists(Driver::getTable())
+                && $GLOBALS['DB']->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id');
+        } catch (\Throwable $e) { $hasDrvUpd = false; }
+        if ($hasDrvUpd) {
+            if (array_key_exists('plugin_reservafrota_drivers_id', $input)) {
+                $dId = (int) $input['plugin_reservafrota_drivers_id'];
+                if ($dId > 0) {
+                    $drv = new Driver();
+                    if (!$drv->getFromDB($dId) || !(int) $drv->fields['is_active']) {
+                        Session::addMessageAfterRedirect(__('Motorista inválido ou inativo.', 'reservafrota'), false, ERROR);
+                        return false;
+                    }
+                    $input['driver'] = $drv->fields['name'];
+                } elseif ($dId === 0 && array_key_exists('driver', $input)) {
+                    $input['driver'] = trim((string) $input['driver']);
                 }
-                $input['driver'] = $drv->fields['name'];
-            } elseif ($dId === 0 && array_key_exists('driver', $input)) {
-                // permite limpar ou manter texto livre
-                $input['driver'] = trim((string) $input['driver']);
+            } elseif (array_key_exists('driver', $input) && !empty($input['driver'])) {
+                $nm = trim((string) $input['driver']);
+                try {
+                    global $DB;
+                    $found = $DB->request([
+                        'FROM'  => Driver::getTable(),
+                        'WHERE' => ['name' => $nm, 'is_deleted' => 0],
+                        'LIMIT' => 1,
+                    ])->current();
+                    if (is_array($found) && isset($found['id'])) {
+                        $input['plugin_reservafrota_drivers_id'] = (int) $found['id'];
+                        $input['driver'] = $found['name'];
+                    }
+                } catch (\Throwable $e) {}
             }
-        } elseif (array_key_exists('driver', $input) && !empty($input['driver'])) {
-            // veio só nome legado — tenta resolver
-            $nm = trim((string) $input['driver']);
-            global $DB;
-            $found = $DB->request([
-                'FROM'  => Driver::getTable(),
-                'WHERE' => ['name' => $nm, 'is_deleted' => 0],
-                'LIMIT' => 1,
-            ])->current();
-            if (is_array($found) && isset($found['id'])) {
-                $input['plugin_reservafrota_drivers_id'] = (int) $found['id'];
-                $input['driver'] = $found['name'];
-            }
+        } elseif (isset($input['plugin_reservafrota_drivers_id'])) {
+            unset($input['plugin_reservafrota_drivers_id']);
         }
 
         // Destino é obrigatório ao editar (se veio no payload ou se está alterando).
@@ -391,14 +419,18 @@ class Booking extends CommonDBTM
         ];
 
         // Motorista: se o gestor escolheu, grava; senão mantém o sugerido.
-        if ($driverId !== null && $driverId > 0) {
+        // Se a tabela ainda não existe, ignora o campo.
+        try {
+            $hasDrvAp = isset($GLOBALS['DB']) && $GLOBALS['DB'] instanceof \DBmysql
+                && $GLOBALS['DB']->tableExists(Driver::getTable())
+                && $GLOBALS['DB']->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id');
+        } catch (\Throwable $e) { $hasDrvAp = false; }
+        if ($hasDrvAp && $driverId !== null && $driverId > 0) {
             $drv = new Driver();
             if ($drv->getFromDB($driverId) && (int) $drv->fields['is_active']) {
                 $update['plugin_reservafrota_drivers_id'] = $driverId;
                 $update['driver'] = $drv->fields['name'];
             }
-        } elseif ($driverId !== null && $driverId === 0) {
-            // Permite limpar? Não — mantém o atual
         }
 
         // Nome automático ainda não tinha carro na criação — completa agora.
@@ -907,6 +939,18 @@ class Booking extends CommonDBTM
      *
      * @return list<array<string, mixed>>
      */
+    private static function hasDriverSupport(): bool
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+        try {
+            return $DB->tableExists(Driver::getTable())
+                && $DB->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     public static function getBookingsForMonth(string $month, bool $expand = true): array
     {
         /** @var \DBmysql $DB */
@@ -914,29 +958,34 @@ class Booking extends CommonDBTM
 
         [$start, $end] = self::getMonthRange($month);
 
+        $hasDriver = self::hasDriverSupport();
+        $select = [
+            'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
+            'b.reason', 'b.status', 'b.driver', 'b.has_companion', 'b.companion', 'b.users_id', 'b.date_returned',
+            'b.comment_validation', 'b.date_validation',
+            'b.arrival_sheet', 'b.arrival_obs',
+            'b.plugin_reservafrota_cars_id AS car_id',
+            'b.groups_id',
+            'c.name AS car',
+            'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
+            'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
+            'g.name AS sector',
+        ];
+        $joins = [
+            Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
+            'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
+            'glpi_users AS au'        => ['ON' => ['b' => 'users_id_approver', 'au' => 'id']],
+            'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
+        ];
+        if ($hasDriver) {
+            $select[] = 'b.plugin_reservafrota_drivers_id AS drivers_id';
+            $select[] = 'd.name AS driver_name';
+            $joins[Driver::getTable() . ' AS d'] = ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']];
+        }
         $iterator = $DB->request([
-            'SELECT' => [
-                'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
-                'b.reason', 'b.status', 'b.driver', 'b.has_companion', 'b.companion', 'b.users_id', 'b.date_returned',
-                'b.comment_validation', 'b.date_validation',
-                'b.arrival_sheet', 'b.arrival_obs',
-                'b.plugin_reservafrota_cars_id AS car_id',
-                'b.plugin_reservafrota_drivers_id AS drivers_id',
-                'b.groups_id',
-                'c.name AS car',
-                'd.name AS driver_name',
-                'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
-                'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
-                'g.name AS sector',
-            ],
+            'SELECT'    => $select,
             'FROM'      => self::getTable() . ' AS b',
-            'LEFT JOIN' => [
-                Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
-                Driver::getTable() . ' AS d' => ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']],
-                'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
-                'glpi_users AS au'        => ['ON' => ['b' => 'users_id_approver', 'au' => 'id']],
-                'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
-            ],
+            'LEFT JOIN' => $joins,
             'WHERE' => [
                 'b.is_deleted' => 0,
                 ['b.date_departure' => ['<=', $end]],
@@ -1062,22 +1111,28 @@ class Booking extends CommonDBTM
         $start = sprintf('%04d-01-01 00:00:00', $year);
         $end   = sprintf('%04d-12-31 23:59:59', $year);
 
+        $hasDriver = self::hasDriverSupport();
+        $select = [
+            'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
+            'b.reason', 'b.status', 'b.driver', 'b.has_companion', 'b.companion', 'b.comment_validation',
+            'c.name AS car',
+            'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
+            'g.name AS sector',
+        ];
+        $joins = [
+            Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
+            'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
+            'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
+        ];
+        if ($hasDriver) {
+            $select[] = 'b.plugin_reservafrota_drivers_id AS drivers_id';
+            $select[] = 'd.name AS driver_name';
+            $joins[Driver::getTable() . ' AS d'] = ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']];
+        }
         $iterator = $DB->request([
-            'SELECT' => [
-                'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
-                'b.reason', 'b.status', 'b.driver', 'b.plugin_reservafrota_drivers_id AS drivers_id', 'b.has_companion', 'b.companion', 'b.comment_validation',
-                'c.name AS car',
-                'd.name AS driver_name',
-                'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
-                'g.name AS sector',
-            ],
+            'SELECT'    => $select,
             'FROM'      => self::getTable() . ' AS b',
-            'LEFT JOIN' => [
-                Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
-                Driver::getTable() . ' AS d' => ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']],
-                'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
-                'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
-            ],
+            'LEFT JOIN' => $joins,
             'WHERE' => [
                 'b.is_deleted' => 0,
                 ['b.date_departure' => ['>=', $start]],
@@ -1134,27 +1189,33 @@ class Booking extends CommonDBTM
             $where['b.users_id'] = (int) Session::getLoginUserID();
         }
 
+        $hasDriver = self::hasDriverSupport();
+        $select = [
+            'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
+            'b.reason', 'b.status', 'b.driver', 'b.has_companion', 'b.companion', 'b.date_returned', 'b.users_id',
+            'b.comment_validation', 'b.date_validation',
+            'b.arrival_sheet', 'b.arrival_obs', 'b.km_final',
+            'b.plugin_reservafrota_cars_id AS car_id',
+            'c.name AS car',
+            'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
+            'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
+            'g.name AS sector',
+        ];
+        $joins = [
+            Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
+            'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
+            'glpi_users AS au'        => ['ON' => ['b' => 'users_id_approver', 'au' => 'id']],
+            'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
+        ];
+        if ($hasDriver) {
+            $select[] = 'b.plugin_reservafrota_drivers_id AS drivers_id';
+            $select[] = 'd.name AS driver_name';
+            $joins[Driver::getTable() . ' AS d'] = ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']];
+        }
         $iterator = $DB->request([
-            'SELECT' => [
-                'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
-                'b.reason', 'b.status', 'b.driver', 'b.plugin_reservafrota_drivers_id AS drivers_id', 'b.has_companion', 'b.companion', 'b.date_returned', 'b.users_id',
-                'b.comment_validation', 'b.date_validation',
-                'b.arrival_sheet', 'b.arrival_obs', 'b.km_final',
-                'b.plugin_reservafrota_cars_id AS car_id',
-                'c.name AS car',
-                'd.name AS driver_name',
-                'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
-                'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
-                'g.name AS sector',
-            ],
+            'SELECT'    => $select,
             'FROM'      => self::getTable() . ' AS b',
-            'LEFT JOIN' => [
-                Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
-                Driver::getTable() . ' AS d' => ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']],
-                'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
-                'glpi_users AS au'        => ['ON' => ['b' => 'users_id_approver', 'au' => 'id']],
-                'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
-            ],
+            'LEFT JOIN' => $joins,
             'WHERE' => $where,
             'ORDER' => 'b.id DESC',
         ]);
@@ -1285,26 +1346,32 @@ class Booking extends CommonDBTM
             $where['b.users_id'] = (int) Session::getLoginUserID();
         }
 
+        $hasDriver = self::hasDriverSupport();
+        $select = [
+            'b.id', 'b.date_departure', 'b.date_arrival', 'b.status',
+            'b.driver', 'b.has_companion', 'b.companion',
+            'b.date_returned', 'b.date_validation', 'b.comment_validation',
+            'b.arrival_sheet', 'b.arrival_obs',
+            'c.name AS car',
+            'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
+            'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
+            'g.name AS sector',
+        ];
+        $joins = [
+            Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
+            'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
+            'glpi_users AS au'        => ['ON' => ['b' => 'users_id_approver', 'au' => 'id']],
+            'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
+        ];
+        if ($hasDriver) {
+            $select[] = 'b.plugin_reservafrota_drivers_id AS drivers_id';
+            $select[] = 'd.name AS driver_name';
+            $joins[Driver::getTable() . ' AS d'] = ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']];
+        }
         $iterator = $DB->request([
-            'SELECT' => [
-                'b.id', 'b.date_departure', 'b.date_arrival', 'b.status',
-                'b.driver', 'b.plugin_reservafrota_drivers_id AS drivers_id', 'b.has_companion', 'b.companion',
-                'b.date_returned', 'b.date_validation', 'b.comment_validation',
-                'b.arrival_sheet', 'b.arrival_obs',
-                'c.name AS car',
-                'd.name AS driver_name',
-                'u.name AS user_login', 'u.realname AS realname', 'u.firstname AS firstname',
-                'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
-                'g.name AS sector',
-            ],
+            'SELECT'    => $select,
             'FROM'      => self::getTable() . ' AS b',
-            'LEFT JOIN' => [
-                Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
-                Driver::getTable() . ' AS d' => ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']],
-                'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
-                'glpi_users AS au'        => ['ON' => ['b' => 'users_id_approver', 'au' => 'id']],
-                'glpi_groups AS g'        => ['ON' => ['b' => 'groups_id', 'g' => 'id']],
-            ],
+            'LEFT JOIN' => $joins,
             'WHERE' => $where,
             'ORDER' => 'b.date_departure DESC',
         ]);

@@ -48,6 +48,61 @@ function plugin_init_reservafrota()
     Plugin::registerClass(Car::class);
     Plugin::registerClass(Driver::class);
 
+    // Auto-migração silenciosa: se o plugin foi atualizado por cópia de arquivos
+    // (sem passar por Configurar > Plugins > Atualizar), cria as tabelas/colunas
+    // novas na primeira página carregada — evita o erro "Table doesn't exist".
+    // Não usa Migration aqui para não interferir no fluxo normal de instalação.
+    try {
+        if (isset($GLOBALS['DB']) && $GLOBALS['DB'] instanceof \DBmysql) {
+            $db = $GLOBALS['DB'];
+            $charset   = \DBConnection::getDefaultCharset();
+            $collation = \DBConnection::getDefaultCollation();
+            $drvTable  = Driver::getTable();
+            if (!$db->tableExists($drvTable)) {
+                $db->doQuery("CREATE TABLE `$drvTable` (
+                    `id`            int unsigned NOT NULL AUTO_INCREMENT,
+                    `name`          varchar(255) NOT NULL DEFAULT '',
+                    `cnh`           varchar(20)  NOT NULL DEFAULT '',
+                    `phone`         varchar(50)  NOT NULL DEFAULT '',
+                    `picture`       varchar(255) DEFAULT NULL,
+                    `is_active`     tinyint      NOT NULL DEFAULT 1,
+                    `comment`       text         DEFAULT NULL,
+                    `is_deleted`    tinyint      NOT NULL DEFAULT 0,
+                    `date_creation` timestamp    NULL DEFAULT NULL,
+                    `date_mod`      timestamp    NULL DEFAULT NULL,
+                    PRIMARY KEY (`id`),
+                    KEY `is_active` (`is_active`),
+                    KEY `is_deleted` (`is_deleted`)
+                ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+            }
+            $bkTable = Booking::getTable();
+            if ($db->tableExists($bkTable) && !$db->fieldExists($bkTable, 'plugin_reservafrota_drivers_id')) {
+                $db->doQuery("ALTER TABLE `$bkTable`
+                    ADD COLUMN `plugin_reservafrota_drivers_id` int unsigned NOT NULL DEFAULT 0 AFTER `driver`,
+                    ADD KEY `plugin_reservafrota_drivers_id` (`plugin_reservafrota_drivers_id`)");
+            }
+            // Garante que o direito do motorista exista (para instalações antigas)
+            $exists = $db->request([
+                'FROM'  => \ProfileRight::getTable(),
+                'WHERE' => ['name' => 'reservafrota::driver'],
+                'LIMIT' => 1,
+            ])->current();
+            if (!$exists) {
+                \ProfileRight::addProfileRights(['reservafrota::driver']);
+                $current = (int) ($_SESSION['glpiactiveprofile']['id'] ?? 0);
+                if ($current > 0) {
+                    $db->update(\ProfileRight::getTable(), ['rights' => ALLSTANDARDRIGHT], [
+                        'profiles_id' => $current,
+                        'name'        => 'reservafrota::driver',
+                    ]);
+                    \GlpiPlugin\Reservafrota\Profile::changeProfile();
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        // Silencioso: instalação/migração completa será feita em Configurar > Plugins > Instalar/Atualizar
+    }
+
     // ESSENCIAL: a cada login/troca de perfil, o GLPI dispara este hook.
     // Ele carrega os direitos do plugin (reservafrota::booking / reservafrota::car)
     // do banco para a sessão ativa. Sem isso, Session::haveRight() não enxerga
