@@ -174,7 +174,13 @@ class Booking extends CommonDBTM
             $hasDriver = false;
         }
         if ($hasDriver) {
-            $drvId = (int) ($input['plugin_reservafrota_drivers_id'] ?? 0);
+            $rawDrv = $input['plugin_reservafrota_drivers_id'] ?? null;
+            // Se vier nome no campo drivers_id (ex.: cache antigo), trata como `driver`
+            if (is_string($rawDrv) && trim($rawDrv) !== '' && !is_numeric(trim($rawDrv))) {
+                $input['driver'] = trim((string) $rawDrv);
+                $rawDrv = null;
+            }
+            $drvId = (int) ($rawDrv ?? 0);
             // Compatibilidade: se veio `driver` como nome, tenta resolver para id
             if ($drvId === 0 && !empty($input['driver'])) {
                 try {
@@ -204,6 +210,8 @@ class Booking extends CommonDBTM
                 $input['plugin_reservafrota_drivers_id'] = 0;
                 if (isset($input['driver'])) {
                     $input['driver'] = trim((string) $input['driver']);
+                } elseif (is_string($rawDrv) && trim((string) $rawDrv) !== '' && !is_numeric(trim((string) $rawDrv))) {
+                    $input['driver'] = trim((string) $rawDrv);
                 }
             }
         } else {
@@ -342,16 +350,41 @@ class Booking extends CommonDBTM
         } catch (\Throwable $e) { $hasDrvUpd = false; }
         if ($hasDrvUpd) {
             if (array_key_exists('plugin_reservafrota_drivers_id', $input)) {
-                $dId = (int) $input['plugin_reservafrota_drivers_id'];
-                if ($dId > 0) {
-                    $drv = new Driver();
-                    if (!$drv->getFromDB($dId) || !(int) $drv->fields['is_active']) {
-                        Session::addMessageAfterRedirect(__('Motorista inválido ou inativo.', 'reservafrota'), false, ERROR);
-                        return false;
+                $rawDrv = $input['plugin_reservafrota_drivers_id'];
+                // Se vier nome (ex.: cache antigo enviou 'Aryan ...' no campo drivers_id), trata como `driver`
+                if (is_string($rawDrv) && trim($rawDrv) !== '' && !is_numeric(trim($rawDrv))) {
+                    $nm = trim((string) $rawDrv);
+                    try {
+                        global $DB;
+                        $found = $DB->request([
+                            'FROM'  => Driver::getTable(),
+                            'WHERE' => ['name' => $nm, 'is_deleted' => 0],
+                            'LIMIT' => 1,
+                        ])->current();
+                        if (is_array($found) && isset($found['id'])) {
+                            $input['plugin_reservafrota_drivers_id'] = (int) $found['id'];
+                            $input['driver'] = $found['name'];
+                        } else {
+                            $input['plugin_reservafrota_drivers_id'] = 0;
+                            $input['driver'] = $nm;
+                        }
+                    } catch (\Throwable $e) {
+                        $input['plugin_reservafrota_drivers_id'] = 0;
+                        $input['driver'] = $nm;
                     }
-                    $input['driver'] = $drv->fields['name'];
-                } elseif ($dId === 0 && array_key_exists('driver', $input)) {
-                    $input['driver'] = trim((string) $input['driver']);
+                } else {
+                    $dId = (int) $rawDrv;
+                    $input['plugin_reservafrota_drivers_id'] = $dId;
+                    if ($dId > 0) {
+                        $drv = new Driver();
+                        if (!$drv->getFromDB($dId) || !(int) $drv->fields['is_active']) {
+                            Session::addMessageAfterRedirect(__('Motorista inválido ou inativo.', 'reservafrota'), false, ERROR);
+                            return false;
+                        }
+                        $input['driver'] = $drv->fields['name'];
+                    } elseif ($dId === 0 && array_key_exists('driver', $input)) {
+                        $input['driver'] = trim((string) $input['driver']);
+                    }
                 }
             } elseif (array_key_exists('driver', $input) && !empty($input['driver'])) {
                 $nm = trim((string) $input['driver']);
@@ -535,6 +568,16 @@ class Booking extends CommonDBTM
             $update['km_final'] = $km;
         }
         $ok = $this->update($update);
+
+        // Atualiza o KM atual do carro (dispara alerta de manutenção, se houver).
+        if ($ok && $km !== null && $km > 0) {
+            try {
+                $carId = (int) ($this->fields['plugin_reservafrota_cars_id'] ?? 0);
+                if ($carId > 0) {
+                    Car::updateKm($carId, (int) $km, 'booking');
+                }
+            } catch (\Throwable $e) {}
+        }
 
         // Se houver observação, ela é registrada no HISTÓRICO do carro
         // (não altera o campo "Observações" do carro).
@@ -1696,6 +1739,12 @@ class Booking extends CommonDBTM
                     'search' => Car::getSearchURL(false),
                     'add'    => Car::getFormURL(false),
                 ],
+            ];
+            // Manutenções — mesmo público da Frota (usa o direito de carros).
+            $menu['options']['maintenance'] = [
+                'title' => __('Manutenções', 'reservafrota'),
+                'icon'  => 'ti ti-tool',
+                'page'  => $web . '/front/maintenance.php',
             ];
         }
 

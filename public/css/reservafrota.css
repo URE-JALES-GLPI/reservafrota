@@ -1388,3 +1388,48 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-cell.is-past .reservafrota-cell__num { color: #94a3b8; text-decoration: line-through; }
 .reservafrota-cell.is-past:hover { background: #f1f5f9 !important; }
 .reservafrota-evt.s-past { background: rgba(148,163,184,0.15); border-left-color: #94a3b8; color: #64748b; font-style: italic; }
+
+/* ============================================================
+   Manutenções por KM
+   ============================================================ */
+.reservafrota-maint-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px;
+    border-radius: 999px; font-size: 0.72rem; font-weight: 800;
+    background: #f43f5e; color: #fff; vertical-align: middle;
+}
+.reservafrota-maint-alert {
+    display: flex; gap: 0.8rem; align-items: flex-start;
+    padding: 0.9rem 1rem; margin-bottom: 1rem;
+    background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(244,63,94,0.10));
+    border: 1px solid rgba(245,158,11,0.4); border-radius: 14px;
+}
+.reservafrota-maint-alert__icon {
+    width: 38px; height: 38px; flex: 0 0 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; background: #f59e0b; color: #fff; font-size: 1.2rem;
+}
+.reservafrota-maint-alert__body { font-size: 0.86rem; }
+.reservafrota-maint-alert__body ul { margin: 0.4rem 0 0.2rem 1.1rem; padding: 0; }
+.reservafrota-maint-alert__body li { margin-bottom: 0.25rem; }
+.reservafrota-maint-filter { display: flex; gap: 0.5rem; align-items: center; }
+.reservafrota-maint-filter .form-select { min-width: 220px; }
+.reservafrota-maint-table tr.maint-overdue { background: rgba(244,63,94,0.05); }
+.reservafrota-maint-table tr.maint-warning { background: rgba(245,158,11,0.07); }
+.reservafrota-maint-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.reservafrota-maint-done { display: flex; gap: 0.35rem; align-items: center; }
+.reservafrota-maint-done .form-control { width: 110px; }
+.reservafrota-btn-danger {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(244,63,94,0.4);
+    background: #fff; color: #e11d48; cursor: pointer;
+}
+.reservafrota-btn-danger:hover { background: #ffe4e6; }
+.reservafrota-maint-edit { margin-top: 0.4rem; font-size: 0.82rem; }
+.reservafrota-maint-edit summary { cursor: pointer; color: var(--cb-muted); }
+.reservafrota-maint-edit form { margin-top: 0.5rem; display: grid; gap: 0.4rem; }
+.reservafrota-maint-new { margin-top: 1rem; border: 1px dashed var(--cb-border); border-radius: 12px; padding: 0.8rem 1rem; }
+.reservafrota-maint-new summary { cursor: pointer; font-weight: 700; }
+.reservafrota-maint-new[open] summary { margin-bottom: 0.8rem; }
+.reservafrota-maint-form .row { margin-bottom: 0.2rem; }
+.reservafrota-maint-carblock { margin-top: 1.2rem; }

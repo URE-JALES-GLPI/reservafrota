@@ -124,6 +124,24 @@
 
                 </div>
 
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label" for="car-km">{{ __('KM atual', 'reservafrota') }}</label>
+                        <input type="number"
+                               class="form-control"
+                               id="car-km"
+                               name="km_current"
+                               value="{{ item.fields['km_current'] ?? 0 }}"
+                               min="0"
+                               step="1"
+                               placeholder="0"
+                               {% if readonly %}readonly{% endif %}>
+                        {% if last_booking_km %}
+                            <small class="text-muted">{{ __('Último KM de chegada: %s', 'reservafrota')|format(last_booking_km) }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label" for="car-active">
                         {{ __('Disponível para agendamento', 'reservafrota') }}
@@ -183,6 +201,71 @@
         </div>
 
     </form>
+
+    {% if not is_new %}
+    <section class="reservafrota-carhistory reservafrota-maint-carblock">
+        <h3 class="reservafrota-carhistory__title"><i class="ti ti-tool"></i> {{ __('Manutenções deste carro', 'reservafrota') }}</h3>
+
+        {% if maint_plans is defined and maint_plans is not empty %}
+            <div class="reservafrota-tablewrap">
+                <table class="reservafrota-arrived-table">
+                    <thead><tr>
+                        <th>{{ __('Manutenção', 'reservafrota') }}</th>
+                        <th>{{ __('KM prevista', 'reservafrota') }}</th>
+                        <th>{{ __('Situação', 'reservafrota') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for p in maint_plans %}
+                        <tr>
+                            <td>{{ p.name }}</td>
+                            <td><b>{{ p.due_km }}</b></td>
+                            <td>
+                                {% if p.status_key == 'overdue' %}
+                                    <span class="reservafrota-chip status-rejected">{{ p.status_label }}</span>
+                                {% elseif p.status_key == 'warning' %}
+                                    <span class="reservafrota-chip status-pending">{{ p.status_label }} · {{ __('faltam %s km', 'reservafrota')|format(p.remaining) }}</span>
+                                {% elseif p.status_key == 'done' %}
+                                    <span class="reservafrota-chip status-approved">{{ p.status_label }}</span>
+                                {% else %}
+                                    <span class="reservafrota-chip status-approved">{{ p.status_label }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="reservafrota-hint">{{ __('Nenhuma manutenção programada para este carro.', 'reservafrota') }}</p>
+        {% endif %}
+
+        {% if maint_history is defined and maint_history is not empty %}
+            <h4 style="margin-top:1rem;"><i class="ti ti-history"></i> {{ __('Últimas manutenções feitas', 'reservafrota') }}</h4>
+            <div class="reservafrota-tablewrap">
+                <table class="reservafrota-arrived-table">
+                    <thead><tr>
+                        <th>{{ __('Data', 'reservafrota') }}</th>
+                        <th>{{ __('KM', 'reservafrota') }}</th>
+                        <th>{{ __('O que foi feito', 'reservafrota') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for m in maint_history|slice(0, 5) %}
+                        <tr>
+                            <td>{{ m.maintenance_date ? m.maintenance_date|slice(8,2) ~ '/' ~ m.maintenance_date|slice(5,2) ~ '/' ~ m.maintenance_date|slice(0,4) : '—' }}</td>
+                            <td><b>{{ m.km }}</b></td>
+                            <td>{{ m.description }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        <a class="reservafrota-export-btn" style="margin-top:0.8rem;display:inline-flex;" href="{{ web_dir }}/front/maintenance.php?cars_id={{ item.fields['id'] }}">
+            <i class="ti ti-tool"></i> {{ __('Gerenciar manutenções', 'reservafrota') }}
+        </a>
+    </section>
+    {% endif %}
 
     {% if history is defined and history is not empty %}
     <section class="reservafrota-carhistory reservafrota-tablefilter">

@@ -20,12 +20,20 @@ if (Session::getCurrentInterface() === 'helpdesk' && method_exists(Html::class, 
     );
 }
 
+$maintCount = 0;
+try {
+    if (class_exists(\GlpiPlugin\Reservafrota\MaintenancePlan::class)) {
+        $maintCount = \GlpiPlugin\Reservafrota\MaintenancePlan::countAlerts();
+    }
+} catch (\Throwable $e) {}
+
 TemplateRenderer::getInstance()->display('@reservafrota/history.html.twig', [
     'web_dir'            => Plugin::getWebDir('reservafrota'),
     'history'            => Booking::getHistory(),
     'is_manager'         => Booking::canApprove(),
     'can_manage_cars'    => Session::haveRight(Car::$rightname, READ),
     'can_view_analytics' => Booking::canApprove(),
+    'maint_alerts'       => $maintCount,
 ]);
 
 if ($used_help) {

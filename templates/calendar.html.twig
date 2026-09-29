@@ -21,13 +21,32 @@
         <span class="reservafrota-tab is-active"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</span>
         {% if can_manage_cars %}
             <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}{% if maint_alerts is defined and maint_alerts|length > 0 %}<span class="reservafrota-maint-count">{{ maint_alerts|length }}</span>{% endif %}</a>
         {% endif %}
         {% if can_view_analytics %}
             <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
         {% endif %}
         <a class="reservafrota-tab" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
-        <span class="reservafrota-build">v1.0.0</span>
+        <span class="reservafrota-build">v1.1.0</span>
     </div>
+
+    {% if can_approve and maint_alerts is defined and maint_alerts is not empty %}
+        <div class="reservafrota-maint-alert">
+            <div class="reservafrota-maint-alert__icon"><i class="ti ti-alert-triangle"></i></div>
+            <div class="reservafrota-maint-alert__body">
+                <strong><i class="ti ti-tool"></i> {{ __('Manutenções pendentes por KM', 'reservafrota') }}</strong>
+                <ul>
+                    {% for a in maint_alerts|slice(0, 3) %}
+                        <li><b>{{ a.car_name }}</b>{% if a.car_plate %} ({{ a.car_plate }}){% endif %} — {{ a.name }}:
+                            {% if a.status_key == 'overdue' %}<span class="reservafrota-chip status-rejected">{{ __('ATRASADA', 'reservafrota') }}</span>
+                            {% else %}<span class="reservafrota-chip status-pending">{{ __('faltam %s km', 'reservafrota')|format(a.remaining) }}</span>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <a class="reservafrota-export-btn" style="margin-top:6px;" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Ver manutenções', 'reservafrota') }}</a>
+            </div>
+        </div>
+    {% endif %}
 
 
     {# ---------- Cabeçalho: mês grande + navegação + botão Nova Reserva ---------- #}

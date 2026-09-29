@@ -44,6 +44,13 @@ $meses = [1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
 $ts = strtotime($month . '-01');
 $month_label = $meses[(int) date('n', $ts)] . ' / ' . date('Y', $ts);
 
+$maintCount = 0;
+try {
+    if (class_exists(\GlpiPlugin\Reservafrota\MaintenancePlan::class)) {
+        $maintCount = \GlpiPlugin\Reservafrota\MaintenancePlan::countAlerts();
+    }
+} catch (\Throwable $e) {}
+
 TemplateRenderer::getInstance()->display('@reservafrota/analytics.html.twig', [
     'web_dir'         => Plugin::getWebDir('reservafrota'),
     'month'           => $month,
@@ -56,6 +63,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/analytics.html.twig', [
     'bookings'        => $bookings,
     'cancellations'   => $cancellations,
     'year_bookings'   => $year_bookings,
+    'maint_alerts'    => $maintCount,
 ]);
 
 if ($used_help) {

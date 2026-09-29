@@ -8,6 +8,8 @@
 use GlpiPlugin\Reservafrota\Booking;
 use GlpiPlugin\Reservafrota\Car;
 use GlpiPlugin\Reservafrota\Driver;
+use GlpiPlugin\Reservafrota\Maintenance;
+use GlpiPlugin\Reservafrota\MaintenancePlan;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 
 /**
@@ -147,6 +149,69 @@ function plugin_reservafrota_install()
             ADD KEY `plugin_reservafrota_drivers_id` (`plugin_reservafrota_drivers_id`)");
     }
 
+    // ---- KM atual do carro ----
+    if ($DB->tableExists($cars) && !$DB->fieldExists($cars, 'km_current')) {
+        $DB->doQuery("ALTER TABLE `$cars`
+            ADD COLUMN `km_current` int unsigned NOT NULL DEFAULT 0 AFTER `model_year`,
+            ADD COLUMN `km_updated` datetime DEFAULT NULL AFTER `km_current`");
+    }
+    if ($DB->tableExists($cars) && !$DB->fieldExists($cars, 'km_updated')) {
+        $DB->doQuery("ALTER TABLE `$cars`
+            ADD COLUMN `km_updated` datetime DEFAULT NULL AFTER `km_current`");
+    }
+
+    // ---- Tabela de manutenções programadas (por carro, por KM) ----
+    $plans = MaintenancePlan::getTable();
+    if (!$DB->tableExists($plans)) {
+        $DB->doQuery("CREATE TABLE `$plans` (
+            `id`                                    int unsigned NOT NULL AUTO_INCREMENT,
+            `plugin_reservafrota_cars_id`           int unsigned NOT NULL DEFAULT 0,
+            `name`                                  varchar(255) NOT NULL DEFAULT '',
+            `due_km`                                int unsigned NOT NULL DEFAULT 0,
+            `warn_km`                               int unsigned NOT NULL DEFAULT 1000,
+            `comment`                               text         DEFAULT NULL,
+            `is_done`                               tinyint      NOT NULL DEFAULT 0,
+            `date_done`                             datetime     DEFAULT NULL,
+            `last_notify`                           datetime     DEFAULT NULL,
+            `is_deleted`                            tinyint      NOT NULL DEFAULT 0,
+            `date_creation`                         timestamp    NULL DEFAULT NULL,
+            `date_mod`                              timestamp    NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `plugin_reservafrota_cars_id` (`plugin_reservafrota_cars_id`),
+            KEY `is_done` (`is_done`),
+            KEY `due_km` (`due_km`),
+            KEY `is_deleted` (`is_deleted`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+    if ($DB->tableExists($plans) && !$DB->fieldExists($plans, 'warn_km')) {
+        $DB->doQuery("ALTER TABLE `$plans` ADD COLUMN `warn_km` int unsigned NOT NULL DEFAULT 1000 AFTER `due_km`");
+    }
+    if ($DB->tableExists($plans) && !$DB->fieldExists($plans, 'last_notify')) {
+        $DB->doQuery("ALTER TABLE `$plans` ADD COLUMN `last_notify` datetime DEFAULT NULL AFTER `date_done`");
+    }
+
+    // ---- Tabela de manutenções realizadas (histórico: o quê, quando, KM) ----
+    $maint = Maintenance::getTable();
+    if (!$DB->tableExists($maint)) {
+        $DB->doQuery("CREATE TABLE `$maint` (
+            `id`                                    int unsigned NOT NULL AUTO_INCREMENT,
+            `plugin_reservafrota_cars_id`           int unsigned NOT NULL DEFAULT 0,
+            `plugin_reservafrota_maintenanceplans_id` int unsigned NOT NULL DEFAULT 0,
+            `maintenance_date`                      date         DEFAULT NULL,
+            `km`                                    int unsigned NOT NULL DEFAULT 0,
+            `description`                           text         DEFAULT NULL,
+            `users_id`                              int unsigned NOT NULL DEFAULT 0,
+            `is_deleted`                            tinyint      NOT NULL DEFAULT 0,
+            `date_creation`                         timestamp    NULL DEFAULT NULL,
+            `date_mod`                              timestamp    NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `plugin_reservafrota_cars_id` (`plugin_reservafrota_cars_id`),
+            KEY `plugin_reservafrota_maintenanceplans_id` (`plugin_reservafrota_maintenanceplans_id`),
+            KEY `maintenance_date` (`maintenance_date`),
+            KEY `is_deleted` (`is_deleted`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+
     $migration->executeMigration();
 
     // ---- Permissões ----
@@ -233,7 +298,7 @@ function plugin_reservafrota_uninstall()
     }
 
     // Remove as tabelas.
-    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable()] as $table) {
+    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(), Maintenance::getTable()] as $table) {
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `$table`");
         }

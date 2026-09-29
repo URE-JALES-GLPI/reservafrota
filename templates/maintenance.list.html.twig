@@ -1,0 +1,270 @@
+{# Manutenções da frota — programadas por KM + histórico do que foi feito #}
+
+<div id="reservafrota-maintenance" class="reservafrota-agenda" data-cb-pending-url="{{ web_dir }}/ajax/pending.php">
+
+    {# ---------- Abas ---------- #}
+    <div class="reservafrota-tabs">
+        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        {% if can_manage_cars %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+        {% endif %}
+        <span class="reservafrota-tab is-active"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}
+            {% if alerts|length > 0 %}<span class="reservafrota-maint-count">{{ alerts|length }}</span>{% endif %}
+        </span>
+        {% if can_view_analytics %}
+            <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
+        {% endif %}
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+        <span class="reservafrota-build">v1.1.0</span>
+    </div>
+
+    {# ---------- Alerta ao gestor ---------- #}
+    {% if is_manager and alerts is not empty %}
+        <div class="reservafrota-maint-alert">
+            <div class="reservafrota-maint-alert__icon"><i class="ti ti-alert-triangle"></i></div>
+            <div class="reservafrota-maint-alert__body">
+                <strong>{{ __('Atenção: %d manutenção(ões) precisam de olhar', 'reservafrota')|format(alerts|length) }}</strong>
+                <ul>
+                    {% for a in alerts|slice(0, 5) %}
+                        <li>
+                            <b>{{ a.car_name ?: '#' ~ a.plugin_reservafrota_cars_id }}</b>
+                            {% if a.car_plate %}({{ a.car_plate }}){% endif %}
+                            — {{ a.name }}:
+                            {% if a.status_key == 'overdue' %}
+                                <span class="reservafrota-chip status-rejected">{{ __('ATRASADA', 'reservafrota') }} ({{ __('prevista aos %s km — atual %s km', 'reservafrota')|format(a.due_km, a.current_km) }})</span>
+                            {% else %}
+                                <span class="reservafrota-chip status-pending">{{ __('PRÓXIMA', 'reservafrota') }} ({{ __('faltam %s km — prevista aos %s km', 'reservafrota')|format(a.remaining, a.due_km) }})</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {% if alerts|length > 5 %}
+                    <small>{{ __('+ %d outras abaixo na lista.', 'reservafrota')|format(alerts|length - 5) }}</small>
+                {% endif %}
+                <small class="reservafrota-hint">{{ __('O aviso por e-mail é enviado aos gestores quando o KM é atualizado (chegada ou manutenção).', 'reservafrota') }}</small>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="reservafrota-fleet-head">
+        <h2><i class="ti ti-tool"></i> {{ __('Manutenções por KM', 'reservafrota') }}</h2>
+        <form method="get" action="{{ web_dir }}/front/maintenance.php" class="reservafrota-maint-filter">
+            <select name="cars_id" class="form-select" onchange="this.form.submit()">
+                <option value="0">{{ __('Todos os carros', 'reservafrota') }}</option>
+                {% for car in cars %}
+                    <option value="{{ car.id }}" {{ car_filter == car.id ? 'selected' : '' }}>{{ car.name }}{% if car.plate %} — {{ car.plate }}{% endif %}</option>
+                {% endfor %}
+            </select>
+            {% if car_filter > 0 %}
+                <a href="{{ web_dir }}/front/maintenance.php" class="reservafrota-clearbtn"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# ---------- Próximas manutenções ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-calendar-clock"></i> {{ __('Manutenções programadas', 'reservafrota') }}
+            <span class="reservafrota-level">{{ __('cadastre a manutenção e a quilometragem; o sistema avisa ao se aproximar', 'reservafrota') }}</span>
+        </h3>
+
+        {% if pending is empty %}
+            <p class="reservafrota-blist-empty">{{ __('Nenhuma manutenção programada. Cadastre a primeira abaixo.', 'reservafrota') }}</p>
+        {% else %}
+        <div class="reservafrota-table-wrap">
+            <table class="reservafrota-table reservafrota-maint-table">
+                <thead><tr>
+                    <th>{{ __('Carro', 'reservafrota') }}</th>
+                    <th>{{ __('Manutenção', 'reservafrota') }}</th>
+                    <th>{{ __('KM prevista', 'reservafrota') }}</th>
+                    <th>{{ __('KM atual', 'reservafrota') }}</th>
+                    <th>{{ __('Situação', 'reservafrota') }}</th>
+                    {% if can_edit %}<th>{{ __('Ações', 'reservafrota') }}</th>{% endif %}
+                </tr></thead>
+                <tbody>
+                {% for p in pending %}
+                    <tr class="maint-{{ p.status_key }}">
+                        <td><b>{{ p.car_name ?: '#' ~ p.plugin_reservafrota_cars_id }}</b>{% if p.car_plate %}<br><small class="reservafrota-plate">{{ p.car_plate }}</small>{% endif %}</td>
+                        <td>{{ p.name }}{% if p.comment %}<br><small class="text-muted">{{ p.comment }}</small>{% endif %}</td>
+                        <td><b>{{ p.due_km }}</b><br><small class="text-muted">{{ __('avisa %s km antes', 'reservafrota')|format(p.warn_km) }}</small></td>
+                        <td>{{ p.current_km }}</td>
+                        <td>
+                            {% if p.status_key == 'overdue' %}
+                                <span class="reservafrota-chip status-rejected">{{ p.status_label }} · {{ (p.current_km - p.due_km) }} km {{ __('acima', 'reservafrota') }}</span>
+                            {% elseif p.status_key == 'warning' %}
+                                <span class="reservafrota-chip status-pending">{{ p.status_label }} · {{ __('faltam %s km', 'reservafrota')|format(p.remaining) }}</span>
+                            {% else %}
+                                <span class="reservafrota-chip status-approved">{{ p.status_label }} · {{ __('faltam %s km', 'reservafrota')|format(p.remaining) }}</span>
+                            {% endif %}
+                        </td>
+                        {% if can_edit %}
+                        <td>
+                            <div class="reservafrota-maint-actions">
+                                <form method="post" action="{{ web_dir }}/front/maintenance.form.php" class="reservafrota-maint-done">
+                                    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+                                    <input type="hidden" name="id" value="{{ p.id }}">
+                                    <input type="hidden" name="cars_id" value="{{ car_filter }}">
+                                    <input type="number" name="done_km" class="form-control" min="0" step="1" placeholder="{{ __('KM feito', 'reservafrota') }}" value="{{ p.current_km }}" title="{{ __('KM em que foi feita (preenche o histórico)', 'reservafrota') }}">
+                                    <button type="submit" name="done_plan" value="1" class="reservafrota-btn-approve" title="{{ __('Marcar como concluída', 'reservafrota') }}"><i class="ti ti-check"></i> {{ __('Concluir', 'reservafrota') }}</button>
+                                </form>
+                                <form method="post" action="{{ web_dir }}/front/maintenance.form.php" onsubmit="return confirm('{{ __('Excluir esta manutenção programada?', 'reservafrota') }}');">
+                                    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+                                    <input type="hidden" name="id" value="{{ p.id }}">
+                                    <input type="hidden" name="cars_id" value="{{ car_filter }}">
+                                    <button type="submit" name="delete_plan" value="1" class="reservafrota-btn-danger"><i class="ti ti-trash"></i></button>
+                                </form>
+                            </div>
+                            <details class="reservafrota-maint-edit">
+                                <summary>{{ __('Editar', 'reservafrota') }}</summary>
+                                <form method="post" action="{{ web_dir }}/front/maintenance.form.php">
+                                    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+                                    <input type="hidden" name="id" value="{{ p.id }}">
+                                    <input type="hidden" name="cars_id" value="{{ car_filter }}">
+                                    <input type="text" name="name" class="form-control" value="{{ p.name }}" required>
+                                    <div class="reservafrota-datetime">
+                                        <input type="number" name="due_km" class="form-control" value="{{ p.due_km }}" min="1" required title="{{ __('KM prevista', 'reservafrota') }}">
+                                        <input type="number" name="warn_km" class="form-control" value="{{ p.warn_km }}" min="0" title="{{ __('Avisar quantos KM antes', 'reservafrota') }}">
+                                    </div>
+                                    <input type="text" name="comment" class="form-control" value="{{ p.comment }}" placeholder="{{ __('Observação (opcional)', 'reservafrota') }}">
+                                    <button type="submit" name="update_plan" value="1" class="reservafrota-submit"><i class="ti ti-device-floppy"></i> {{ __('Salvar', 'reservafrota') }}</button>
+                                </form>
+                            </details>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if can_edit %}
+        <details class="reservafrota-maint-new" {{ pending is empty ? 'open' : '' }}>
+            <summary><i class="ti ti-plus"></i> {{ __('Programar nova manutenção', 'reservafrota') }}</summary>
+            <form method="post" action="{{ web_dir }}/front/maintenance.form.php" class="reservafrota-form reservafrota-maint-form">
+                <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+                <input type="hidden" name="cars_id" value="{{ car_filter }}">
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-2">
+                        <label class="form-label">{{ __('Carro', 'reservafrota') }} *</label>
+                        <select name="plugin_reservafrota_cars_id" class="form-select" required>
+                            <option value="">{{ __('— Selecione —', 'reservafrota') }}</option>
+                            {% for car in cars %}
+                                <option value="{{ car.id }}" {{ car_filter == car.id ? 'selected' : '' }}>{{ car.name }}{% if car.plate %} — {{ car.plate }}{% endif %} (KM {{ car.km_current ?? 0 }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4 mb-2">
+                        <label class="form-label">{{ __('Manutenção', 'reservafrota') }} *</label>
+                        <input type="text" name="name" class="form-control" required placeholder="{{ __('Ex.: Troca de óleo', 'reservafrota') }}">
+                    </div>
+                    <div class="col-6 col-md-2 mb-2">
+                        <label class="form-label">{{ __('KM prevista', 'reservafrota') }} *</label>
+                        <input type="number" name="due_km" class="form-control" min="1" step="1" required placeholder="50000">
+                    </div>
+                    <div class="col-6 col-md-2 mb-2">
+                        <label class="form-label">{{ __('Avisar antes (KM)', 'reservafrota') }}</label>
+                        <input type="number" name="warn_km" class="form-control" min="0" step="1" value="1000">
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">{{ __('Observação', 'reservafrota') }}</label>
+                    <input type="text" name="comment" class="form-control" placeholder="{{ __('Opcional', 'reservafrota') }}">
+                </div>
+                <button type="submit" name="add_plan" value="1" class="reservafrota-submit"><i class="ti ti-plus"></i> {{ __('Programar', 'reservafrota') }}</button>
+            </form>
+        </details>
+        {% endif %}
+    </div>
+
+    {# ---------- Histórico: o que foi feito ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-history"></i> {{ __('Manutenções realizadas', 'reservafrota') }}
+            <span class="reservafrota-level">{{ __('o que foi feito, quando e em qual KM', 'reservafrota') }}</span>
+        </h3>
+
+        {% if recent is empty %}
+            <p class="reservafrota-blist-empty">{{ __('Nenhuma manutenção registrada ainda.', 'reservafrota') }}</p>
+        {% else %}
+        <div class="reservafrota-table-wrap">
+            <table class="reservafrota-table">
+                <thead><tr>
+                    <th>{{ __('Data', 'reservafrota') }}</th>
+                    <th>{{ __('Carro', 'reservafrota') }}</th>
+                    <th>{{ __('KM', 'reservafrota') }}</th>
+                    <th>{{ __('O que foi feito', 'reservafrota') }}</th>
+                    <th>{{ __('Por', 'reservafrota') }}</th>
+                    {% if can_edit %}<th></th>{% endif %}
+                </tr></thead>
+                <tbody>
+                {% for m in recent %}
+                    <tr>
+                        <td>{{ m.maintenance_date ? m.maintenance_date|slice(8,2) ~ '/' ~ m.maintenance_date|slice(5,2) ~ '/' ~ m.maintenance_date|slice(0,4) : '—' }}</td>
+                        <td><b>{{ m.car_name ?: '#' ~ m.plugin_reservafrota_cars_id }}</b>{% if m.car_plate %}<br><small class="reservafrota-plate">{{ m.car_plate }}</small>{% endif %}</td>
+                        <td><b>{{ m.km }}</b>{% if m.plan_name %}<br><small class="text-muted">{{ m.plan_name }}</small>{% endif %}</td>
+                        <td>{{ m.description }}</td>
+                        <td><small>{{ m.user_display }}</small></td>
+                        {% if can_edit %}
+                        <td>
+                            <form method="post" action="{{ web_dir }}/front/maintenance.form.php" onsubmit="return confirm('{{ __('Excluir este registro?', 'reservafrota') }}');">
+                                <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+                                <input type="hidden" name="id" value="{{ m.id }}">
+                                <input type="hidden" name="cars_id" value="{{ car_filter }}">
+                                <button type="submit" name="delete_maintenance" value="1" class="reservafrota-btn-danger"><i class="ti ti-trash"></i></button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if can_edit %}
+        <details class="reservafrota-maint-new" open>
+            <summary><i class="ti ti-plus"></i> {{ __('Registrar o que foi feito', 'reservafrota') }}</summary>
+            <form method="post" action="{{ web_dir }}/front/maintenance.form.php" class="reservafrota-form reservafrota-maint-form">
+                <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
+                <input type="hidden" name="cars_id" value="{{ car_filter }}">
+                <div class="row">
+                    <div class="col-12 col-md-3 mb-2">
+                        <label class="form-label">{{ __('Carro', 'reservafrota') }} *</label>
+                        <select name="plugin_reservafrota_cars_id" class="form-select" required id="maint-car-select">
+                            <option value="">{{ __('— Selecione —', 'reservafrota') }}</option>
+                            {% for car in cars %}
+                                <option value="{{ car.id }}" {{ car_filter == car.id ? 'selected' : '' }}>{{ car.name }}{% if car.plate %} — {{ car.plate }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2 mb-2">
+                        <label class="form-label">{{ __('Data', 'reservafrota') }}</label>
+                        <input type="date" name="maintenance_date" class="form-control" value="{{ today }}">
+                    </div>
+                    <div class="col-6 col-md-2 mb-2">
+                        <label class="form-label">{{ __('KM', 'reservafrota') }} *</label>
+                        <input type="number" name="km" class="form-control" min="1" step="1" required placeholder="{{ __('Ex.: 48250', 'reservafrota') }}">
+                    </div>
+                    <div class="col-12 col-md-5 mb-2">
+                        <label class="form-label">{{ __('Vincular à programada (opcional)', 'reservafrota') }}</label>
+                        <select name="plugin_reservafrota_maintenanceplans_id" class="form-select">
+                            <option value="0">{{ __('— Avulsa / não vincular —', 'reservafrota') }}</option>
+                            {% for cid, plist in plans_by_car %}
+                                {% for p in plist %}
+                                    <option value="{{ p.id }}" data-car="{{ cid }}">{{ p.name }} ({{ p.due_km }} km)</option>
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">{{ __('O que foi feito', 'reservafrota') }} *</label>
+                    <textarea name="description" class="form-control" rows="2" required placeholder="{{ __('Ex.: Troca de óleo + filtro, pastilhas dianteiras...', 'reservafrota') }}"></textarea>
+                </div>
+                <button type="submit" name="add_maintenance" value="1" class="reservafrota-submit"><i class="ti ti-device-floppy"></i> {{ __('Salvar', 'reservafrota') }}</button>
+                <small class="reservafrota-hint">{{ __('Ao salvar, o KM atual do carro é atualizado automaticamente se for maior.', 'reservafrota') }}</small>
+            </form>
+        </details>
+        {% endif %}
+    </div>
+</div>

@@ -30,6 +30,15 @@ if (Session::getCurrentInterface() === 'helpdesk' && method_exists(Html::class, 
     );
 }
 
+$maintAlerts = [];
+try {
+    if (class_exists(\GlpiPlugin\Reservafrota\MaintenancePlan::class) && Booking::canApprove()) {
+        $maintAlerts = \GlpiPlugin\Reservafrota\MaintenancePlan::getAlerts();
+    }
+} catch (\Throwable $e) {
+    $maintAlerts = [];
+}
+
 TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'web_dir'            => Plugin::getWebDir('reservafrota'),
     'month'              => $month,
@@ -49,6 +58,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'agenda_url'         => Plugin::getWebDir('reservafrota') . '/front/agenda.php',
     'blist_url'          => Plugin::getWebDir('reservafrota') . '/ajax/bookinglist.php',
     'csrf'               => Session::getNewCSRFToken(),
+    'maint_alerts'       => $maintAlerts,
 ]);
 
 if ($used_help) {
