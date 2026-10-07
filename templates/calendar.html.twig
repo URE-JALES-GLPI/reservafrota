@@ -17,7 +17,6 @@
 
     {# ---------- Abas (conforme os direitos do usuário) ---------- #}
     <div class="reservafrota-tabs">
-        <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
         <span class="reservafrota-tab is-active"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</span>
         {% if can_manage_cars %}
             <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>

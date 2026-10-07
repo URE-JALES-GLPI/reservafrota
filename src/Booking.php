@@ -292,6 +292,29 @@ class Booking extends CommonDBTM
             }
         }
 
+        // Motorista: não pode estar em duas viagens sobrepostas, mesmo em
+        // carros diferentes. Espelha a regra do carro.
+        $drvCheck = (int) ($input['plugin_reservafrota_drivers_id'] ?? 0);
+        if ($drvCheck > 0 && !empty($input['date_departure'])) {
+            $dep = (string) $input['date_departure'];
+            $arr = !empty($input['date_arrival']) ? (string) $input['date_arrival'] : null;
+            if (self::hasDriverConflict($drvCheck, $dep, $arr, 0)) {
+                if (!self::canApprove()) {
+                    Session::addMessageAfterRedirect(
+                        __('Conflito: este motorista já está em outra viagem neste horário. Escolha outro motorista ou horário.', 'reservafrota'),
+                        false,
+                        ERROR
+                    );
+                    return false;
+                }
+                Session::addMessageAfterRedirect(
+                    __('Conflito: este motorista já está agendado neste horário. O pedido foi registrado mesmo assim, mas pode ser recusado.', 'reservafrota'),
+                    true,
+                    WARNING
+                );
+            }
+        }
+
         return $input;
     }
 
@@ -422,6 +445,28 @@ class Booking extends CommonDBTM
             unset($input['status'], $input['users_id_approver'], $input['date_validation']);
         }
 
+        // Edição: se motorista ou datas mudaram, verifica sobreposição do motorista.
+        $isDateChange = isset($input['date_departure']) || array_key_exists('date_arrival', $input)
+            || array_key_exists('plugin_reservafrota_drivers_id', $input);
+        if ($isDateChange) {
+            $finalDep = $input['date_departure'] ?? ($this->fields['date_departure'] ?? null);
+            $finalArr = array_key_exists('date_arrival', $input) ? $input['date_arrival'] : ($this->fields['date_arrival'] ?? null);
+            $finalDrv = array_key_exists('plugin_reservafrota_drivers_id', $input)
+                ? (int) $input['plugin_reservafrota_drivers_id']
+                : (int) ($this->fields['plugin_reservafrota_drivers_id'] ?? 0);
+            if ($finalDrv > 0 && !empty($finalDep)) {
+                $exclude = (int) ($this->fields['id'] ?? $input['id'] ?? 0);
+                if (self::hasDriverConflict($finalDrv, (string) $finalDep, $finalArr ?: null, $exclude)) {
+                    Session::addMessageAfterRedirect(
+                        __('Conflito: este motorista já está em outra viagem neste horário.', 'reservafrota'),
+                        false,
+                        ERROR
+                    );
+                    return false;
+                }
+            }
+        }
+
         return $input;
     }
 
@@ -458,11 +503,27 @@ class Booking extends CommonDBTM
                 && $GLOBALS['DB']->tableExists(Driver::getTable())
                 && $GLOBALS['DB']->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id');
         } catch (\Throwable $e) { $hasDrvAp = false; }
+        $finalDriver = (int) ($this->fields['plugin_reservafrota_drivers_id'] ?? 0);
         if ($hasDrvAp && $driverId !== null && $driverId > 0) {
             $drv = new Driver();
             if ($drv->getFromDB($driverId) && (int) $drv->fields['is_active']) {
                 $update['plugin_reservafrota_drivers_id'] = $driverId;
                 $update['driver'] = $drv->fields['name'];
+                $finalDriver = $driverId;
+            }
+        }
+
+        // Bloqueia aprovar com motorista já ocupado em horário sobreposto.
+        if ($finalDriver > 0) {
+            $dep = (string) ($this->fields['date_departure'] ?? '');
+            $arr = ($this->fields['date_arrival'] ?? null) ?: null;
+            if ($dep !== '' && self::hasDriverConflict($finalDriver, $dep, $arr, (int) ($this->fields['id'] ?? 0))) {
+                Session::addMessageAfterRedirect(
+                    __('Conflito: este motorista já está em outra viagem neste horário. Escolha outro motorista.', 'reservafrota'),
+                    false,
+                    ERROR
+                );
+                return false;
             }
         }
 
@@ -774,6 +835,161 @@ class Booking extends CommonDBTM
     }
 
     /**
+     * Agendamentos (não recusados/cancelados/concluídos) de um motorista
+     * que tocam um determinado dia. Espelha getBookingsForCarOnDate.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function getBookingsForDriverOnDate(int $drivers_id, string $date): array
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+
+        if ($drivers_id <= 0) {
+            return [];
+        }
+        // Sem suporte a motoristas (tabela/coluna ainda não migrada): sem conflito.
+        try {
+            if (!$DB->tableExists(Driver::getTable())
+                || !$DB->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id')) {
+                return [];
+            }
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $rows = [];
+        try {
+            $iterator = $DB->request([
+                'FROM'  => self::getTable(),
+                'WHERE' => [
+                    'plugin_reservafrota_drivers_id' => $drivers_id,
+                    'is_deleted'                     => 0,
+                    'status' => ['NOT IN', [
+                        self::STATUS_REJECTED,
+                        self::STATUS_CANCELLED,
+                        self::STATUS_ARRIVED
+                    ]],
+                    'date_departure' => ['<=', "$date 23:59:59"],
+                    'OR' => [
+                        [
+                            'date_arrival'   => null,
+                            'date_departure' => ['>=', "$date 00:00:00"],
+                        ],
+                        [
+                            'date_arrival' => ['>=', "$date 00:00:00"],
+                        ],
+                    ],
+                ],
+                'ORDER' => 'date_departure ASC',
+            ]);
+        } catch (\Throwable $e) {
+            return [];
+        }
+        foreach ($iterator as $row) {
+            $rows[(int) $row['id']] = $row;
+        }
+        return $rows;
+    }
+
+    /**
+     * Motorista ocupado no intervalo? Compara sobreposição real de
+     * [saída, chegada] contra agendamentos pendentes/aprovados.
+     */
+    public static function hasDriverConflict(int $drivers_id, string $departure, ?string $arrival, int $excludeId = 0): bool
+    {
+        if ($drivers_id <= 0) {
+            return false;
+        }
+        $start = strtotime($departure);
+        if ($start === false) {
+            return false;
+        }
+        $end = $arrival ? strtotime($arrival) : ($start + 3600);
+        if ($end === false) {
+            $end = $start + 3600;
+        }
+        $day = substr($departure, 0, 10);
+        foreach (self::getBookingsForDriverOnDate($drivers_id, $day) as $id => $c) {
+            if ((int) $id === $excludeId) {
+                continue;
+            }
+            $cStart = strtotime((string) $c['date_departure']);
+            $cEnd   = !empty($c['date_arrival']) ? strtotime((string) $c['date_arrival']) : ($cStart + 3600);
+            if ($cStart === false || $cEnd === false) {
+                continue;
+            }
+            if ($start < $cEnd && $cStart < $end) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Lista os motoristas ativos indicando quais já estão indisponíveis
+     * (têm outro agendamento com sobreposição de horário) no intervalo.
+     * Espelha getCarAvailabilityForSlot (considera pendentes + aprovados,
+     * pois o motorista sugerido já bloqueia o horário).
+     *
+     * @return list<array{id:int,name:string,blocked:bool}>
+     */
+    public static function getDriverAvailabilityForSlot(string $departure, ?string $arrival, int $excludeId = 0): array
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+
+        $start = strtotime($departure);
+        $end   = $arrival ? strtotime($arrival) : ($start + 3600);
+        $day   = substr($departure, 0, 10);
+
+        $busy = [];
+        try {
+            if (!$DB->tableExists(Driver::getTable())
+                || !$DB->fieldExists(self::getTable(), 'plugin_reservafrota_drivers_id')) {
+                $busy = [];
+            } else {
+                $iterator = $DB->request([
+                    'FROM'  => self::getTable(),
+                    'WHERE' => [
+                        'is_deleted' => 0,
+                        'status'     => [self::STATUS_PENDING, self::STATUS_APPROVED],
+                        'id'         => ['<>', $excludeId],
+                        'date_departure' => ['<=', "$day 23:59:59"],
+                        'OR' => [
+                            ['date_arrival' => null, 'date_departure' => ['>=', "$day 00:00:00"]],
+                            ['date_arrival' => ['>=', "$day 00:00:00"]],
+                        ],
+                    ],
+                ]);
+                foreach ($iterator as $row) {
+                    $did = (int) ($row['plugin_reservafrota_drivers_id'] ?? 0);
+                    if ($did <= 0) {
+                        continue;
+                    }
+                    $s = strtotime((string) $row['date_departure']);
+                    $e = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($s + 3600);
+                    if ($start < $e && $s < $end) {
+                        $busy[$did] = true;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $busy = [];
+        }
+
+        $out = [];
+        foreach (Driver::getActiveDrivers() as $did => $d) {
+            $out[] = [
+                'id'      => (int) $did,
+                'name'    => $d['name'],
+                'blocked' => !empty($busy[(int) $did]),
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Situação de cada carro ativo em um dia: livre, pendente ou em uso,
      * com a lista de pessoas e horários. Alimenta a página de agenda e o AJAX.
      *
@@ -1048,14 +1264,14 @@ class Booking extends CommonDBTM
         $uid            = (int) Session::getLoginUserID();
         $can_approve    = self::canApprove();
 
-        // Carrega tudo e calcula conflitos de horário por carro.
+        // Carrega tudo e calcula conflitos de horário por carro e por motorista.
         $rows = [];
         $confInput = [];
         foreach ($iterator as $row) {
             $rows[] = $row;
             $s = strtotime((string) $row['date_departure']);
             $e = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($s + 3600);
-            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'start' => $s, 'end' => $e, 'status' => (int) $row['status']];
+            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'drivers_id' => (int) ($row['drivers_id'] ?? 0), 'start' => $s, 'end' => $e, 'status' => (int) $row['status']];
         }
         $conflicts = self::markConflicts($confInput);
 
@@ -1275,7 +1491,7 @@ class Booking extends CommonDBTM
             $st = (int) $row['status'];
             $start = strtotime((string) $row['date_departure']);
             $end   = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($start + 3600);
-            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'start' => $start, 'end' => $end, 'status' => $st];
+            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'drivers_id' => (int) ($row['drivers_id'] ?? 0), 'start' => $start, 'end' => $end, 'status' => $st];
 
             $nm = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
             if ($nm === '') { $nm = $row['user_login'] ?? ''; }
@@ -1459,9 +1675,11 @@ class Booking extends CommonDBTM
     }
 
     /**
-     * Marca conflitos de horário entre agendamentos do mesmo carro.
+     * Marca conflitos de horário entre agendamentos do mesmo carro OU do
+     * mesmo motorista. Um motorista não pode estar em duas viagens
+     * sobrepostas, mesmo em carros diferentes.
      *
-     * @param list<array{id:int,car_id:int,start:int,end:int,status:int}> $rows
+     * @param list<array{id:int,car_id:int,drivers_id?:int,start:int,end:int,status:int}> $rows
      * @return array<int,bool> id => tem conflito
      */
     public static function markConflicts(array $rows): array
@@ -1477,7 +1695,14 @@ class Booking extends CommonDBTM
 
         foreach ($active as $a) {
             foreach ($active as $b) {
-                if ($a['id'] === $b['id'] || $a['car_id'] <= 0 || $a['car_id'] !== $b['car_id']) {
+                if ($a['id'] === $b['id']) {
+                    continue;
+                }
+                $sameCar = ($a['car_id'] ?? 0) > 0 && ($a['car_id'] ?? 0) === ($b['car_id'] ?? 0);
+                $da = (int) ($a['drivers_id'] ?? 0);
+                $db = (int) ($b['drivers_id'] ?? 0);
+                $sameDriver = $da > 0 && $da === $db;
+                if (!$sameCar && !$sameDriver) {
                     continue;
                 }
                 if ($a['start'] < $b['end'] && $b['start'] < $a['end']) {

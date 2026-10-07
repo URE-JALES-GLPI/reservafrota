@@ -18,6 +18,11 @@ if ($id <= 0 || !$booking->getFromDB($id)) {
 $departure = (string) $booking->fields['date_departure'];
 $arrival   = $booking->fields['date_arrival'] ?: null;
 
+$driverAvail = Booking::getDriverAvailabilityForSlot($departure, $arrival, $id);
+$blockedById = [];
+foreach ($driverAvail as $da) {
+    $blockedById[(int) $da['id']] = !empty($da['blocked']);
+}
 echo json_encode([
     'id'        => $id,
     'departure' => $departure,
@@ -25,7 +30,7 @@ echo json_encode([
     'car_id'    => (int) $booking->fields['plugin_reservafrota_cars_id'],
     'cars'      => Booking::getCarAvailabilityForSlot($departure, $arrival, $id),
     'driver_id' => (int) ($booking->fields['plugin_reservafrota_drivers_id'] ?? 0),
-    'drivers'   => array_values(array_map(function ($d) {
-        return ['id' => (int) $d['id'], 'name' => $d['name'], 'phone' => $d['phone'] ?? '', 'cnh' => $d['cnh'] ?? ''];
+    'drivers'   => array_values(array_map(function ($d) use ($blockedById) {
+        return ['id' => (int) $d['id'], 'name' => $d['name'], 'phone' => $d['phone'] ?? '', 'cnh' => $d['cnh'] ?? '', 'blocked' => !empty($blockedById[(int) $d['id']])];
     }, Driver::getActiveDrivers())),
 ]);

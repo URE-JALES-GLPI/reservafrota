@@ -44,9 +44,11 @@ if ($arrival !== null && strtotime($arrival) <= strtotime($departure)) {
 
 $exclude = (int) ($_GET['exclude'] ?? 0);
 $cars = Booking::getCarAvailabilityForSlot($departure, $arrival, $exclude);
+$drivers = Booking::getDriverAvailabilityForSlot($departure, $arrival, $exclude);
 
 echo json_encode([
     'departure' => $departure,
     'arrival'   => $arrival,
     'cars'      => $cars,
+    'drivers'   => $drivers,
 ]);
