@@ -548,7 +548,7 @@
           + '<label class="form-label"><b>Data e hora do retorno</b></label>'
           + '<div class="reservafrota-datetime">'
           + '<input type="date" class="form-control cb-rdate">'
-          + '<input type="time" class="form-control cb-rtime" step="300">'
+          + '<select class="form-select cb-rtime"></select>'
           + '</div>'
           + '<input type="hidden" name="returned_at" class="cb-rwhen">'
           + '<label class="form-label" style="margin-top:0.7rem;"><b>KM final do veículo</b> (opcional)</label>'
@@ -584,8 +584,17 @@
         if (!d || !t || !hid) { return; }
         var now = new Date();
         function p(n) { return n < 10 ? '0' + n : '' + n; }
+        var opts = '<option value="">--:--</option>';
+        for (var hh = 0; hh < 24; hh++) {
+            for (var mm = 0; mm < 60; mm += 5) {
+                var vv = p(hh) + ':' + p(mm);
+                opts += '<option value="' + vv + '">' + vv + '</option>';
+            }
+        }
+        if (t && t.tagName === 'SELECT') { t.innerHTML = opts; }
         d.value = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
-        t.value = p(now.getHours()) + ':' + p(now.getMinutes());
+        var roundedMin = now.getMinutes() - (now.getMinutes() % 5);
+        t.value = p(now.getHours()) + ':' + p(roundedMin);
         function sync() { hid.value = (d.value && t.value) ? (d.value + 'T' + t.value) : ''; }
         sync();
         d.addEventListener('change', sync);

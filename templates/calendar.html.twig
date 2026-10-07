@@ -177,13 +177,27 @@
                             <label class="form-label">3. {{ __('Saída — dia e hora', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-date" aria-label="{{ __('Dia da saída', 'reservafrota') }}" required>
-                                <input type="time" class="form-control" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" step="300" required>
+                                <select class="form-select" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" required>
+                                    <option value="">--:--</option>
+                                    {% for h in 0..23 %}
+                                        {% for min in ['00','05','10','15','20','25','30','35','40','45','50','55'] %}
+                                            <option value="{{ '%02d'|format(h) }}:{{ min }}">{{ '%02d'|format(h) }}:{{ min }}</option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </select>
                             </div>
 
                             <label class="form-label">4. {{ __('Chegada — dia e hora', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-adate" aria-label="{{ __('Dia da chegada', 'reservafrota') }}" required>
-                                <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="300" required>
+                                <select class="form-select" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" required>
+                                    <option value="">--:--</option>
+                                    {% for h in 0..23 %}
+                                        {% for min in ['00','05','10','15','20','25','30','35','40','45','50','55'] %}
+                                            <option value="{{ '%02d'|format(h) }}:{{ min }}">{{ '%02d'|format(h) }}:{{ min }}</option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </select>
                             </div>
 
                             <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
