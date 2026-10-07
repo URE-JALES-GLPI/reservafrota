@@ -1433,3 +1433,43 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-maint-new[open] summary { margin-bottom: 0.8rem; }
 .reservafrota-maint-form .row { margin-bottom: 0.2rem; }
 .reservafrota-maint-carblock { margin-top: 1.2rem; }
+
+/* ---------- PAGEHEAD padrão (igual layout.png) ---------- */
+.reservafrota-pagehead {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.9rem;
+    padding: 0.9rem 1.1rem; margin-bottom: 1.2rem;
+    background: var(--cb-surface, #fff);
+    border: 1px solid var(--cb-border, #e7e9ee);
+    border-radius: 16px;
+    box-shadow: var(--cb-shadow);
+}
+.reservafrota-pagehead__title { display: flex; align-items: center; gap: 0.8rem; }
+.reservafrota-pagehead__icon {
+    width: 46px; height: 46px; display: grid; place-items: center;
+    font-size: 1.5rem; color: #4f46e5;
+    background: #eef0ff; border-radius: 12px;
+}
+.reservafrota-pagehead__title h1 {
+    margin: 0; font-size: 1.35rem; font-weight: 800;
+    letter-spacing: -0.01em; color: #191847; line-height: 1.1;
+}
+.reservafrota-pagehead__title p { margin: 0.1rem 0 0; font-size: 0.82rem; color: var(--cb-muted, #6b7689); }
+.reservafrota-pagehead__nav { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+.reservafrota-pill {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.42rem 0.8rem; font-size: 0.85rem; font-weight: 600;
+    color: #4b5563; background: #f4f5f7; border-radius: 999px; text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.reservafrota-pill:hover { background: #e9ebf0; color: #191847; }
+.reservafrota-pill.is-active { background: #eef0ff; color: #4f46e5; }
+.reservafrota-pill .reservafrota-maint-count {
+    min-width: 20px; height: 20px; padding: 0 6px;
+    display: inline-grid; place-items: center;
+    font-size: 0.72rem; font-weight: 800; color: #fff;
+    background: #e11d48; border-radius: 999px;
+}
+@media (max-width: 720px) {
+    .reservafrota-pagehead { align-items: flex-start; flex-direction: column; }
+}

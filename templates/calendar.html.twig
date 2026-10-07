@@ -15,19 +15,27 @@
      {% if can_delete %}data-candelete="1"{% endif %}
      {% if can_approve %}data-canapprove="1"{% endif %}>
 
-    {# ---------- Abas (conforme os direitos do usuário) ---------- #}
-    <div class="reservafrota-tabs">
-        <span class="reservafrota-tab is-active"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</span>
-        {% if can_manage_cars %}
-            <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
-            <a class="reservafrota-tab" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}{% if maint_alerts is defined and maint_alerts|length > 0 %}<span class="reservafrota-maint-count">{{ maint_alerts|length }}</span>{% endif %}</a>
-        {% endif %}
-        <a class="reservafrota-tab" href="{{ web_dir }}/front/driver.php"><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }}</a>
-        {% if can_view_analytics %}
-            <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
-        {% endif %}
-        <a class="reservafrota-tab" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
-        <span class="reservafrota-build">v1.1.0</span>
+    {# ---------- Cabeçalho padrão (título em destaque + pílulas) ---------- #}
+    <div class="reservafrota-pagehead">
+        <div class="reservafrota-pagehead__title">
+            <span class="reservafrota-pagehead__icon"><i class="ti ti-car"></i></span>
+            <div>
+                <h1>{{ __('Reserva de Frota', 'reservafrota') }}</h1>
+                <p>{{ __('Agendamento de veículos da frota', 'reservafrota') }}</p>
+            </div>
+        </div>
+        <nav class="reservafrota-pagehead__nav">
+            <span class="reservafrota-pill is-active"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</span>
+            {% if can_manage_cars %}
+                <a class="reservafrota-pill" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+                <a class="reservafrota-pill" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}{% if maint_alerts is defined and maint_alerts|length > 0 %}<span class="reservafrota-maint-count">{{ maint_alerts|length }}</span>{% endif %}</a>
+            {% endif %}
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/driver.php"><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }}</a>
+            {% if can_view_analytics %}
+                <a class="reservafrota-pill" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
+            {% endif %}
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+        </nav>
     </div>
 
     {% if can_approve and maint_alerts is defined and maint_alerts is not empty %}
