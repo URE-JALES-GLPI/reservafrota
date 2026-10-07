@@ -300,6 +300,13 @@
                 alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
                 return;
             }
+            var depMin = parseInt(String(depInput.value).substr(14, 2), 10);
+            var arrMin = parseInt(String(arrInput.value).substr(14, 2), 10);
+            if (isNaN(depMin) || depMin % 5 !== 0 || isNaN(arrMin) || arrMin % 5 !== 0) {
+                e.preventDefault();
+                alert('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).');
+                return;
+            }
             var todayStr = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
             if (arrInput.value.substr(0,10) < todayStr) {
                 e.preventDefault();

@@ -598,6 +598,12 @@
                         alert('Não é possível reservar em data passada. Escolha hoje ou futuro.');
                         return;
                     }
+                    var depMin = parseInt(String(mTime.value).substr(3, 2), 10);
+                    if (isNaN(depMin) || depMin % 5 !== 0) {
+                        alert('A saída deve ser em intervalos de 5 minutos (ex.: 08:00, 08:05, 08:10).');
+                        mTime.focus();
+                        return;
+                    }
                     modalDep.value = mDate.value + 'T' + mTime.value;
                 } else {
                     alert('Informe o dia e a hora da saída.');
@@ -616,6 +622,12 @@
                         return;
                     }
                     var at = mATime.value;
+                    var arrMin = parseInt(String(at).substr(3, 2), 10);
+                    if (isNaN(arrMin) || arrMin % 5 !== 0) {
+                        alert('A chegada deve ser em intervalos de 5 minutos (ex.: 08:00, 08:05, 08:10).');
+                        mATime.focus();
+                        return;
+                    }
                     var todayA = todayStr();
                     if (mADate.value < todayA) {
                         alert('A data de chegada não pode ser anterior a hoje.');

@@ -108,6 +108,18 @@ class Booking extends CommonDBTM
         return $value;
     }
 
+    private static function isFiveMinuteSlot(?string $datetime): bool
+    {
+        if (empty($datetime)) {
+            return true;
+        }
+        $ts = strtotime($datetime);
+        if ($ts === false) {
+            return false;
+        }
+        return ((int) date('i', $ts) % 5) === 0;
+    }
+
     public function prepareInputForAdd($input)
     {
         // Solicitante: por padrão o usuário logado.
@@ -146,6 +158,10 @@ class Booking extends CommonDBTM
         $arrTs = strtotime($input['date_arrival']);
         if ($arrTs === false || $depTs === false || $arrTs <= $depTs) {
             Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
+            return false;
+        }
+        if (!self::isFiveMinuteSlot($input['date_departure']) || !self::isFiveMinuteSlot($input['date_arrival'])) {
+            Session::addMessageAfterRedirect(__('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).', 'reservafrota'), false, ERROR);
             return false;
         }
 
@@ -360,6 +376,11 @@ class Booking extends CommonDBTM
             $arrTs = strtotime($finalArr);
             if ($arrTs !== false && $depTs !== false && $arrTs <= $depTs) {
                 Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
+                return false;
+            }
+            if ((isset($input['date_departure']) || array_key_exists('date_arrival', $input))
+                && (!self::isFiveMinuteSlot($finalDep) || !self::isFiveMinuteSlot($finalArr))) {
+                Session::addMessageAfterRedirect(__('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).', 'reservafrota'), false, ERROR);
                 return false;
             }
         }
