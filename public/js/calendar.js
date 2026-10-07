@@ -78,6 +78,19 @@
         var mADate = document.getElementById('cb-m-adate');
         var mATime = document.getElementById('cb-m-atime');
         var modalForm = document.getElementById('reservafrota-modal-form');
+        function snapToFive(input) {
+            if (!input || !input.value) { return; }
+            var parts = String(input.value).split(':');
+            if (parts.length < 2) { return; }
+            var hh = parseInt(parts[0], 10);
+            var mm = parseInt(parts[1], 10);
+            if (isNaN(hh) || isNaN(mm) || mm % 5 === 0) { return; }
+            mm = Math.round(mm / 5) * 5;
+            if (mm >= 60) { mm = 55; }
+            input.value = (hh < 10 ? '0' + hh : '' + hh) + ':' + (mm < 10 ? '0' + mm : '' + mm);
+        }
+        if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
+        if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
         var modalWeekdays = document.getElementById('cb-m-weekdays');
         var submitBtn = document.getElementById('cb-m-submit');
         var cancelBtn = document.getElementById('cb-m-cancel');

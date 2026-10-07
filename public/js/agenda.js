@@ -548,7 +548,7 @@
           + '<label class="form-label"><b>Data e hora do retorno</b></label>'
           + '<div class="reservafrota-datetime">'
           + '<input type="date" class="form-control cb-rdate">'
-          + '<select class="form-select cb-rtime"></select>'
+          + '<input type="time" class="form-control cb-rtime" step="300">'
           + '</div>'
           + '<input type="hidden" name="returned_at" class="cb-rwhen">'
           + '<label class="form-label" style="margin-top:0.7rem;"><b>KM final do veículo</b> (opcional)</label>'
@@ -584,17 +584,19 @@
         if (!d || !t || !hid) { return; }
         var now = new Date();
         function p(n) { return n < 10 ? '0' + n : '' + n; }
-        var opts = '<option value="">--:--</option>';
-        for (var hh = 0; hh < 24; hh++) {
-            for (var mm = 0; mm < 60; mm += 5) {
-                var vv = p(hh) + ':' + p(mm);
-                opts += '<option value="' + vv + '">' + vv + '</option>';
-            }
-        }
-        if (t && t.tagName === 'SELECT') { t.innerHTML = opts; }
         d.value = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
         var roundedMin = now.getMinutes() - (now.getMinutes() % 5);
         t.value = p(now.getHours()) + ':' + p(roundedMin);
+        t.addEventListener('change', function () {
+            if (!t.value) { return; }
+            var parts = t.value.split(':');
+            var mm = parseInt(parts[1], 10);
+            if (isNaN(mm) || mm % 5 === 0) { return; }
+            mm = Math.round(mm / 5) * 5;
+            var hh = parseInt(parts[0], 10);
+            if (mm >= 60) { mm = 55; }
+            t.value = (hh < 10 ? '0' + hh : '' + hh) + ':' + (mm < 10 ? '0' + mm : '' + mm);
+        });
         function sync() { hid.value = (d.value && t.value) ? (d.value + 'T' + t.value) : ''; }
         sync();
         d.addEventListener('change', sync);
