@@ -419,7 +419,7 @@
                 mDate.min = todayStr();
                 mDate.value = dateStr;
             }
-            if (mTime && !mTime.value) { mTime.value = '08:00'; }
+            if (mTime && !mTime.value) { mTime.value = ''; }
             if (mADate) {
                 mADate.min = mDate ? mDate.value : todayStr();
                 mADate.value = '';
