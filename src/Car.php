@@ -376,6 +376,12 @@ class Car extends CommonDBTM
     {
         $this->initForm($ID, $options);
 
+        // Item novo: basta CREATE para cadastrar; existente: exige UPDATE para editar.
+        $is_new = $this->isNewItem();
+        $can_edit = $is_new
+            ? Session::haveRight(self::$rightname, CREATE)
+            : Session::haveRight(self::$rightname, UPDATE);
+
         $history = [];
         if (!$this->isNewItem()) {
             $raw = \Log::getHistoryData($this, 0, 50);
@@ -405,7 +411,7 @@ class Car extends CommonDBTM
         TemplateRenderer::getInstance()->display('@reservafrota/car.form.html.twig', [
             'item'            => $this,
             'params'          => $options,
-            'can_edit'        => Session::haveRight(self::$rightname, UPDATE),
+            'can_edit'        => $can_edit,
             'picture_url'     => $this->getPictureUrl(),
             'web_dir'         => Plugin::getWebDir('reservafrota'),
             'history'         => $history,

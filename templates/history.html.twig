@@ -10,6 +10,9 @@
             <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
             <a class="reservafrota-tab" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}{% if maint_alerts is defined and maint_alerts > 0 %}<span class="reservafrota-maint-count">{{ maint_alerts }}</span>{% endif %}</a>
         {% endif %}
+        {% if can_manage_drivers is not defined or can_manage_drivers %}
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/driver.php"><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }}</a>
+        {% endif %}
         {% if can_view_analytics %}
             <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
         {% endif %}

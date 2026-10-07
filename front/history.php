@@ -32,6 +32,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/history.html.twig', [
     'history'            => Booking::getHistory(),
     'is_manager'         => Booking::canApprove(),
     'can_manage_cars'    => Session::haveRight(Car::$rightname, READ),
+    'can_manage_drivers' => Session::haveRight(\GlpiPlugin\Reservafrota\Driver::$rightname, READ),
     'can_view_analytics' => Booking::canApprove(),
     'maint_alerts'       => $maintCount,
 ]);

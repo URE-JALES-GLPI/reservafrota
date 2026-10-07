@@ -146,14 +146,29 @@ function plugin_init_reservafrota()
             ])->current();
             if (!$exists) {
                 \ProfileRight::addProfileRights(['reservafrota::driver']);
-                $current = (int) ($_SESSION['glpiactiveprofile']['id'] ?? 0);
-                if ($current > 0) {
-                    $db->update(\ProfileRight::getTable(), ['rights' => ALLSTANDARDRIGHT], [
-                        'profiles_id' => $current,
-                        'name'        => 'reservafrota::driver',
-                    ]);
-                    \GlpiPlugin\Reservafrota\Profile::changeProfile();
-                }
+            }
+            // Se o perfil ativo está sem acesso ao motorista (rights=0 por
+            // instalação anterior ao módulo), concede acesso total e recarrega
+            // a sessão — sem isso o super-admin continua sem ver o botão.
+            $current = (int) ($_SESSION['glpiactiveprofile']['id'] ?? 0);
+            if ($current > 0) {
+                try {
+                    $curRight = $db->request([
+                        'FROM'  => \ProfileRight::getTable(),
+                        'WHERE' => [
+                            'profiles_id' => $current,
+                            'name'        => 'reservafrota::driver',
+                        ],
+                        'LIMIT' => 1,
+                    ])->current();
+                    if (!is_array($curRight) || (int) ($curRight['rights'] ?? 0) === 0) {
+                        $db->update(\ProfileRight::getTable(), ['rights' => ALLSTANDARDRIGHT], [
+                            'profiles_id' => $current,
+                            'name'        => 'reservafrota::driver',
+                        ]);
+                        \GlpiPlugin\Reservafrota\Profile::changeProfile();
+                    }
+                } catch (\Throwable $e) {}
             }
         }
     } catch (\Throwable $e) {

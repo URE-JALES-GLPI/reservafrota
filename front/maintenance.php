@@ -55,6 +55,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/maintenance.list.html.tw
     'plans_by_car'       => $plansByCar,
     'can_edit'           => Session::haveRight(Car::$rightname, UPDATE),
     'can_manage_cars'    => Session::haveRight(Car::$rightname, READ),
+    'can_manage_drivers' => Session::haveRight(\GlpiPlugin\Reservafrota\Driver::$rightname, READ),
     'can_view_analytics' => Booking::canApprove(),
     'is_manager'         => Booking::canApprove(),
     'csrf'               => Session::getNewCSRFToken(),

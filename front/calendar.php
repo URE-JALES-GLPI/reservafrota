@@ -44,6 +44,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'month'              => $month,
     'is_helpdesk'        => $used_help,
     'can_manage_cars'    => Session::haveRight(Car::$rightname, READ),
+    'can_manage_drivers' => Session::haveRight(Driver::$rightname, READ),
     'can_view_analytics' => Booking::canApprove(),
     'can_create'         => Session::haveRight(Booking::$rightname, CREATE),
     'can_delete'         => Session::haveRight(Booking::$rightname, PURGE),

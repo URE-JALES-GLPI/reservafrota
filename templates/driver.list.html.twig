@@ -4,7 +4,10 @@
     <div class="reservafrota-tabs">
         <button type="button" class="reservafrota-back" data-home="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar', 'reservafrota') }}</button>
         <a class="reservafrota-tab" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+        {% if can_manage_cars is not defined or can_manage_cars %}
         <a class="reservafrota-tab" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
+        <a class="reservafrota-tab" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}</a>
+        {% endif %}
         <span class="reservafrota-tab is-active"><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }}</span>
         {% if can_view_analytics %}
             <a class="reservafrota-tab" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
@@ -15,7 +18,7 @@
 
     <div class="reservafrota-fleet-head">
         <h2><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }} <span class="reservafrota-blist-count">{{ drivers|length }}</span></h2>
-        {% if can_edit %}
+        {% if can_add is defined ? can_add : can_edit %}
             <a href="{{ web_dir }}/front/driver.form.php" class="reservafrota-export-btn" style="background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 8px 18px -8px rgba(5,150,105,.8);">
                 <i class="ti ti-plus"></i> {{ __('Cadastrar motorista', 'reservafrota') }}
             </a>

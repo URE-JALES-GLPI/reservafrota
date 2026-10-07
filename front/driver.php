@@ -18,6 +18,9 @@ TemplateRenderer::getInstance()->display('@reservafrota/driver.list.html.twig', 
     'web_dir'            => Plugin::getWebDir('reservafrota'),
     'drivers'            => Driver::getAllForList(),
     'can_edit'           => Session::haveRight(Driver::$rightname, UPDATE),
+    'can_add'            => Session::haveRight(Driver::$rightname, CREATE),
+    'can_manage_cars'    => Session::haveRight(\GlpiPlugin\Reservafrota\Car::$rightname, READ),
+    'can_manage_drivers' => Session::haveRight(Driver::$rightname, READ),
     'can_view_analytics' => Booking::canApprove(),
 ]);
 

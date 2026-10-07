@@ -58,6 +58,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/analytics.html.twig', [
     'year'            => $year,
     'meses'           => $meses,
     'can_manage_cars' => Session::haveRight(Car::$rightname, READ),
+    'can_manage_drivers' => Session::haveRight(\GlpiPlugin\Reservafrota\Driver::$rightname, READ),
     'is_helpdesk'     => $used_help,
     'data'            => $data,
     'bookings'        => $bookings,
