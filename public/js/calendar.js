@@ -218,7 +218,7 @@
                     items.slice(0, 4).forEach(function (b) {
                         var hasCar = b.car_id && b.car && b.car !== 'A designar';
                         var label = hasCar ? esc(b.car) + ' — ' + esc(b.user) : esc(b.user);
-                        chips += '<span class="reservafrota-evt s-' + (b.status || 1) + (b.conflict ? ' is-conflict' : '') + '"'
+                        chips += '<span class="reservafrota-evt s-' + (b.status || 1) + ((b.conflict && (b.status || 1) !== 2) ? ' is-conflict' : '') + '"'
                             + ' title="' + esc(hasCar ? b.car : '') + '">'
                             + '<b>' + esc(timeOf(b.departure)) + '</b> '
                             + label
@@ -341,13 +341,13 @@
                     : '';
                 var openUrl = bform ? (bform + '?id=' + b.id) : '';
                 var hasObs = (b.status === 5 && b.obs);
-                return '<div class="reservafrota-day-item s-' + (b.status || 1) + (b.conflict ? ' is-conflict' : '') + (hasObs ? ' has-obs' : '') + '"'
+                return '<div class="reservafrota-day-item s-' + (b.status || 1) + ((b.conflict && (b.status || 1) !== 2) ? ' is-conflict' : '') + (hasObs ? ' has-obs' : '') + '"'
                     + (openUrl ? ' data-open="' + openUrl + '" style="cursor:pointer;"' : '')
                     + '>'
                     + '<div class="reservafrota-day-item__body">'
                     + '<div class="reservafrota-day-item__top">'
-                    + '<span class="reservafrota-chip status-' + (b.conflict ? 'conflict' : statusName(b.status)) + '">'
-                    + (b.conflict ? 'Conflito' : esc(b.status_label)) + '</span>'
+                    + '<span class="reservafrota-chip status-' + ((b.conflict && (b.status || 1) !== 2) ? 'conflict' : statusName(b.status)) + '">'
+                    + ((b.conflict && (b.status || 1) !== 2) ? 'Conflito' : esc(b.status_label)) + '</span>'
                     + (hasObs ? '<span class="reservafrota-obsdot" title="Tem observação"></span> ' : '')
                     + ((b.car_id && b.car && b.car !== 'A designar') ? '<strong>' + esc(b.car) + '</strong>' : '') + '</div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(b.user)
