@@ -94,7 +94,9 @@
         function attachFiveMinutePicker(input) {
             if (!input || input.dataset.fivePicker) { return; }
             input.dataset.fivePicker = '1';
-            input.setAttribute('readonly', 'readonly');
+            input.setAttribute('inputmode', 'none');
+            input.setAttribute('autocomplete', 'off');
+            input.setAttribute('spellcheck', 'false');
             input.classList.add('reservafrota-time5');
             var pop = null;
             function pad2(n) { return n < 10 ? '0' + n : '' + n; }

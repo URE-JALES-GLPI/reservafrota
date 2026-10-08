@@ -600,7 +600,7 @@
           + '<label class="form-label"><b>Data e hora do retorno</b></label>'
           + '<div class="reservafrota-datetime">'
           + '<input type="date" class="form-control cb-rdate">'
-          + '<input type="time" class="form-control cb-rtime" step="300">'
+          + '<input type="text" class="form-control cb-rtime reservafrota-time5" placeholder="HH:MM" maxlength="5" inputmode="none">'
           + '</div>'
           + '<input type="hidden" name="returned_at" class="cb-rwhen">'
           + '<label class="form-label" style="margin-top:0.7rem;"><b>KM final do veículo</b> (opcional)</label>'
@@ -639,7 +639,8 @@
         d.value = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
         var roundedMin = now.getMinutes() - (now.getMinutes() % 5);
         t.value = p(now.getHours()) + ':' + p(roundedMin);
-        t.setAttribute('readonly', 'readonly');
+        t.setAttribute('autocomplete', 'off');
+        t.setAttribute('spellcheck', 'false');
         t.classList.add('reservafrota-time5');
         (function (input) {
             var pop = null;
