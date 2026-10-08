@@ -62,11 +62,6 @@
         <h2 id="reservafrota-cal-title" class="reservafrota-cal-monthtitle"></h2>
         <button type="button" class="reservafrota-cal-arrow" data-nav="1" title="{{ __('Próximo mês', 'reservafrota') }}"><i class="ti ti-chevron-right"></i></button>
         <button type="button" class="reservafrota-cal-today" data-nav="today">{{ __('Hoje', 'reservafrota') }}</button>
-        {% if can_create %}
-            <button type="button" class="reservafrota-new-booking" id="reservafrota-new-booking-btn">
-                <i class="ti ti-plus"></i> {{ __('Reservar veículo', 'reservafrota') }}
-            </button>
-        {% endif %}
     </div>
     <div class="reservafrota-cal-hint">
         <i class="ti ti-info-circle"></i> {{ __('Clique em qualquer dia para ver reservas e solicitar um veículo. O gestor escolhe o carro ao aprovar.', 'reservafrota') }}
