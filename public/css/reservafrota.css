@@ -17,8 +17,10 @@
     --cb-border: var(--tblr-border-color, #e7e9ee);
     --cb-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -12px rgba(16, 24, 40, 0.22);
     --cb-shadow-lift: 0 2px 6px rgba(16, 24, 40, 0.06), 0 28px 50px -18px rgba(16, 24, 40, 0.40);
-    max-width: 1180px;
+    max-width: 1400px;
     margin: 0 auto;
+    padding: 24px;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     color: var(--cb-ink);
 }
 
@@ -1120,11 +1122,11 @@ body.reservafrota-modal-open { overflow: hidden; }
 }
 .reservafrota-fleet-head h2 { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem; }
 .reservafrota-fleet-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
 }
 .reservafrota-fleet-card {
     display: flex; flex-direction: column; text-decoration: none; color: inherit;
-    background: var(--cb-surface, #fff); border: 1px solid var(--cb-border); border-radius: 16px;
+    background: var(--cb-surface, #fff); border: 1.5px solid #e8eaf0; border-radius: 16px;
     overflow: hidden; transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
 }
 .reservafrota-fleet-card:hover {
@@ -1448,42 +1450,41 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-maint-form .row { margin-bottom: 0.2rem; }
 .reservafrota-maint-carblock { margin-top: 1.2rem; }
 
-/* ---------- PAGEHEAD padrão (igual layout.png) ---------- */
+/* ---------- PAGEHEAD padrão (mesmo padrão do assetmgrstatus) ---------- */
 .reservafrota-pagehead {
     display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 0.9rem;
-    padding: 0.9rem 1.1rem; margin-bottom: 1.2rem;
-    background: var(--cb-surface, #fff);
-    border: 1px solid var(--cb-border, #e7e9ee);
-    border-radius: 16px;
-    box-shadow: var(--cb-shadow);
+    flex-wrap: wrap; gap: 10px;
+    margin-bottom: 28px; padding-bottom: 20px;
+    border-bottom: 2px solid #f0f2f5;
 }
-.reservafrota-pagehead__title { display: flex; align-items: center; gap: 0.8rem; }
+.reservafrota-pagehead__title { display: flex; align-items: center; gap: 12px; }
 .reservafrota-pagehead__icon {
-    width: 46px; height: 46px; display: grid; place-items: center;
-    font-size: 1.5rem; color: #4f46e5;
-    background: #eef0ff; border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 1.8rem; color: #4f46e5;
+    background: #eef2ff; padding: 10px; border-radius: 12px;
 }
 .reservafrota-pagehead__title h1 {
-    margin: 0; font-size: 1.35rem; font-weight: 800;
-    letter-spacing: -0.01em; color: #191847; line-height: 1.1;
+    margin: 0; font-size: 1.6rem; font-weight: 800;
+    letter-spacing: -0.02em; color: #1e1b4b; line-height: 1.1;
 }
-.reservafrota-pagehead__title p { margin: 0.1rem 0 0; font-size: 0.82rem; color: var(--cb-muted, #6b7689); }
-.reservafrota-pagehead__nav { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+.reservafrota-pagehead__nav { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .reservafrota-pill {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.42rem 0.8rem; font-size: 0.85rem; font-weight: 600;
-    color: #4b5563; background: #f4f5f7; border-radius: 999px; text-decoration: none;
-    transition: background 0.15s ease, color 0.15s ease;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; font-size: 0.82rem; font-weight: 600;
+    color: #374151; background: #f3f4f6; border: none; border-radius: 10px; text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
-.reservafrota-pill:hover { background: #e9ebf0; color: #191847; }
-.reservafrota-pill.is-active { background: #eef0ff; color: #4f46e5; }
+.reservafrota-pill:hover { background: #e5e7eb; color: #4f46e5; }
+.reservafrota-pill.is-active { background: #fff; color: #4f46e5; font-weight: 700; box-shadow: 0 2px 8px rgba(79,70,229,.15); }
 .reservafrota-pill .reservafrota-maint-count {
-    min-width: 20px; height: 20px; padding: 0 6px;
-    display: inline-grid; place-items: center;
-    font-size: 0.72rem; font-weight: 800; color: #fff;
-    background: #e11d48; border-radius: 999px;
+    min-width: 18px; padding: 1px 7px; text-align: center;
+    display: inline-block;
+    font-size: 0.70rem; font-weight: 700; color: #4f46e5;
+    background: #eef2ff; border-radius: 10px;
 }
-@media (max-width: 720px) {
+.reservafrota-pill.is-active .reservafrota-maint-count { background: #4f46e5; color: #fff; }
+@media (max-width: 640px) {
+    .reservafrota-agenda { padding: 12px; }
     .reservafrota-pagehead { align-items: flex-start; flex-direction: column; }
+    .reservafrota-fleet-grid { grid-template-columns: 1fr; }
 }
