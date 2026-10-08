@@ -39,7 +39,9 @@
                 <a class="reservafrota-pill" href="{{ web_dir }}/front/maintenance.php"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}{% if maint_alerts is defined and maint_alerts > 0 %}<span class="reservafrota-maint-count">{{ maint_alerts }}</span>{% endif %}</a>
             {% endif %}
             <a class="reservafrota-pill" href="{{ web_dir }}/front/driver.php"><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }}</a>
+            {% if show_analytics_tab|default(false) %}
             <span class="reservafrota-pill is-active"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</span>
+            {% endif %}
             <a class="reservafrota-pill" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
         </nav>
     </div>

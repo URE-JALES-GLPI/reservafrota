@@ -14,9 +14,11 @@
             {% if can_manage_cars %}
                 <a class="reservafrota-pill" href="{{ web_dir }}/front/car.php"><i class="ti ti-car"></i> {{ __('Frota', 'reservafrota') }}</a>
             {% endif %}
+            {% if show_maintenance_tab|default(false) %}
             <span class="reservafrota-pill is-active"><i class="ti ti-tool"></i> {{ __('Manutenções', 'reservafrota') }}
                 {% if alerts|length > 0 %}<span class="reservafrota-maint-count">{{ alerts|length }}</span>{% endif %}
             </span>
+            {% endif %}
             <a class="reservafrota-pill" href="{{ web_dir }}/front/driver.php"><i class="ti ti-steering-wheel"></i> {{ __('Motoristas', 'reservafrota') }}</a>
             {% if can_view_analytics %}
                 <a class="reservafrota-pill" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>

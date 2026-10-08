@@ -1501,6 +1501,8 @@ body.reservafrota-modal-open { overflow: hidden; }
 }
 .reservafrota-pill:hover { background: #e5e7eb; color: #4f46e5; }
 .reservafrota-pill.is-active { background: #fff; color: #4f46e5; font-weight: 700; box-shadow: 0 2px 8px rgba(79,70,229,.15); }
+.reservafrota-pagehead__nav a[href*="/front/maintenance.php"],
+.reservafrota-pagehead__nav a[href*="/front/analytics.php"] { display: none; }
 .reservafrota-pill .reservafrota-maint-count {
     min-width: 18px; padding: 1px 7px; text-align: center;
     display: inline-block;
