@@ -1514,8 +1514,11 @@ body.reservafrota-modal-open { overflow: hidden; }
     .reservafrota-fleet-grid { grid-template-columns: 1fr; }
 }
 .reservafrota-stat-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px; margin-bottom: 24px; justify-content: center; justify-items: stretch;
+    display: grid; grid-template-columns: repeat(5, minmax(150px, 190px));
+    gap: 14px; margin: 0 auto 24px; justify-content: center; justify-items: stretch;
+}
+@media (max-width: 1024px) {
+    .reservafrota-stat-grid { grid-template-columns: repeat(3, minmax(150px, 190px)); }
 }
 .reservafrota-stat-card {
     background: #fff; border: 1.5px solid #e8eaf0; border-radius: 14px;
