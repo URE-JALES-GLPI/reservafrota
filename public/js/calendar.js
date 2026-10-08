@@ -230,7 +230,8 @@
                     items.slice(0, 4).forEach(function (b) {
                         var hasCar = b.car_id && b.car && b.car !== 'A designar';
                         var label = hasCar ? esc(b.car) + ' — ' + esc(b.user) : esc(b.user);
-                        chips += '<span class="reservafrota-evt s-' + (b.status || 1) + ((b.conflict && (b.status || 1) !== 2) ? ' is-conflict' : '') + '"'
+                        var isMulti = !!b.arrival && String(b.departure).substr(0, 10) !== String(b.arrival).substr(0, 10);
+                        chips += '<span class="reservafrota-evt s-' + (b.status || 1) + ((b.conflict && (b.status || 1) !== 2) ? ' is-conflict' : '') + (isMulti ? ' is-multi' : '') + '"'
                             + ' title="' + esc(hasCar ? b.car : '') + '">'
                             + '<b>' + esc(timeOf(b.departure)) + '</b> '
                             + label

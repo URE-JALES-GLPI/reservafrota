@@ -1289,6 +1289,8 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-evt.s-3 { border-left-color: #e03131 !important; background: rgba(224,49,49,0.10) !important; }
 .reservafrota-evt.s-4 { border-left-color: #e03131 !important; background: rgba(224,49,49,0.12) !important; }
 .reservafrota-evt.is-conflict { border-left-color: #f97316 !important; background: rgba(249,115,22,0.18) !important; color: #9a3412 !important; }
+.reservafrota-evt.is-multi { border-left-color: #7c3aed !important; background: rgba(124,58,237,0.16) !important; color: #6d28d9 !important; }
+.reservafrota-dot.dot-multi { background: #7c3aed; }
 
 /* Itens do popup do dia */
 .reservafrota-day-item.s-1 { border-left-color: #f59f00 !important; }
