@@ -980,6 +980,7 @@ body.reservafrota-modal-open { overflow: hidden; }
 /* Data + hora lado a lado */
 .reservafrota-datetime { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem; margin-bottom: 0.4rem; }
 .reservafrota-time5 { cursor: pointer; }
+input.reservafrota-time5[readonly] { background-color: #fff; }
 .reservafrota-time5::-webkit-calendar-picker-indicator { display: none; }
 .reservafrota-timepop {
     position: fixed; z-index: 1070; max-height: 240px; overflow-y: auto;

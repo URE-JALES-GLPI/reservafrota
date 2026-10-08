@@ -648,13 +648,32 @@
                 if (pop) { return; }
                 pop = document.createElement('div');
                 pop.className = 'reservafrota-timepop';
+                pop.style.position = 'fixed';
+                pop.style.zIndex = '1070';
+                pop.style.maxHeight = '240px';
+                pop.style.overflowY = 'auto';
+                pop.style.background = '#fff';
+                pop.style.border = '1px solid #e7e9ee';
+                pop.style.borderRadius = '10px';
+                pop.style.boxShadow = '0 16px 40px -12px rgba(16,24,40,.35)';
+                pop.style.padding = '4px';
                 for (var h = 0; h < 24; h++) {
                     for (var m = 0; m < 60; m += 5) {
                         (function (v) {
                             var b = document.createElement('button');
                             b.type = 'button';
                             b.textContent = v;
-                            if (input.value === v) { b.className = 'is-sel'; }
+                            b.style.display = 'block';
+                            b.style.width = '100%';
+                            b.style.textAlign = 'left';
+                            b.style.border = '0';
+                            b.style.background = (input.value === v) ? '#eef0ff' : 'transparent';
+                            b.style.color = (input.value === v) ? '#4f46e5' : 'inherit';
+                            b.style.fontWeight = (input.value === v) ? '700' : '400';
+                            b.style.padding = '6px 10px';
+                            b.style.borderRadius = '7px';
+                            b.style.fontSize = '.9rem';
+                            b.style.cursor = 'pointer';
                             b.addEventListener('click', function (ev) {
                                 ev.preventDefault();
                                 ev.stopPropagation();
