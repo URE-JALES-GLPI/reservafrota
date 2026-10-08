@@ -121,7 +121,7 @@
                 pop = document.createElement('div');
                 pop.className = 'reservafrota-timegrid';
                 pop.style.position = 'fixed';
-                pop.style.zIndex = '1070';
+                pop.style.zIndex = '3000';
                 var html = '<div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Hora</div><div class="reservafrota-timegrid__hours">';
                 for (var h = 0; h < 24; h++) {
                     html += '<button type="button" data-h="' + h + '" class="' + (h === sel.h ? 'is-sel' : '') + '">' + pad2(h) + '</button>';
