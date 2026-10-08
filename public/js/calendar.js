@@ -91,6 +91,57 @@
         }
         if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
         if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
+        function attachFiveMinutePicker(input) {
+            if (!input || input.dataset.fivePicker) { return; }
+            input.dataset.fivePicker = '1';
+            input.setAttribute('readonly', 'readonly');
+            input.classList.add('reservafrota-time5');
+            var pop = null;
+            function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+            function close() { if (pop) { pop.remove(); pop = null; } }
+            function open() {
+                if (pop) { return; }
+                pop = document.createElement('div');
+                pop.className = 'reservafrota-timepop';
+                for (var h = 0; h < 24; h++) {
+                    for (var m = 0; m < 60; m += 5) {
+                        (function (v) {
+                            var b = document.createElement('button');
+                            b.type = 'button';
+                            b.textContent = v;
+                            if (input.value === v) { b.className = 'is-sel'; }
+                            b.addEventListener('click', function (ev) {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                input.value = v;
+                                try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+                                close();
+                            });
+                            pop.appendChild(b);
+                        })(pad2(h) + ':' + pad2(m));
+                    }
+                }
+                document.body.appendChild(pop);
+                var r = input.getBoundingClientRect();
+                var hgt = Math.min(240, pop.offsetHeight);
+                var top = r.bottom + 4;
+                if (top + hgt > window.innerHeight) { top = Math.max(4, r.top - hgt - 4); }
+                pop.style.minWidth = r.width + 'px';
+                pop.style.left = r.left + 'px';
+                pop.style.top = top + 'px';
+                var sel = pop.querySelector('.is-sel');
+                if (sel && sel.scrollIntoView) { sel.scrollIntoView({ block: 'center' }); }
+            }
+            input.addEventListener('click', open);
+            input.addEventListener('focus', open);
+            input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
+            document.addEventListener('click', function (e) {
+                if (pop && e.target !== input && !pop.contains(e.target)) { close(); }
+            }, true);
+            window.addEventListener('scroll', close, true);
+        }
+        if (mTime) { attachFiveMinutePicker(mTime); }
+        if (mATime) { attachFiveMinutePicker(mATime); }
         var schoolMap = {};
         try {
             var schoolTag = document.getElementById('reservafrota-schools');
@@ -483,6 +534,8 @@
 
         function closeModal() {
             if (!modal) { return; }
+            var pops = document.querySelectorAll('.reservafrota-timepop');
+            for (var pi = 0; pi < pops.length; pi++) { pops[pi].remove(); }
             modal.hidden = true;
             document.body.classList.remove('reservafrota-modal-open');
             

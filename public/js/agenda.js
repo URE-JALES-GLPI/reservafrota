@@ -639,6 +639,53 @@
         d.value = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
         var roundedMin = now.getMinutes() - (now.getMinutes() % 5);
         t.value = p(now.getHours()) + ':' + p(roundedMin);
+        t.setAttribute('readonly', 'readonly');
+        t.classList.add('reservafrota-time5');
+        (function (input) {
+            var pop = null;
+            function close() { if (pop) { pop.remove(); pop = null; } }
+            function open() {
+                if (pop) { return; }
+                pop = document.createElement('div');
+                pop.className = 'reservafrota-timepop';
+                for (var h = 0; h < 24; h++) {
+                    for (var m = 0; m < 60; m += 5) {
+                        (function (v) {
+                            var b = document.createElement('button');
+                            b.type = 'button';
+                            b.textContent = v;
+                            if (input.value === v) { b.className = 'is-sel'; }
+                            b.addEventListener('click', function (ev) {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                input.value = v;
+                                try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+                                close();
+                            });
+                            pop.appendChild(b);
+                        })((h < 10 ? '0' + h : '' + h) + ':' + (m < 10 ? '0' + m : '' + m));
+                    }
+                }
+                document.body.appendChild(pop);
+                var r = input.getBoundingClientRect();
+                var hgt = Math.min(240, pop.offsetHeight);
+                var top = r.bottom + 4;
+                if (top + hgt > window.innerHeight) { top = Math.max(4, r.top - hgt - 4); }
+                pop.style.minWidth = r.width + 'px';
+                pop.style.left = r.left + 'px';
+                pop.style.top = top + 'px';
+                var sel = pop.querySelector('.is-sel');
+                if (sel && sel.scrollIntoView) { sel.scrollIntoView({ block: 'center' }); }
+            }
+            input.addEventListener('click', open);
+            input.addEventListener('focus', open);
+            input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
+            document.addEventListener('click', function (e) {
+                if (pop && e.target !== input && !pop.contains(e.target)) { close(); }
+            }, true);
+            window.addEventListener('scroll', close, true);
+            overlay.querySelectorAll('[data-x]').forEach(function (el) { el.addEventListener('click', close); });
+        })(t);
         function sync() { hid.value = (d.value && t.value) ? (d.value + 'T' + t.value) : ''; }
         sync();
         d.addEventListener('change', sync);
