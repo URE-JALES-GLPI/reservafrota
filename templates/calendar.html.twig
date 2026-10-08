@@ -189,7 +189,7 @@
                             <label class="form-label" for="cb-m-city">5. {{ __('Município (cidade)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <select class="form-select" id="cb-m-city" required>
                                 <option value="">{{ __('— Selecione o município —', 'reservafrota') }}</option>
-                                {% for city in school_map|keys|sort %}
+                                {% for city in (school_map|default({}))|keys|sort %}
                                     <option value="{{ city }}">{{ city }}</option>
                                 {% endfor %}
                             </select>
@@ -198,7 +198,7 @@
                             <select class="form-select" id="cb-m-dest" name="destination" required>
                                 <option value="">{{ __('— Selecione primeiro o município —', 'reservafrota') }}</option>
                             </select>
-                            <script id="reservafrota-schools" type="application/json">{{ school_map|json_encode|raw }}</script>
+                            <script id="reservafrota-schools" type="application/json">{{ (school_map|default({}))|json_encode|raw }}</script>
 
                             <div class="reservafrota-formactions">
                                 <button type="button" class="reservafrota-back" id="cb-m-cancel" data-cb-cancel

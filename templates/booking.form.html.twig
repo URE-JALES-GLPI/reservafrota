@@ -38,7 +38,7 @@
                 <label class="form-label" for="bk-city">{{ __('Município (cidade)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                 <select class="form-select" id="bk-city" required {{ editable ? '' : 'disabled' }}>
                     <option value="">{{ __('— Selecione o município —', 'reservafrota') }}</option>
-                    {% for city in school_map|keys|sort %}
+                    {% for city in (school_map|default({}))|keys|sort %}
                         <option value="{{ city }}">{{ city }}</option>
                     {% endfor %}
                 </select>
@@ -49,7 +49,7 @@
                     <option value="">{{ __('— Selecione primeiro o município —', 'reservafrota') }}</option>
                 </select>
             </div>
-            <script id="reservafrota-schools-bk" type="application/json">{{ school_map|json_encode|raw }}</script>
+            <script id="reservafrota-schools-bk" type="application/json">{{ (school_map|default({}))|json_encode|raw }}</script>
 
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-driver">{{ __('Motorista', 'reservafrota') }}</label>
@@ -101,7 +101,8 @@
             (function () {
                 var mapTag = document.getElementById('reservafrota-schools-bk');
                 var map = {};
-                try { if (mapTag) { map = JSON.parse(mapTag.textContent || '{}'); } } catch (e) { map = {}; }
+                try { if (mapTag) { map = JSON.parse(mapTag.textContent || '{}') || {}; } } catch (e) { map = {}; }
+                if (!map || typeof map !== 'object') { map = {}; }
                 var city = document.getElementById('bk-city');
                 var dest = document.getElementById('bk-dest');
                 var current = {{ item.fields['destination']|json_encode|raw }};

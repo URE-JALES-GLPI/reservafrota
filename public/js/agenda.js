@@ -197,15 +197,10 @@
           + '<input type="datetime-local" class="form-control" name="date_departure" value="' + dtLocal(b.departure) + '" step="300" required>'
           + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora <span style="color:#d6336c;">*</span></label>'
           + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="300" required>'
-<<<<<<< HEAD
           + '<label class="form-label" style="margin-top:0.6rem;">Município (cidade) <span style="color:#d6336c;">*</span></label>'
           + '<select class="form-select cb-e-city" required></select>'
           + '<label class="form-label" style="margin-top:0.6rem;">Escola (destino) <span style="color:#d6336c;">*</span></label>'
           + '<select class="form-select cb-e-dest" name="destination" required></select>'
-=======
-          + '<label class="form-label" style="margin-top:0.6rem;">Destino</label>'
-          + '<input type="text" class="form-control" name="destination" value="' + esc2(b.destination) + '">'
->>>>>>> 2c0e088fc2536c2b9b06b74a6c0b3d551a0ed93b
           + '<div class="reservafrota-confirm-actions">'
           + (canCancel ? '<button type="button" class="reservafrota-back cb-e-cancel"><i class="ti ti-ban"></i> Cancelar</button>' : '')
           + (canConfirm ? '<button type="button" class="reservafrota-btn-approve cb-e-confirm"><i class="ti ti-check"></i> Confirmar</button>' : '')
@@ -234,9 +229,11 @@
         // Município -> escola (destino fechado na lista da URE Jales).
         var schoolMapE = window.RESERVAFROTA_SCHOOLS || {};
         try {
-            if (!Object.keys(schoolMapE).length) {
+            if (!schoolMapE || typeof schoolMapE !== 'object' || !Object.keys(schoolMapE).length) {
+                schoolMapE = {};
                 var schoolTagE = document.getElementById('reservafrota-schools');
-                if (schoolTagE) { schoolMapE = JSON.parse(schoolTagE.textContent || '{}'); }
+                if (schoolTagE) { schoolMapE = JSON.parse(schoolTagE.textContent || '{}') || {}; }
+                if (!schoolMapE || typeof schoolMapE !== 'object') { schoolMapE = {}; }
             }
         } catch (e2) { schoolMapE = {}; }
         var citySelE = overlay.querySelector('.cb-e-city');
@@ -642,19 +639,6 @@
         d.value = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
         var roundedMin = now.getMinutes() - (now.getMinutes() % 5);
         t.value = p(now.getHours()) + ':' + p(roundedMin);
-<<<<<<< HEAD
-=======
-        t.addEventListener('change', function () {
-            if (!t.value) { return; }
-            var parts = t.value.split(':');
-            var mm = parseInt(parts[1], 10);
-            if (isNaN(mm) || mm % 5 === 0) { return; }
-            mm = Math.round(mm / 5) * 5;
-            var hh = parseInt(parts[0], 10);
-            if (mm >= 60) { mm = 55; }
-            t.value = (hh < 10 ? '0' + hh : '' + hh) + ':' + (mm < 10 ? '0' + mm : '' + mm);
-        });
->>>>>>> 2c0e088fc2536c2b9b06b74a6c0b3d551a0ed93b
         function sync() { hid.value = (d.value && t.value) ? (d.value + 'T' + t.value) : ''; }
         sync();
         d.addEventListener('change', sync);

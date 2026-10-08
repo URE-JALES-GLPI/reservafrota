@@ -91,11 +91,11 @@
         }
         if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
         if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
-<<<<<<< HEAD
         var schoolMap = {};
         try {
             var schoolTag = document.getElementById('reservafrota-schools');
-            if (schoolTag) { schoolMap = JSON.parse(schoolTag.textContent || '{}'); }
+            if (schoolTag) { schoolMap = JSON.parse(schoolTag.textContent || '{}') || {}; }
+            if (!schoolMap || typeof schoolMap !== 'object') { schoolMap = {}; }
         } catch (err) { schoolMap = {}; }
         window.RESERVAFROTA_SCHOOLS = schoolMap;
         var mCity = document.getElementById('cb-m-city');
@@ -121,8 +121,6 @@
             }
         }
         if (mCity) { mCity.addEventListener('change', function () { fillSchools(mCity.value, ''); }); }
-=======
->>>>>>> 2c0e088fc2536c2b9b06b74a6c0b3d551a0ed93b
         var modalWeekdays = document.getElementById('cb-m-weekdays');
         var submitBtn = document.getElementById('cb-m-submit');
         var cancelBtn = document.getElementById('cb-m-cancel');
