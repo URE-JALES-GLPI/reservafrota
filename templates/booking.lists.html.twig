@@ -56,7 +56,8 @@
 
     </div>
 
-    {# ---------- Tabela de chegadas ---------- #}
+    {# ---------- Tabela de chegadas (Viagens — oculta por enquanto) ---------- #}
+    {% if show_arrived|default(false) %}
     <section id="reservafrota-arrived-section" class="reservafrota-arrived-section">
         <header class="reservafrota-blist-head reservafrota-arrived-head">
             <i class="ti ti-flag-check"></i> {{ __('Viagens', 'reservafrota') }}
@@ -131,5 +132,6 @@
             </div>
         {% endif %}
     </section>
+    {% endif %}
 
 </div>
