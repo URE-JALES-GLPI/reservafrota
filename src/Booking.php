@@ -813,8 +813,9 @@ class Booking extends CommonDBTM
      * Lista os carros ativos indicando quais já estão indisponíveis
      * (têm outro agendamento APROVADO com sobreposição de horário) no
      * intervalo informado. Usado na tela de escolha do carro ao aprovar.
+     * Carros bloqueados trazem o período ocupado (início/fim e solicitante).
      *
-     * @return list<array{id:int,name:string,plate:string,blocked:bool}>
+     * @return list<array{id:int,name:string,plate:string,blocked:bool,busy:list<array{start:string,end:string,user:string}>}>
      */
     public static function getCarAvailabilityForSlot(string $departure, ?string $arrival, int $excludeId = 0): array
     {
@@ -826,17 +827,25 @@ class Booking extends CommonDBTM
         $day   = substr($departure, 0, 10);
 
         $iterator = $DB->request([
-            'FROM'  => self::getTable(),
+            'SELECT'    => [
+                'b.plugin_reservafrota_cars_id', 'b.date_departure', 'b.date_arrival',
+                'u.firstname', 'u.realname', 'u.name AS user_login',
+            ],
+            'FROM'      => self::getTable() . ' AS b',
+            'LEFT JOIN' => [
+                'glpi_users AS u' => ['ON' => ['b' => 'users_id', 'u' => 'id']],
+            ],
             'WHERE' => [
-                'is_deleted' => 0,
-                'status'     => self::STATUS_APPROVED,
-                'id'         => ['<>', $excludeId],
-                'date_departure' => ['<=', "$day 23:59:59"],
+                'b.is_deleted' => 0,
+                'b.status'     => self::STATUS_APPROVED,
+                'b.id'         => ['<>', $excludeId],
+                'b.date_departure' => ['<=', "$day 23:59:59"],
                 'OR' => [
-                    ['date_arrival' => null, 'date_departure' => ['>=', "$day 00:00:00"]],
-                    ['date_arrival' => ['>=', "$day 00:00:00"]],
+                    ['b.date_arrival' => null, 'b.date_departure' => ['>=', "$day 00:00:00"]],
+                    ['b.date_arrival' => ['>=', "$day 00:00:00"]],
                 ],
             ],
+            'ORDER' => 'b.date_departure ASC',
         ]);
 
         $busy = [];
@@ -848,7 +857,15 @@ class Booking extends CommonDBTM
             $s = strtotime((string) $row['date_departure']);
             $e = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($s + 3600);
             if ($start < $e && $s < $end) {
-                $busy[$cid] = true;
+                $person = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
+                if ($person === '') {
+                    $person = (string) ($row['user_login'] ?? '');
+                }
+                $busy[$cid][] = [
+                    'start' => (string) $row['date_departure'],
+                    'end'   => !empty($row['date_arrival']) ? (string) $row['date_arrival'] : '',
+                    'user'  => $person,
+                ];
             }
         }
 
@@ -859,6 +876,7 @@ class Booking extends CommonDBTM
                 'name'    => $car['name'],
                 'plate'   => $car['plate'],
                 'blocked' => !empty($busy[(int) $cid]),
+                'busy'    => array_values($busy[(int) $cid] ?? []),
             ];
         }
         return $out;

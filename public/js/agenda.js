@@ -668,13 +668,18 @@
                 return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
             });
         }
+        function fmtSlot(dt) {
+            var s = '' + (dt || '');
+            if (s.length < 16) { return s; }
+            return s.substr(8, 2) + '/' + s.substr(5, 2) + ' ' + s.substr(11, 5);
+        }
 
         var overlay = document.createElement('div');
         overlay.className = 'reservafrota-modal';
         overlay.innerHTML =
             '<div class="reservafrota-modal__backdrop" data-x></div>'
-          + '<div class="reservafrota-modal__dialog" style="max-width:480px;">'
-          + '<div class="reservafrota-modal__head"><h3><i class="ti ti-check"></i> Confirmar agendamento</h3>'
+            + '<div class="reservafrota-modal__dialog" style="max-width:480px;">'
+            + '<div class="reservafrota-modal__head"><h3><i class="ti ti-check"></i> Confirmar agendamento</h3>'
           + '<button type="button" class="reservafrota-modal__close" data-x><i class="ti ti-x"></i></button></div>'
           + '<div class="reservafrota-modal__body">'
           + '<p>Escolha o carro e confirme o motorista para este agendamento.</p>'
@@ -704,10 +709,19 @@
                     list.innerHTML = '<p class="reservafrota-hint">Nenhum carro cadastrado.</p>';
                 } else {
                     list.innerHTML = data.cars.map(function (c) {
+                        var busyTxt = '';
+                        if (c.blocked && c.busy && c.busy.length) {
+                            var first = c.busy[0];
+                            busyTxt = 'Reservado: ' + fmtSlot(first.start) + (first.end ? ' → ' + fmtSlot(first.end) : '')
+                                + (first.user ? ' (' + first.user + ')' : '')
+                                + (c.busy.length > 1 ? ' +' + (c.busy.length - 1) : '');
+                        } else if (c.blocked) {
+                            busyTxt = 'Já reservado neste horário';
+                        }
                         return '<label class="reservafrota-carchoice' + (c.blocked ? ' is-blocked' : '') + '">'
                             + '<input type="radio" name="cb-ap-car" value="' + c.id + '"' + (c.blocked ? ' disabled' : '') + '>'
                             + '<span>' + esc2(c.name) + (c.plate ? ' · ' + esc2(c.plate) : '') + '</span>'
-                            + (c.blocked ? '<small>Já reservado neste horário</small>' : '')
+                            + (busyTxt ? '<small>' + esc2(busyTxt) + '</small>' : '')
                             + '</label>';
                     }).join('');
                     if (data.car_id) {
