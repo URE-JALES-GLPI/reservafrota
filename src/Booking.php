@@ -2060,6 +2060,9 @@ class Booking extends CommonDBTM
             'requester_name' => $requester,
             'web_dir'        => Plugin::getWebDir('reservafrota'),
             'school_map'     => Schools::getMap(),
+            'current_driver_id' => $this->isNewItem()
+                ? Driver::getDriverIdForUser((int) Session::getLoginUserID())
+                : 0,
         ]);
 
         return true;

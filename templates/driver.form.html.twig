@@ -52,6 +52,17 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label" for="driver-user">{{ __('Usuário GLPI vinculado', 'reservafrota') }}</label>
+                    <select class="form-select" id="driver-user" name="users_id" {% if readonly %}disabled{% endif %}>
+                        <option value="0">{{ __('— Nenhum —', 'reservafrota') }}</option>
+                        {% for uid, uname in users|default([]) %}
+                            <option value="{{ uid }}" {{ item.fields['users_id'] == uid ? 'selected' : '' }}>{{ uname }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">{{ __('Quando esse usuário pedir um carro, este motorista já vem selecionado.', 'reservafrota') }}</small>
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label" for="driver-active">{{ __('Disponível', 'reservafrota') }}</label>
                     <select class="form-select" id="driver-active" name="is_active" {% if readonly %}disabled{% endif %}>
                         <option value="1" {{ item.fields['is_active'] ? 'selected' : '' }}>{{ __('Disponível', 'reservafrota') }}</option>

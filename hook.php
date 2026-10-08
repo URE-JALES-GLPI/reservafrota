@@ -53,6 +53,7 @@ function plugin_reservafrota_install()
             `name`          varchar(255) NOT NULL DEFAULT '',
             `cnh`           varchar(20)  NOT NULL DEFAULT '',
             `phone`         varchar(50)  NOT NULL DEFAULT '',
+            `users_id`      int unsigned NOT NULL DEFAULT 0,
             `picture`       varchar(255) DEFAULT NULL,
             `is_active`     tinyint      NOT NULL DEFAULT 1,
             `comment`       text         DEFAULT NULL,
@@ -61,8 +62,29 @@ function plugin_reservafrota_install()
             `date_mod`      timestamp    NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
             KEY `is_active` (`is_active`),
-            KEY `is_deleted` (`is_deleted`)
+            KEY `is_deleted` (`is_deleted`),
+            KEY `users_id` (`users_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+
+    // Migração: vínculo do motorista com o usuário GLPI (pré-seleção na reserva).
+    if ($DB->tableExists($drivers) && !$DB->fieldExists($drivers, 'users_id')) {
+        $DB->doQuery("ALTER TABLE `$drivers`
+            ADD COLUMN `users_id` int unsigned NOT NULL DEFAULT 0 AFTER `phone`,
+            ADD KEY `users_id` (`users_id`)");
+    }
+    // Backfill: liga motoristas sem vínculo cujo nome é exatamente igual ao
+    // nome do usuário GLPI ("Nome Sobrenome") ou ao login.
+    if ($DB->tableExists($drivers) && $DB->fieldExists($drivers, 'users_id')) {
+        try {
+            $DB->doQuery("UPDATE `$drivers` d
+                INNER JOIN `glpi_users` u
+                    ON (TRIM(CONCAT_WS(' ', u.`firstname`, u.`realname`)) = TRIM(d.`name`)
+                        OR u.`name` = TRIM(d.`name`))
+                SET d.`users_id` = u.`id`
+                WHERE d.`users_id` = 0 AND d.`is_deleted` = 0
+                    AND u.`is_deleted` = 0 AND TRIM(d.`name`) <> ''");
+        } catch (\Throwable $e) {}
     }
 
     // ---- Tabela de agendamentos ----

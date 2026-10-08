@@ -97,6 +97,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'csrf'               => Session::getNewCSRFToken(),
     'maint_alerts'       => $maintAlerts,
     'school_map'         => \GlpiPlugin\Reservafrota\Schools::getMap(),
+    'current_driver_id'  => Driver::getDriverIdForUser((int) Session::getLoginUserID()),
     'month_stats'        => $monthStats,
     'month_label'        => $month,
 ]);

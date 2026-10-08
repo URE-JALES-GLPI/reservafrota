@@ -184,7 +184,7 @@
                                 <select class="form-select" id="cb-m-driver" name="plugin_reservafrota_drivers_id">
                                     <option value="">{{ __('— Selecione o motorista —', 'reservafrota') }}</option>
                                     {% for id, d in drivers %}
-                                        <option value="{{ id }}">{{ d.name }}{% if d.phone %} — {{ d.phone }}{% endif %}{% if d.cnh %} (CNH: {{ d.cnh }}){% endif %}</option>
+                                        <option value="{{ id }}" {{ id == current_driver_id|default(0) ? 'selected' : '' }}>{{ d.name }}{% if d.phone %} — {{ d.phone }}{% endif %}{% if d.cnh %} (CNH: {{ d.cnh }}){% endif %}</option>
                                     {% endfor %}
                                 </select>
                             {% endif %}

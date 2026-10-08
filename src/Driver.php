@@ -150,6 +150,70 @@ class Driver extends CommonDBTM
     }
 
     /**
+     * Motorista (ativo) vinculado ao usuário GLPI — usado para pré-selecionar
+     * o motorista no momento da reserva. Retorna 0 se não houver vínculo.
+     */
+    public static function getDriverIdForUser(int $users_id): int
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+        if ($users_id <= 0) {
+            return 0;
+        }
+        try {
+            if (!$DB->tableExists(self::getTable())
+                || !$DB->fieldExists(self::getTable(), 'users_id')) {
+                return 0;
+            }
+            $row = $DB->request([
+                'SELECT' => ['id'],
+                'FROM'   => self::getTable(),
+                'WHERE'  => [
+                    'users_id'   => $users_id,
+                    'is_active'  => 1,
+                    'is_deleted' => 0,
+                ],
+                'LIMIT'  => 1,
+            ])->current();
+        } catch (\Throwable $e) {
+            return 0;
+        }
+        return (int) ($row['id'] ?? 0);
+    }
+
+    /**
+     * Usuários GLPI ativos para o select de vínculo: [id => "Nome (login)"].
+     *
+     * @return array<int, string>
+     */
+    public static function getUsersForSelect(): array
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+        $out = [];
+        try {
+            $iterator = $DB->request([
+                'SELECT' => ['id', 'name', 'realname', 'firstname'],
+                'FROM'   => 'glpi_users',
+                'WHERE'  => ['is_active' => 1, 'is_deleted' => 0],
+                'ORDER'  => ['realname ASC', 'firstname ASC', 'name ASC'],
+            ]);
+        } catch (\Throwable $e) {
+            return [];
+        }
+        foreach ($iterator as $u) {
+            $label = trim(($u['firstname'] ?? '') . ' ' . ($u['realname'] ?? ''));
+            if ($label === '') {
+                $label = $u['name'] ?? '';
+            }
+            if ($label !== '') {
+                $out[(int) $u['id']] = $label . ' (' . ($u['name'] ?? '') . ')';
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Lista para selects: [id => "Nome — CNH — telefone"]
      */
     public static function getDriversForSelect(): array
@@ -206,6 +270,14 @@ class Driver extends CommonDBTM
             'name'     => __('Observações', 'reservafrota'),
             'datatype' => 'text',
         ];
+        $options[] = [
+            'id'        => 6,
+            'table'     => 'glpi_users',
+            'field'     => 'name',
+            'linkfield' => 'users_id',
+            'name'      => __('Usuário GLPI vinculado', 'reservafrota'),
+            'datatype'  => 'dropdown',
+        ];
         return $options;
     }
 
@@ -245,6 +317,7 @@ class Driver extends CommonDBTM
             'picture_url' => $this->getPictureUrl(),
             'web_dir'     => Plugin::getWebDir('reservafrota'),
             'history'     => $history,
+            'users'       => self::getUsersForSelect(),
         ]);
         return true;
     }
