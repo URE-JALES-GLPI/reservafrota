@@ -59,7 +59,18 @@
     {# ---------- Cabeçalho: mês grande + navegação + botão Nova Reserva ---------- #}
     <div class="reservafrota-cal-bar">
         <button type="button" class="reservafrota-cal-arrow" data-nav="-1" title="{{ __('Mês anterior', 'reservafrota') }}"><i class="ti ti-chevron-left"></i></button>
-        <h2 id="reservafrota-cal-title" class="reservafrota-cal-monthtitle"></h2>
+        <div class="reservafrota-cal-titlewrap">
+            <h2 id="reservafrota-cal-title" class="reservafrota-cal-monthtitle reservafrota-cal-titlebtn" title="{{ __('Escolher mês e ano', 'reservafrota') }}"></h2>
+            <div id="reservafrota-minical" class="reservafrota-minical" hidden>
+                <div class="reservafrota-minical__head">
+                    <button type="button" class="reservafrota-cal-arrow" data-my="-1" aria-label="{{ __('Ano anterior', 'reservafrota') }}"><i class="ti ti-chevron-left"></i></button>
+                    <strong id="reservafrota-minical-year"></strong>
+                    <button type="button" class="reservafrota-cal-arrow" data-my="1" aria-label="{{ __('Próximo ano', 'reservafrota') }}"><i class="ti ti-chevron-right"></i></button>
+                </div>
+                <div id="reservafrota-minical-grid" class="reservafrota-minical__grid"></div>
+                <button type="button" class="reservafrota-cal-today reservafrota-minical__today" data-my-today>{{ __('Hoje', 'reservafrota') }}</button>
+            </div>
+        </div>
         <button type="button" class="reservafrota-cal-arrow" data-nav="1" title="{{ __('Próximo mês', 'reservafrota') }}"><i class="ti ti-chevron-right"></i></button>
         <button type="button" class="reservafrota-cal-today" data-nav="today">{{ __('Hoje', 'reservafrota') }}</button>
     </div>

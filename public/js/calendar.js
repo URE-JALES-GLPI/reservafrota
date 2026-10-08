@@ -534,6 +534,69 @@
             });
         });
 
+        // Mini-calendário estilo Teams: clica no título do mês e salta
+        // direto para qualquer mês/ano (útil p/ reservar meses à frente).
+        (function () {
+            var titleBtn = document.getElementById('reservafrota-cal-title');
+            var mini = document.getElementById('reservafrota-minical');
+            if (!titleBtn || !mini) { return; }
+            var miniGrid = document.getElementById('reservafrota-minical-grid');
+            var miniYear = document.getElementById('reservafrota-minical-year');
+            var viewYear = cur.getFullYear();
+            function closeMini() { mini.hidden = true; }
+            function renderMini() {
+                if (miniYear) { miniYear.textContent = viewYear; }
+                if (!miniGrid) { return; }
+                miniGrid.innerHTML = '';
+                MONTHS.forEach(function (name, i) {
+                    var b = document.createElement('button');
+                    b.type = 'button';
+                    b.textContent = name.substr(0, 3);
+                    b.title = name + ' ' + viewYear;
+                    b.className = 'reservafrota-minical__month'
+                        + ((viewYear === cur.getFullYear() && i === cur.getMonth()) ? ' is-cur' : '');
+                    b.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        cur = new Date(viewYear, i, 1);
+                        closeMini();
+                        load();
+                    });
+                    miniGrid.appendChild(b);
+                });
+            }
+            titleBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (mini.hidden) {
+                    viewYear = cur.getFullYear();
+                    renderMini();
+                    mini.hidden = false;
+                } else {
+                    closeMini();
+                }
+            });
+            mini.querySelectorAll('[data-my]').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    viewYear += parseInt(btn.dataset.my, 10);
+                    renderMini();
+                });
+            });
+            var miniToday = mini.querySelector('[data-my-today]');
+            if (miniToday) {
+                miniToday.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    cur = new Date();
+                    cur.setDate(1);
+                    closeMini();
+                    load();
+                });
+            }
+            document.addEventListener('click', function (e) {
+                if (!mini.hidden && !mini.contains(e.target) && e.target !== titleBtn) { closeMini(); }
+            });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMini(); } });
+        })();
+
         // Botão "Reservar veículo" - abre modal de nova reserva
         if (newBtn) {
             newBtn.addEventListener('click', function () {

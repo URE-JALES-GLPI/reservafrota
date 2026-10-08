@@ -562,6 +562,31 @@
     text-transform: uppercase; color: var(--cb-approved);
     flex: 0 0 auto; min-width: 230px;
 }
+.reservafrota-cal-titlewrap { position: relative; }
+.reservafrota-cal-titlebtn { cursor: pointer; border-radius: 10px; padding: 0 0.4rem; }
+.reservafrota-cal-titlebtn:hover { background: var(--tblr-bg-surface-secondary, #f3f5f9); }
+.reservafrota-cal-titlebtn::after {
+    content: ""; display: inline-block; margin-left: 0.5rem; vertical-align: middle;
+    border-left: 0.35rem solid transparent; border-right: 0.35rem solid transparent;
+    border-top: 0.45rem solid currentColor; opacity: 0.6;
+}
+.reservafrota-minical {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 70;
+    background: var(--cb-surface, #fff); border: 1px solid var(--cb-border, #e7e9ee);
+    border-radius: 14px; box-shadow: var(--cb-shadow-lift); padding: 0.7rem;
+    min-width: 250px;
+}
+.reservafrota-minical__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.reservafrota-minical__head strong { font-size: 1rem; }
+.reservafrota-minical__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; margin-bottom: 0.5rem; }
+.reservafrota-minical__month {
+    border: 1px solid transparent; background: var(--tblr-bg-surface-secondary, #f3f5f9);
+    border-radius: 8px; padding: 0.4rem 0.2rem; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; color: var(--cb-ink);
+}
+.reservafrota-minical__month:hover { border-color: var(--cb-approved); color: var(--cb-approved); }
+.reservafrota-minical__month.is-cur { background: var(--cb-approved); color: #fff; }
+.reservafrota-minical__today { margin-left: 0; width: 100%; }
 .reservafrota-cal-arrow {
     width: 2.2rem; height: 2.2rem; border-radius: 11px;
     border: 1px solid var(--cb-border); background: var(--cb-surface);
