@@ -461,7 +461,7 @@
                     if (mDate) { mDate.value = b.departure.substr(0, 10); }
                     if (mTime) { mTime.value = b.departure.substr(11, 5); }
                     
-                    if (mADate) { mADate.value = b.arrival ? b.arrival.substr(0, 10) : ''; }
+                    if (mADate) { mADate.value = b.arrival ? b.arrival.substr(0, 10) : b.departure.substr(0, 10); }
                     if (mATime) { mATime.value = b.arrival ? b.arrival.substr(11, 5) : ''; }
                     if (mADate && mDate) { mADate.min = mDate.value; }
                     
@@ -491,7 +491,7 @@
             if (mTime && !mTime.value) { mTime.value = ''; }
             if (mADate) {
                 mADate.min = mDate ? mDate.value : todayStr();
-                mADate.value = '';
+                mADate.value = mDate && mDate.value ? mDate.value : todayStr();
             }
             if (mATime) { mATime.value = ''; }
             if (mCity) { mCity.value = ''; }
