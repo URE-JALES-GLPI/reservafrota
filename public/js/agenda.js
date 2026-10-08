@@ -194,11 +194,13 @@
           + '</div>'
           + '</div>'
           + '<label class="form-label" style="margin-top:0.6rem;">Saída — dia e hora <span style="color:#d6336c;">*</span></label>'
-          + '<input type="datetime-local" class="form-control" name="date_departure" value="' + dtLocal(b.departure) + '" step="60" required>'
+          + '<input type="datetime-local" class="form-control" name="date_departure" value="' + dtLocal(b.departure) + '" step="300" required>'
           + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora <span style="color:#d6336c;">*</span></label>'
-          + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="60" required>'
-          + '<label class="form-label" style="margin-top:0.6rem;">Destino</label>'
-          + '<input type="text" class="form-control" name="destination" value="' + esc2(b.destination) + '">'
+          + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="300" required>'
+          + '<label class="form-label" style="margin-top:0.6rem;">Município (cidade) <span style="color:#d6336c;">*</span></label>'
+          + '<select class="form-select cb-e-city" required></select>'
+          + '<label class="form-label" style="margin-top:0.6rem;">Escola (destino) <span style="color:#d6336c;">*</span></label>'
+          + '<select class="form-select cb-e-dest" name="destination" required></select>'
           + '<div class="reservafrota-confirm-actions">'
           + (canCancel ? '<button type="button" class="reservafrota-back cb-e-cancel"><i class="ti ti-ban"></i> Cancelar</button>' : '')
           + (canConfirm ? '<button type="button" class="reservafrota-btn-approve cb-e-confirm"><i class="ti ti-check"></i> Confirmar</button>' : '')
@@ -224,6 +226,54 @@
         // Inicializa os campos de acompanhantes (se houver).
         var cs = overlay.querySelector('.reservafrota-companion-count');
         if (cs && parseInt(b.has_companion, 10) === 1) { cbInitComp(cs); }
+        // Município -> escola (destino fechado na lista da URE Jales).
+        var schoolMapE = window.RESERVAFROTA_SCHOOLS || {};
+        try {
+            if (!Object.keys(schoolMapE).length) {
+                var schoolTagE = document.getElementById('reservafrota-schools');
+                if (schoolTagE) { schoolMapE = JSON.parse(schoolTagE.textContent || '{}'); }
+            }
+        } catch (e2) { schoolMapE = {}; }
+        var citySelE = overlay.querySelector('.cb-e-city');
+        var destSelE = overlay.querySelector('.cb-e-dest');
+        function fillEditSchools(city, selected) {
+            if (!destSelE) { return; }
+            destSelE.innerHTML = '<option value="">-- Selecione a escola --</option>';
+            var list = (city && schoolMapE[city]) || [];
+            list.forEach(function (school) {
+                var val = school + ' \u2014 ' + city;
+                var opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = school;
+                if (selected && selected === val) { opt.selected = true; }
+                destSelE.appendChild(opt);
+            });
+            if (selected && destSelE.value !== selected) {
+                var legacy = document.createElement('option');
+                legacy.value = selected;
+                legacy.textContent = selected;
+                legacy.selected = true;
+                destSelE.appendChild(legacy);
+            }
+        }
+        if (citySelE) {
+            var citiesE = Object.keys(schoolMapE).sort(function (a, c) { return a.localeCompare(c); });
+            citySelE.innerHTML = '<option value="">-- Selecione o munic\u00edpio --</option>';
+            citiesE.forEach(function (city) {
+                var opt = document.createElement('option');
+                opt.value = city;
+                opt.textContent = city;
+                citySelE.appendChild(opt);
+            });
+            var curParts = String(b.destination || '').split(' \u2014 ');
+            if (curParts.length === 2) {
+                citySelE.value = curParts[1];
+                fillEditSchools(curParts[1], b.destination);
+            } else {
+                fillEditSchools('', b.destination || '');
+            }
+            citySelE.addEventListener('change', function () { fillEditSchools(citySelE.value, ''); });
+        }
 
         // Mantém chegada >= saída e bloqueia passado: define min e sincroniza.
         (function(){
@@ -274,10 +324,10 @@
 
         // Validação de datas: ida e volta + destino são obrigatórios; chegada > saída; nada no passado.
         form.addEventListener('submit', function (e) {
-            var destInput = form.querySelector('input[name="destination"]');
+            var destInput = form.querySelector('[name="destination"]');
             if (destInput && !destInput.value.trim()) {
                 e.preventDefault();
-                alert('Informe o destino da viagem.');
+                alert('Escolha o município e a escola de destino.');
                 destInput.focus();
                 return;
             }
@@ -298,6 +348,13 @@
             if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
                 e.preventDefault();
                 alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
+                return;
+            }
+            var depMin = parseInt(String(depInput.value).substr(14, 2), 10);
+            var arrMin = parseInt(String(arrInput.value).substr(14, 2), 10);
+            if (isNaN(depMin) || depMin % 5 !== 0 || isNaN(arrMin) || arrMin % 5 !== 0) {
+                e.preventDefault();
+                alert('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).');
                 return;
             }
             var todayStr = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
@@ -541,7 +598,7 @@
           + '<label class="form-label"><b>Data e hora do retorno</b></label>'
           + '<div class="reservafrota-datetime">'
           + '<input type="date" class="form-control cb-rdate">'
-          + '<input type="time" class="form-control cb-rtime">'
+          + '<input type="time" class="form-control cb-rtime" step="300">'
           + '</div>'
           + '<input type="hidden" name="returned_at" class="cb-rwhen">'
           + '<label class="form-label" style="margin-top:0.7rem;"><b>KM final do veículo</b> (opcional)</label>'
@@ -578,11 +635,23 @@
         var now = new Date();
         function p(n) { return n < 10 ? '0' + n : '' + n; }
         d.value = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
-        t.value = p(now.getHours()) + ':' + p(now.getMinutes());
+        var roundedMin = now.getMinutes() - (now.getMinutes() % 5);
+        t.value = p(now.getHours()) + ':' + p(roundedMin);
         function sync() { hid.value = (d.value && t.value) ? (d.value + 'T' + t.value) : ''; }
         sync();
         d.addEventListener('change', sync);
-        t.addEventListener('change', sync);
+        t.addEventListener('change', function () {
+            if (t.value) {
+                var parts = t.value.split(':');
+                var mm = parseInt(parts[1], 10);
+                if (!isNaN(mm) && mm % 5 !== 0) {
+                    mm = Math.round(mm / 5) * 5;
+                    if (mm >= 60) { mm = 55; }
+                    t.value = parts[0] + ':' + (mm < 10 ? '0' + mm : '' + mm);
+                }
+            }
+            sync();
+        });
     }
 
     /* Confirmar (aprovar) um agendamento pendente: o gestor escolhe o carro

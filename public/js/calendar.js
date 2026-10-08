@@ -78,6 +78,48 @@
         var mADate = document.getElementById('cb-m-adate');
         var mATime = document.getElementById('cb-m-atime');
         var modalForm = document.getElementById('reservafrota-modal-form');
+        function snapToFive(input) {
+            if (!input || !input.value) { return; }
+            var parts = String(input.value).split(':');
+            if (parts.length < 2) { return; }
+            var hh = parseInt(parts[0], 10);
+            var mm = parseInt(parts[1], 10);
+            if (isNaN(hh) || isNaN(mm) || mm % 5 === 0) { return; }
+            mm = Math.round(mm / 5) * 5;
+            if (mm >= 60) { mm = 55; }
+            input.value = (hh < 10 ? '0' + hh : '' + hh) + ':' + (mm < 10 ? '0' + mm : '' + mm);
+        }
+        if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
+        if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
+        var schoolMap = {};
+        try {
+            var schoolTag = document.getElementById('reservafrota-schools');
+            if (schoolTag) { schoolMap = JSON.parse(schoolTag.textContent || '{}'); }
+        } catch (err) { schoolMap = {}; }
+        window.RESERVAFROTA_SCHOOLS = schoolMap;
+        var mCity = document.getElementById('cb-m-city');
+        function fillSchools(city, selected) {
+            var destSel = document.getElementById('cb-m-dest');
+            if (!destSel) { return; }
+            destSel.innerHTML = '<option value="">-- Selecione a escola --</option>';
+            var list = (city && schoolMap[city]) || [];
+            list.forEach(function (school) {
+                var val = school + ' \u2014 ' + city;
+                var opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = school;
+                if (selected && selected === val) { opt.selected = true; }
+                destSel.appendChild(opt);
+            });
+            if (selected && destSel.value !== selected) {
+                var legacy = document.createElement('option');
+                legacy.value = selected;
+                legacy.textContent = selected;
+                legacy.selected = true;
+                destSel.appendChild(legacy);
+            }
+        }
+        if (mCity) { mCity.addEventListener('change', function () { fillSchools(mCity.value, ''); }); }
         var modalWeekdays = document.getElementById('cb-m-weekdays');
         var submitBtn = document.getElementById('cb-m-submit');
         var cancelBtn = document.getElementById('cb-m-cancel');
@@ -402,8 +444,14 @@
                     if (mATime) { mATime.value = b.arrival ? b.arrival.substr(11, 5) : ''; }
                     if (mADate && mDate) { mADate.min = mDate.value; }
                     
-                    var destInput = document.getElementById('cb-m-dest');
-                    if (destInput) { destInput.value = b.destination || ''; }
+                    var destParts = String(b.destination || '').split(' \u2014 ');
+                    if (destParts.length === 2 && mCity) {
+                        mCity.value = destParts[1];
+                        fillSchools(destParts[1], b.destination);
+                    } else {
+                        if (mCity) { mCity.value = ''; }
+                        fillSchools('', b.destination || '');
+                    }
 
                     // Remove destaque de outros cards e destaca este
                     modalExisting.querySelectorAll('.reservafrota-day-item').forEach(function(c){ c.classList.remove('is-editing'); });
@@ -425,6 +473,8 @@
                 mADate.value = '';
             }
             if (mATime) { mATime.value = ''; }
+            if (mCity) { mCity.value = ''; }
+            fillSchools('', '');
 
             modal.hidden = false;
             document.body.classList.add('reservafrota-modal-open');
@@ -587,7 +637,7 @@
 
                 var destVal = document.getElementById('cb-m-dest') ? document.getElementById('cb-m-dest').value.trim() : '';
                 if (!destVal) {
-                    alert('Informe o destino da viagem.');
+                    alert('Escolha o município e a escola de destino.');
                     var di = document.getElementById('cb-m-dest'); if (di) { di.focus(); }
                     return;
                 }
@@ -596,6 +646,12 @@
                     var today = todayStr();
                     if (mDate.value < today) {
                         alert('Não é possível reservar em data passada. Escolha hoje ou futuro.');
+                        return;
+                    }
+                    var depMin = parseInt(String(mTime.value).substr(3, 2), 10);
+                    if (isNaN(depMin) || depMin % 5 !== 0) {
+                        alert('A saída deve ser em intervalos de 5 minutos (ex.: 08:00, 08:05, 08:10).');
+                        mTime.focus();
                         return;
                     }
                     modalDep.value = mDate.value + 'T' + mTime.value;
@@ -616,6 +672,12 @@
                         return;
                     }
                     var at = mATime.value;
+                    var arrMin = parseInt(String(at).substr(3, 2), 10);
+                    if (isNaN(arrMin) || arrMin % 5 !== 0) {
+                        alert('A chegada deve ser em intervalos de 5 minutos (ex.: 08:00, 08:05, 08:10).');
+                        mATime.focus();
+                        return;
+                    }
                     var todayA = todayStr();
                     if (mADate.value < todayA) {
                         alert('A data de chegada não pode ser anterior a hoje.');

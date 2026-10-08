@@ -34,11 +34,22 @@
         {# Veículo removido da parte de agendamento — aparece somente na
            aprovação do gestor (painel abaixo / modal de confirmação). #}
         <div class="row">
-            <div class="col-12 mb-3">
-                <label class="form-label" for="bk-dest">{{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
-                <input type="text" class="form-control" id="bk-dest" name="destination" required
-                       value="{{ item.fields['destination'] }}" {{ editable ? '' : 'disabled' }}>
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-city">{{ __('Município (cidade)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                <select class="form-select" id="bk-city" required {{ editable ? '' : 'disabled' }}>
+                    <option value="">{{ __('— Selecione o município —', 'reservafrota') }}</option>
+                    {% for city in school_map|keys|sort %}
+                        <option value="{{ city }}">{{ city }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label" for="bk-dest">{{ __('Escola (destino)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                <select class="form-select" id="bk-dest" name="destination" required {{ editable ? '' : 'disabled' }}>
+                    <option value="">{{ __('— Selecione primeiro o município —', 'reservafrota') }}</option>
+                </select>
+            </div>
+            <script id="reservafrota-schools-bk" type="application/json">{{ school_map|json_encode|raw }}</script>
 
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-driver">{{ __('Motorista', 'reservafrota') }}</label>
@@ -76,16 +87,68 @@
 
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-dep">{{ __('Saída da SEDUC', 'reservafrota') }}</label>
-                <input type="datetime-local" class="form-control" id="bk-dep" name="date_departure"
+                <input type="datetime-local" class="form-control" id="bk-dep" name="date_departure" step="300"
                        value="{{ item.fields['date_departure'] ? item.fields['date_departure']|replace({' ': 'T'})|slice(0, 16) : '' }}" required {{ editable ? '' : 'disabled' }}>
             </div>
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-arr">
                     {{ __('Chegada', 'reservafrota') }} <span style="color:#d6336c;">*</span>
                 </label>
-                <input type="datetime-local" class="form-control" id="bk-arr" name="date_arrival" required
+                <input type="datetime-local" class="form-control" id="bk-arr" name="date_arrival" step="300" required
                        value="{{ item.fields['date_arrival'] ? item.fields['date_arrival']|replace({' ': 'T'})|slice(0, 16) : '' }}" {{ editable ? '' : 'disabled' }}>
             </div>
+            <script>
+            (function () {
+                var mapTag = document.getElementById('reservafrota-schools-bk');
+                var map = {};
+                try { if (mapTag) { map = JSON.parse(mapTag.textContent || '{}'); } } catch (e) { map = {}; }
+                var city = document.getElementById('bk-city');
+                var dest = document.getElementById('bk-dest');
+                var current = {{ item.fields['destination']|json_encode|raw }};
+                function fill(cityName, selected) {
+                    if (!dest) { return; }
+                    dest.innerHTML = '<option value="">-- Selecione a escola --</option>';
+                    var list = (cityName && map[cityName]) || [];
+                    list.forEach(function (school) {
+                        var val = school + ' \u2014 ' + cityName;
+                        var opt = document.createElement('option');
+                        opt.value = val;
+                        opt.textContent = school;
+                        if (selected && selected === val) { opt.selected = true; }
+                        dest.appendChild(opt);
+                    });
+                    if (selected && dest.value !== selected) {
+                        var legacy = document.createElement('option');
+                        legacy.value = selected;
+                        legacy.textContent = selected;
+                        legacy.selected = true;
+                        dest.appendChild(legacy);
+                    }
+                }
+                if (city && dest) {
+                    var parts = String(current || '').split(' \u2014 ');
+                    if (parts.length === 2 && map[parts[1]]) {
+                        city.value = parts[1];
+                        fill(parts[1], current);
+                    } else {
+                        fill('', current || '');
+                    }
+                    city.addEventListener('change', function () { fill(city.value, ''); });
+                }
+                function snap(input) {
+                    if (!input || !input.value) { return; }
+                    var mm = parseInt(String(input.value).substr(14, 2), 10);
+                    if (isNaN(mm) || mm % 5 === 0) { return; }
+                    var rounded = Math.round(mm / 5) * 5;
+                    if (rounded >= 60) { rounded = 55; }
+                    input.value = input.value.substr(0, 14) + (rounded < 10 ? '0' + rounded : '' + rounded);
+                }
+                ['bk-dep', 'bk-arr'].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.addEventListener('change', function () { snap(el); }); }
+                });
+            })();
+            </script>
 
             <div class="col-12 mb-3">
                 <label class="form-label" for="bk-reason">{{ __('Motivo', 'reservafrota') }}</label>

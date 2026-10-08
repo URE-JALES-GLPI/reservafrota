@@ -60,6 +60,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'blist_url'          => Plugin::getWebDir('reservafrota') . '/ajax/bookinglist.php',
     'csrf'               => Session::getNewCSRFToken(),
     'maint_alerts'       => $maintAlerts,
+    'school_map'         => \GlpiPlugin\Reservafrota\Schools::getMap(),
 ]);
 
 if ($used_help) {
