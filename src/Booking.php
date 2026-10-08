@@ -1310,7 +1310,7 @@ class Booking extends CommonDBTM
             $rows[] = $row;
             $s = strtotime((string) $row['date_departure']);
             $e = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($s + 3600);
-            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'drivers_id' => (int) ($row['drivers_id'] ?? 0), 'start' => $s, 'end' => $e, 'status' => (int) $row['status']];
+            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'start' => $s, 'end' => $e, 'status' => (int) $row['status']];
         }
         $conflicts = self::markConflicts($confInput);
 
@@ -1530,7 +1530,7 @@ class Booking extends CommonDBTM
             $st = (int) $row['status'];
             $start = strtotime((string) $row['date_departure']);
             $end   = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($start + 3600);
-            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'drivers_id' => (int) ($row['drivers_id'] ?? 0), 'start' => $start, 'end' => $end, 'status' => $st];
+            $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'start' => $start, 'end' => $end, 'status' => $st];
 
             $nm = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
             if ($nm === '') { $nm = $row['user_login'] ?? ''; }
@@ -1714,11 +1714,12 @@ class Booking extends CommonDBTM
     }
 
     /**
-     * Marca conflitos de horário entre agendamentos do mesmo carro OU do
-     * mesmo motorista. Um motorista não pode estar em duas viagens
-     * sobrepostas, mesmo em carros diferentes.
+     * Marca conflitos de horário entre agendamentos do MESMO carro.
+     * O conflito de motorista nem chega a existir: é barrado na criação,
+     * na edição e na aprovação (hasDriverConflict) — o que pode escapar
+     * na prática é carro dobrado (ex.: gestor forçou a aprovação).
      *
-     * @param list<array{id:int,car_id:int,drivers_id?:int,start:int,end:int,status:int}> $rows
+     * @param list<array{id:int,car_id:int,start:int,end:int,status:int}> $rows
      * @return array<int,bool> id => tem conflito
      */
     public static function markConflicts(array $rows): array
@@ -1734,14 +1735,7 @@ class Booking extends CommonDBTM
 
         foreach ($active as $a) {
             foreach ($active as $b) {
-                if ($a['id'] === $b['id']) {
-                    continue;
-                }
-                $sameCar = ($a['car_id'] ?? 0) > 0 && ($a['car_id'] ?? 0) === ($b['car_id'] ?? 0);
-                $da = (int) ($a['drivers_id'] ?? 0);
-                $db = (int) ($b['drivers_id'] ?? 0);
-                $sameDriver = $da > 0 && $da === $db;
-                if (!$sameCar && !$sameDriver) {
+                if ($a['id'] === $b['id'] || ($a['car_id'] ?? 0) <= 0 || ($a['car_id'] ?? 0) !== ($b['car_id'] ?? 0)) {
                     continue;
                 }
                 if ($a['start'] < $b['end'] && $b['start'] < $a['end']) {
