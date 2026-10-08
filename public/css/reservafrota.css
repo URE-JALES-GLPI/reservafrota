@@ -1515,7 +1515,7 @@ body.reservafrota-modal-open { overflow: hidden; }
 }
 .reservafrota-stat-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px; margin-bottom: 24px;
+    gap: 14px; margin-bottom: 24px; justify-content: center; justify-items: stretch;
 }
 .reservafrota-stat-card {
     background: #fff; border: 1.5px solid #e8eaf0; border-radius: 14px;
@@ -1523,8 +1523,18 @@ body.reservafrota-modal-open { overflow: hidden; }
 }
 .reservafrota-stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
 .reservafrota-stat-card.is-alert { border-color: #fed7aa; background: #fff7ed; }
-.reservafrota-stat-top { margin-bottom: 10px; }
-.reservafrota-stat-number { font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.reservafrota-stat-top { margin-bottom: 10px; display: flex; justify-content: center; }
+.reservafrota-stat-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
+}
+.reservafrota-stat-badge.badge-pending { background: #fef3c7; color: #b45309; }
+.reservafrota-stat-badge.badge-approved { background: #d1fae5; color: #065f46; }
+.reservafrota-stat-badge.badge-arrived { background: #dbeafe; color: #1d4ed8; }
+.reservafrota-stat-badge.badge-conflict { background: #ffedd5; color: #c2410c; }
+.reservafrota-stat-badge.badge-cancelled { background: #fee2e2; color: #991b1b; }
+.reservafrota-stat-number { font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; color: #1e1b4b; }
 .reservafrota-stat-label { font-size: 0.75rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 @media (max-width: 640px) {
     .reservafrota-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }

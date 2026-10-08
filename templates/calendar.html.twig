@@ -40,29 +40,29 @@
     {% if month_stats is defined %}
     <div class="reservafrota-stat-grid">
         <div class="reservafrota-stat-card">
-            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-pending"></span></div>
-            <div class="reservafrota-stat-number" style="color:#b8860b;" data-stat="pending">{{ month_stats.pending }}</div>
-            <div class="reservafrota-stat-label">{{ __('Pendentes', 'reservafrota') }}</div>
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-pending">{{ __('Pendentes', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" data-stat="pending">{{ month_stats.pending }}</div>
+            <div class="reservafrota-stat-label">{{ __('viagens', 'reservafrota') }}</div>
         </div>
         <div class="reservafrota-stat-card">
-            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-approved"></span></div>
-            <div class="reservafrota-stat-number" style="color:#059669;" data-stat="approved">{{ month_stats.approved }}</div>
-            <div class="reservafrota-stat-label">{{ __('Aprovados', 'reservafrota') }}</div>
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-approved">{{ __('Aprovados', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" data-stat="approved">{{ month_stats.approved }}</div>
+            <div class="reservafrota-stat-label">{{ __('viagens', 'reservafrota') }}</div>
         </div>
         <div class="reservafrota-stat-card">
-            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-arrived"></span></div>
-            <div class="reservafrota-stat-number" style="color:#3b5bdb;" data-stat="arrived">{{ month_stats.arrived }}</div>
-            <div class="reservafrota-stat-label">{{ __('Concluídos', 'reservafrota') }}</div>
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-arrived">{{ __('Concluídos', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" data-stat="arrived">{{ month_stats.arrived }}</div>
+            <div class="reservafrota-stat-label">{{ __('viagens', 'reservafrota') }}</div>
         </div>
         <div class="reservafrota-stat-card is-alert">
-            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-conflict"></span></div>
-            <div class="reservafrota-stat-number" style="color:#f97316;" data-stat="conflict">{{ month_stats.conflict }}</div>
-            <div class="reservafrota-stat-label">{{ __('Em conflito', 'reservafrota') }}</div>
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-conflict">{{ __('Em conflito', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" data-stat="conflict">{{ month_stats.conflict }}</div>
+            <div class="reservafrota-stat-label">{{ __('viagens', 'reservafrota') }}</div>
         </div>
         <div class="reservafrota-stat-card">
-            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-cancelled"></span></div>
-            <div class="reservafrota-stat-number" style="color:#c92a2a;" data-stat="cancelled">{{ month_stats.cancelled }}</div>
-            <div class="reservafrota-stat-label">{{ __('Cancelados', 'reservafrota') }}</div>
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-cancelled">{{ __('Cancelados', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" data-stat="cancelled">{{ month_stats.cancelled }}</div>
+            <div class="reservafrota-stat-label">{{ __('viagens', 'reservafrota') }}</div>
         </div>
     </div>
     {% endif %}
