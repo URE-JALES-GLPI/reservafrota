@@ -197,10 +197,8 @@
           + '<input type="datetime-local" class="form-control" name="date_departure" value="' + dtLocal(b.departure) + '" step="300" required>'
           + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora <span style="color:#d6336c;">*</span></label>'
           + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="300" required>'
-          + '<label class="form-label" style="margin-top:0.6rem;">Município (cidade) <span style="color:#d6336c;">*</span></label>'
-          + '<select class="form-select cb-e-city" required></select>'
-          + '<label class="form-label" style="margin-top:0.6rem;">Escola (destino) <span style="color:#d6336c;">*</span></label>'
-          + '<select class="form-select cb-e-dest" name="destination" required></select>'
+          + '<label class="form-label" style="margin-top:0.6rem;">Destino <span style="color:#d6336c;">*</span></label>'
+          + '<input type="text" class="form-control" name="destination" placeholder="Cidade, escola, etc..." value="' + esc2(b.destination) + '" required>'
           + '<div class="reservafrota-confirm-actions">'
           + (canCancel ? '<button type="button" class="reservafrota-back cb-e-cancel"><i class="ti ti-ban"></i> Cancelar</button>' : '')
           + (canConfirm ? '<button type="button" class="reservafrota-btn-approve cb-e-confirm"><i class="ti ti-check"></i> Confirmar</button>' : '')
@@ -227,56 +225,6 @@
         var cs = overlay.querySelector('.reservafrota-companion-count');
         if (cs && parseInt(b.has_companion, 10) === 1) { cbInitComp(cs); }
         // Município -> escola (destino fechado na lista da URE Jales).
-        var schoolMapE = window.RESERVAFROTA_SCHOOLS || {};
-        try {
-            if (!schoolMapE || typeof schoolMapE !== 'object' || !Object.keys(schoolMapE).length) {
-                schoolMapE = {};
-                var schoolTagE = document.getElementById('reservafrota-schools');
-                if (schoolTagE) { schoolMapE = JSON.parse(schoolTagE.textContent || '{}') || {}; }
-                if (!schoolMapE || typeof schoolMapE !== 'object') { schoolMapE = {}; }
-            }
-        } catch (e2) { schoolMapE = {}; }
-        var citySelE = overlay.querySelector('.cb-e-city');
-        var destSelE = overlay.querySelector('.cb-e-dest');
-        function fillEditSchools(city, selected) {
-            if (!destSelE) { return; }
-            destSelE.innerHTML = '<option value="">-- Selecione a escola --</option>';
-            var list = (city && schoolMapE[city]) || [];
-            list.forEach(function (school) {
-                var val = school + ' \u2014 ' + city;
-                var opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = school;
-                if (selected && selected === val) { opt.selected = true; }
-                destSelE.appendChild(opt);
-            });
-            if (selected && destSelE.value !== selected) {
-                var legacy = document.createElement('option');
-                legacy.value = selected;
-                legacy.textContent = selected;
-                legacy.selected = true;
-                destSelE.appendChild(legacy);
-            }
-        }
-        if (citySelE) {
-            var citiesE = Object.keys(schoolMapE).sort(function (a, c) { return a.localeCompare(c); });
-            citySelE.innerHTML = '<option value="">-- Selecione o munic\u00edpio --</option>';
-            citiesE.forEach(function (city) {
-                var opt = document.createElement('option');
-                opt.value = city;
-                opt.textContent = city;
-                citySelE.appendChild(opt);
-            });
-            var curParts = String(b.destination || '').split(' \u2014 ');
-            if (curParts.length === 2) {
-                citySelE.value = curParts[1];
-                fillEditSchools(curParts[1], b.destination);
-            } else {
-                fillEditSchools('', b.destination || '');
-            }
-            citySelE.addEventListener('change', function () { fillEditSchools(citySelE.value, ''); });
-        }
-
         // Mantém chegada >= saída e bloqueia passado: define min e sincroniza.
         (function(){
             var depInput = overlay.querySelector('input[name="date_departure"]');
@@ -329,7 +277,7 @@
             var destInput = form.querySelector('[name="destination"]');
             if (destInput && !destInput.value.trim()) {
                 e.preventDefault();
-                alert('Escolha o município e a escola de destino.');
+                alert('Informe o destino da viagem.');
                 destInput.focus();
                 return;
             }

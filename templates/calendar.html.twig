@@ -221,19 +221,8 @@
                                 <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="300" required>
                             </div>
 
-                            <label class="form-label" for="cb-m-city">5. {{ __('Município (cidade)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
-                            <select class="form-select" id="cb-m-city" required>
-                                <option value="">{{ __('— Selecione o município —', 'reservafrota') }}</option>
-                                {% for city in (school_map|default({}))|keys|sort %}
-                                    <option value="{{ city }}">{{ city }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label class="form-label" for="cb-m-dest" style="margin-top:0.6rem;">6. {{ __('Escola (destino)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
-                            <select class="form-select" id="cb-m-dest" name="destination" required>
-                                <option value="">{{ __('— Selecione primeiro o município —', 'reservafrota') }}</option>
-                            </select>
-                            <script id="reservafrota-schools" type="application/json">{{ (school_map|default({}))|json_encode|raw }}</script>
+                            <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                            <input type="text" class="form-control" id="cb-m-dest" name="destination" placeholder="{{ __('Cidade, escola, etc...', 'reservafrota') }}" required>
 
                             <div class="reservafrota-formactions">
                                 <button type="button" class="reservafrota-back" id="cb-m-cancel" data-cb-cancel

@@ -165,17 +165,12 @@ class Booking extends CommonDBTM
             return false;
         }
 
-        // Destino é obrigatório e deve ser uma escola da lista
-        // (município + escola — sem digitação livre).
-        $input['destination'] = trim((string) ($input['destination'] ?? ''));
-        if ($input['destination'] === '') {
-            Session::addMessageAfterRedirect(__('Escolha o município e a escola de destino.', 'reservafrota'), false, ERROR);
+        // Destino é obrigatório (texto livre).
+        if (empty(trim((string) ($input['destination'] ?? '')))) {
+            Session::addMessageAfterRedirect(__('Informe o destino da viagem.', 'reservafrota'), false, ERROR);
             return false;
         }
-        if (!Schools::isValidDestination($input['destination'])) {
-            Session::addMessageAfterRedirect(__('Destino inválido. Escolha o município e a escola na lista.', 'reservafrota'), false, ERROR);
-            return false;
-        }
+        $input['destination'] = trim((string) $input['destination']);
 
         // Novo agendamento sempre começa pendente.
         $input['status']            = self::STATUS_PENDING;
@@ -454,19 +449,15 @@ class Booking extends CommonDBTM
             unset($input['plugin_reservafrota_drivers_id']);
         }
 
-        // Destino é obrigatório ao editar e deve ser uma escola da lista.
+        // Destino é obrigatório ao editar (se veio no payload ou se está alterando).
         if (array_key_exists('destination', $input)) {
+            if (empty(trim((string) $input['destination']))) {
+                Session::addMessageAfterRedirect(__('Informe o destino da viagem.', 'reservafrota'), false, ERROR);
+                return false;
+            }
             $input['destination'] = trim((string) $input['destination']);
-            if ($input['destination'] === '') {
-                Session::addMessageAfterRedirect(__('Escolha o município e a escola de destino.', 'reservafrota'), false, ERROR);
-                return false;
-            }
-            if (!Schools::isValidDestination($input['destination'])) {
-                Session::addMessageAfterRedirect(__('Destino inválido. Escolha o município e a escola na lista.', 'reservafrota'), false, ERROR);
-                return false;
-            }
         } elseif ((isset($input['date_departure']) || array_key_exists('date_arrival', $input)) && empty(trim((string) ($this->fields['destination'] ?? '')))) {
-            Session::addMessageAfterRedirect(__('Escolha o município e a escola de destino.', 'reservafrota'), false, ERROR);
+            Session::addMessageAfterRedirect(__('Informe o destino da viagem.', 'reservafrota'), false, ERROR);
             return false;
         }
 
@@ -2077,7 +2068,6 @@ class Booking extends CommonDBTM
             'users'          => self::getUsersList(),
             'requester_name' => $requester,
             'web_dir'        => Plugin::getWebDir('reservafrota'),
-            'school_map'     => Schools::getMap(),
             'current_driver_id' => $this->isNewItem()
                 ? Driver::getDriverIdForUser((int) Session::getLoginUserID())
                 : 0,

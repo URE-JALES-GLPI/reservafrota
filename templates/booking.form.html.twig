@@ -34,22 +34,12 @@
         {# Veículo removido da parte de agendamento — aparece somente na
            aprovação do gestor (painel abaixo / modal de confirmação). #}
         <div class="row">
-            <div class="col-12 col-md-6 mb-3">
-                <label class="form-label" for="bk-city">{{ __('Município (cidade)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
-                <select class="form-select" id="bk-city" required {{ editable ? '' : 'disabled' }}>
-                    <option value="">{{ __('— Selecione o município —', 'reservafrota') }}</option>
-                    {% for city in (school_map|default({}))|keys|sort %}
-                        <option value="{{ city }}">{{ city }}</option>
-                    {% endfor %}
-                </select>
+            <div class="col-12 mb-3">
+                <label class="form-label" for="bk-dest">{{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                <input type="text" class="form-control" id="bk-dest" name="destination" required
+                       placeholder="{{ __('Cidade, escola, etc...', 'reservafrota') }}"
+                       value="{{ item.fields['destination'] }}" {{ editable ? '' : 'disabled' }}>
             </div>
-            <div class="col-12 col-md-6 mb-3">
-                <label class="form-label" for="bk-dest">{{ __('Escola (destino)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
-                <select class="form-select" id="bk-dest" name="destination" required {{ editable ? '' : 'disabled' }}>
-                    <option value="">{{ __('— Selecione primeiro o município —', 'reservafrota') }}</option>
-                </select>
-            </div>
-            <script id="reservafrota-schools-bk" type="application/json">{{ (school_map|default({}))|json_encode|raw }}</script>
 
             <div class="col-12 col-md-6 mb-3">
                 <label class="form-label" for="bk-driver">{{ __('Motorista', 'reservafrota') }}</label>
@@ -99,43 +89,6 @@
             </div>
             <script>
             (function () {
-                var mapTag = document.getElementById('reservafrota-schools-bk');
-                var map = {};
-                try { if (mapTag) { map = JSON.parse(mapTag.textContent || '{}') || {}; } } catch (e) { map = {}; }
-                if (!map || typeof map !== 'object') { map = {}; }
-                var city = document.getElementById('bk-city');
-                var dest = document.getElementById('bk-dest');
-                var current = {{ item.fields['destination']|json_encode|raw }};
-                function fill(cityName, selected) {
-                    if (!dest) { return; }
-                    dest.innerHTML = '<option value="">-- Selecione a escola --</option>';
-                    var list = (cityName && map[cityName]) || [];
-                    list.forEach(function (school) {
-                        var val = school + ' \u2014 ' + cityName;
-                        var opt = document.createElement('option');
-                        opt.value = val;
-                        opt.textContent = school;
-                        if (selected && selected === val) { opt.selected = true; }
-                        dest.appendChild(opt);
-                    });
-                    if (selected && dest.value !== selected) {
-                        var legacy = document.createElement('option');
-                        legacy.value = selected;
-                        legacy.textContent = selected;
-                        legacy.selected = true;
-                        dest.appendChild(legacy);
-                    }
-                }
-                if (city && dest) {
-                    var parts = String(current || '').split(' \u2014 ');
-                    if (parts.length === 2 && map[parts[1]]) {
-                        city.value = parts[1];
-                        fill(parts[1], current);
-                    } else {
-                        fill('', current || '');
-                    }
-                    city.addEventListener('change', function () { fill(city.value, ''); });
-                }
                 function snap(input) {
                     if (!input || !input.value) { return; }
                     var mm = parseInt(String(input.value).substr(14, 2), 10);

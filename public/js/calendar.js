@@ -91,36 +91,6 @@
         }
         if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
         if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
-        var schoolMap = {};
-        try {
-            var schoolTag = document.getElementById('reservafrota-schools');
-            if (schoolTag) { schoolMap = JSON.parse(schoolTag.textContent || '{}') || {}; }
-            if (!schoolMap || typeof schoolMap !== 'object') { schoolMap = {}; }
-        } catch (err) { schoolMap = {}; }
-        window.RESERVAFROTA_SCHOOLS = schoolMap;
-        var mCity = document.getElementById('cb-m-city');
-        function fillSchools(city, selected) {
-            var destSel = document.getElementById('cb-m-dest');
-            if (!destSel) { return; }
-            destSel.innerHTML = '<option value="">-- Selecione a escola --</option>';
-            var list = (city && schoolMap[city]) || [];
-            list.forEach(function (school) {
-                var val = school + ' \u2014 ' + city;
-                var opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = school;
-                if (selected && selected === val) { opt.selected = true; }
-                destSel.appendChild(opt);
-            });
-            if (selected && destSel.value !== selected) {
-                var legacy = document.createElement('option');
-                legacy.value = selected;
-                legacy.textContent = selected;
-                legacy.selected = true;
-                destSel.appendChild(legacy);
-            }
-        }
-        if (mCity) { mCity.addEventListener('change', function () { fillSchools(mCity.value, ''); }); }
         var modalWeekdays = document.getElementById('cb-m-weekdays');
         var submitBtn = document.getElementById('cb-m-submit');
         var cancelBtn = document.getElementById('cb-m-cancel');
@@ -465,14 +435,8 @@
                     if (mATime) { mATime.value = b.arrival ? b.arrival.substr(11, 5) : ''; }
                     if (mADate && mDate) { mADate.min = mDate.value; }
                     
-                    var destParts = String(b.destination || '').split(' \u2014 ');
-                    if (destParts.length === 2 && mCity) {
-                        mCity.value = destParts[1];
-                        fillSchools(destParts[1], b.destination);
-                    } else {
-                        if (mCity) { mCity.value = ''; }
-                        fillSchools('', b.destination || '');
-                    }
+                    var destInput = document.getElementById('cb-m-dest');
+                    if (destInput) { destInput.value = b.destination || ''; }
 
                     // Remove destaque de outros cards e destaca este
                     modalExisting.querySelectorAll('.reservafrota-day-item').forEach(function(c){ c.classList.remove('is-editing'); });
@@ -494,8 +458,6 @@
                 mADate.value = mDate && mDate.value ? mDate.value : todayStr();
             }
             if (mATime) { mATime.value = ''; }
-            if (mCity) { mCity.value = ''; }
-            fillSchools('', '');
 
             modal.hidden = false;
             document.body.classList.add('reservafrota-modal-open');
@@ -721,7 +683,7 @@
 
                 var destVal = document.getElementById('cb-m-dest') ? document.getElementById('cb-m-dest').value.trim() : '';
                 if (!destVal) {
-                    alert('Escolha o município e a escola de destino.');
+                    alert('Informe o destino da viagem.');
                     var di = document.getElementById('cb-m-dest'); if (di) { di.focus(); }
                     return;
                 }
