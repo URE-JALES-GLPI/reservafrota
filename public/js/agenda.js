@@ -548,7 +548,7 @@
           + '<label class="form-label"><b>Data e hora do retorno</b></label>'
           + '<div class="reservafrota-datetime">'
           + '<input type="date" class="form-control cb-rdate">'
-          + '<input type="time" class="form-control cb-rtime" step="300">'
+          + '<input type="text" class="form-control cb-rtime reservafrota-time5" placeholder="HH:MM" maxlength="5" inputmode="none" autocomplete="off">'
           + '</div>'
           + '<input type="hidden" name="returned_at" class="cb-rwhen">'
           + '<label class="form-label" style="margin-top:0.7rem;"><b>KM final do veículo</b> (opcional)</label>'
@@ -602,6 +602,63 @@
             }
             sync();
         });
+        (function (input) {
+            var pop = null;
+            function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+            function close() { if (pop) { pop.remove(); pop = null; } }
+            function open() {
+                if (pop) { return; }
+                var cur = /^(\d{1,2}):(\d{2})/.exec(String(input.value || ''));
+                var sh = cur ? parseInt(cur[1], 10) : -1;
+                var sm = cur ? parseInt(cur[2], 10) : -1;
+                var pickH = (sh >= 0 && sh <= 23) ? sh : 8;
+                pop = document.createElement('div');
+                pop.className = 'reservafrota-timegrid';
+                pop.style.position = 'fixed';
+                pop.style.zIndex = '1070';
+                var html = '<div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Hora</div><div class="reservafrota-timegrid__hours">';
+                for (var h = 0; h < 24; h++) {
+                    html += '<button type="button" data-h="' + h + '" class="' + (h === sh ? 'is-sel' : '') + '">' + pad2(h) + '</button>';
+                }
+                html += '</div></div><div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Min</div><div class="reservafrota-timegrid__mins">';
+                for (var mi = 0; mi < 60; mi += 5) {
+                    html += '<button type="button" data-m="' + mi + '" class="' + (mi === sm ? 'is-sel' : '') + '">' + pad2(mi) + '</button>';
+                }
+                html += '</div></div>';
+                pop.innerHTML = html;
+                pop.querySelectorAll('[data-h]').forEach(function (b) {
+                    b.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        pickH = parseInt(b.dataset.h, 10);
+                        pop.querySelectorAll('[data-h]').forEach(function (x) { x.classList.toggle('is-sel', x === b); });
+                    });
+                });
+                pop.querySelectorAll('[data-m]').forEach(function (b) {
+                    b.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        input.value = pad2(pickH) + ':' + pad2(parseInt(b.dataset.m, 10));
+                        try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+                        close();
+                    });
+                });
+                document.body.appendChild(pop);
+                var r = input.getBoundingClientRect();
+                pop.style.left = r.left + 'px';
+                var top = r.bottom + 4;
+                if (top + 260 > window.innerHeight) { top = Math.max(4, r.top - 264); }
+                pop.style.top = top + 'px';
+            }
+            input.addEventListener('click', open);
+            input.addEventListener('focus', open);
+            input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
+            document.addEventListener('click', function (e) {
+                if (pop && e.target !== input && !pop.contains(e.target)) { close(); }
+            }, true);
+            window.addEventListener('scroll', close, true);
+            overlay.querySelectorAll('[data-x]').forEach(function (el) { el.addEventListener('click', close); });
+        })(t);
     }
 
     /* Confirmar (aprovar) um agendamento pendente: o gestor escolhe o carro

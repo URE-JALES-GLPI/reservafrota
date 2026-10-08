@@ -103,6 +103,70 @@
         }
         if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
         if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
+        function attachTimeGrid(input) {
+            if (!input || input.dataset.timeGrid) { return; }
+            input.dataset.timeGrid = '1';
+            var pop = null;
+            function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+            function close() { if (pop) { pop.remove(); pop = null; } }
+            function readHM() {
+                var m = /^(\d{1,2}):(\d{2})/.exec(String(input.value || ''));
+                if (!m) { return { h: -1, min: -1 }; }
+                return { h: parseInt(m[1], 10), min: parseInt(m[2], 10) };
+            }
+            function open() {
+                if (pop) { return; }
+                var sel = readHM();
+                var pickH = (sel.h >= 0 && sel.h <= 23) ? sel.h : 8;
+                pop = document.createElement('div');
+                pop.className = 'reservafrota-timegrid';
+                pop.style.position = 'fixed';
+                pop.style.zIndex = '1070';
+                var html = '<div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Hora</div><div class="reservafrota-timegrid__hours">';
+                for (var h = 0; h < 24; h++) {
+                    html += '<button type="button" data-h="' + h + '" class="' + (h === sel.h ? 'is-sel' : '') + '">' + pad2(h) + '</button>';
+                }
+                html += '</div></div><div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Min</div><div class="reservafrota-timegrid__mins">';
+                for (var mi = 0; mi < 60; mi += 5) {
+                    html += '<button type="button" data-m="' + mi + '" class="' + (mi === sel.min ? 'is-sel' : '') + '">' + pad2(mi) + '</button>';
+                }
+                html += '</div></div>';
+                pop.innerHTML = html;
+                pop.querySelectorAll('[data-h]').forEach(function (b) {
+                    b.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        pickH = parseInt(b.dataset.h, 10);
+                        pop.querySelectorAll('[data-h]').forEach(function (x) { x.classList.toggle('is-sel', x === b); });
+                    });
+                });
+                pop.querySelectorAll('[data-m]').forEach(function (b) {
+                    b.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        var mm = parseInt(b.dataset.m, 10);
+                        input.value = pad2(pickH) + ':' + pad2(mm);
+                        try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+                        close();
+                    });
+                });
+                document.body.appendChild(pop);
+                var r = input.getBoundingClientRect();
+                pop.style.left = r.left + 'px';
+                var top = r.bottom + 4;
+                if (top + 260 > window.innerHeight) { top = Math.max(4, r.top - 264); }
+                pop.style.top = top + 'px';
+            }
+            input.addEventListener('click', open);
+            input.addEventListener('focus', open);
+            input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
+            document.addEventListener('click', function (e) {
+                if (pop && e.target !== input && !pop.contains(e.target)) { close(); }
+            }, true);
+            window.addEventListener('scroll', close, true);
+        }
+        if (mTime) { attachTimeGrid(mTime); }
+        if (mATime) { attachTimeGrid(mATime); }
         var modalWeekdays = document.getElementById('cb-m-weekdays');
         var submitBtn = document.getElementById('cb-m-submit');
         var cancelBtn = document.getElementById('cb-m-cancel');
