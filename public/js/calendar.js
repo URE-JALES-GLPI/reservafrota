@@ -91,78 +91,6 @@
         }
         if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
         if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
-        function attachFiveMinutePicker(input) {
-            if (!input || input.dataset.fivePicker) { return; }
-            input.dataset.fivePicker = '1';
-            input.setAttribute('inputmode', 'none');
-            input.setAttribute('autocomplete', 'off');
-            input.setAttribute('spellcheck', 'false');
-            input.classList.add('reservafrota-time5');
-            var pop = null;
-            function pad2(n) { return n < 10 ? '0' + n : '' + n; }
-            function close() { if (pop) { pop.remove(); pop = null; } }
-            function open() {
-                if (pop) { return; }
-                pop = document.createElement('div');
-                pop.className = 'reservafrota-timepop';
-                pop.style.position = 'fixed';
-                pop.style.zIndex = '1070';
-                pop.style.maxHeight = '240px';
-                pop.style.overflowY = 'auto';
-                pop.style.background = '#fff';
-                pop.style.border = '1px solid #e7e9ee';
-                pop.style.borderRadius = '10px';
-                pop.style.boxShadow = '0 16px 40px -12px rgba(16,24,40,.35)';
-                pop.style.padding = '4px';
-                for (var h = 0; h < 24; h++) {
-                    for (var m = 0; m < 60; m += 5) {
-                        (function (v) {
-                            var b = document.createElement('button');
-                            b.type = 'button';
-                            b.textContent = v;
-                            b.style.display = 'block';
-                            b.style.width = '100%';
-                            b.style.textAlign = 'left';
-                            b.style.border = '0';
-                            b.style.background = (input.value === v) ? '#eef0ff' : 'transparent';
-                            b.style.color = (input.value === v) ? '#4f46e5' : 'inherit';
-                            b.style.fontWeight = (input.value === v) ? '700' : '400';
-                            b.style.padding = '6px 10px';
-                            b.style.borderRadius = '7px';
-                            b.style.fontSize = '.9rem';
-                            b.style.cursor = 'pointer';
-                            b.addEventListener('click', function (ev) {
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                input.value = v;
-                                try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
-                                close();
-                            });
-                            pop.appendChild(b);
-                        })(pad2(h) + ':' + pad2(m));
-                    }
-                }
-                document.body.appendChild(pop);
-                var r = input.getBoundingClientRect();
-                var hgt = Math.min(240, pop.offsetHeight);
-                var top = r.bottom + 4;
-                if (top + hgt > window.innerHeight) { top = Math.max(4, r.top - hgt - 4); }
-                pop.style.minWidth = r.width + 'px';
-                pop.style.left = r.left + 'px';
-                pop.style.top = top + 'px';
-                var sel = pop.querySelector('.is-sel');
-                if (sel && sel.scrollIntoView) { sel.scrollIntoView({ block: 'center' }); }
-            }
-            input.addEventListener('click', open);
-            input.addEventListener('focus', open);
-            input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
-            document.addEventListener('click', function (e) {
-                if (pop && e.target !== input && !pop.contains(e.target)) { close(); }
-            }, true);
-            window.addEventListener('scroll', close, true);
-        }
-        if (mTime) { attachFiveMinutePicker(mTime); }
-        if (mATime) { attachFiveMinutePicker(mATime); }
         var schoolMap = {};
         try {
             var schoolTag = document.getElementById('reservafrota-schools');
@@ -555,8 +483,6 @@
 
         function closeModal() {
             if (!modal) { return; }
-            var pops = document.querySelectorAll('.reservafrota-timepop');
-            for (var pi = 0; pi < pops.length; pi++) { pops[pi].remove(); }
             modal.hidden = true;
             document.body.classList.remove('reservafrota-modal-open');
             

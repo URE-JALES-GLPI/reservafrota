@@ -177,13 +177,13 @@
                             <label class="form-label">3. {{ __('Saída — dia e hora', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-date" aria-label="{{ __('Dia da saída', 'reservafrota') }}" required>
-                                <input type="text" class="form-control reservafrota-time5" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" placeholder="HH:MM" maxlength="5" inputmode="none" required>
+                                <input type="time" class="form-control" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" step="300" required>
                             </div>
 
                             <label class="form-label">4. {{ __('Chegada — dia e hora', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <div class="reservafrota-datetime">
                                 <input type="date" class="form-control" id="cb-m-adate" aria-label="{{ __('Dia da chegada', 'reservafrota') }}" required>
-                                <input type="text" class="form-control reservafrota-time5" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" placeholder="HH:MM" maxlength="5" inputmode="none" required>
+                                <input type="time" class="form-control" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" step="300" required>
                             </div>
 
                             <label class="form-label" for="cb-m-city">5. {{ __('Município (cidade)', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
