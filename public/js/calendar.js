@@ -179,6 +179,7 @@
                     // aceita tanto array puro quanto {bookings:[...]}
                     var list = Array.isArray(data) ? data : (data && data.bookings) || [];
                     render(groupByDay(list));
+                    refreshStats(list);
                 })
                 .catch(function (err) {
                     // mantém o erro real visível no console para depuração
@@ -186,6 +187,25 @@
                     grid.innerHTML = '<div class="reservafrota-grid-loading">'
                         + 'Não foi possível carregar o calendário. Recarregue a página.</div>';
                 });
+        }
+
+        function refreshStats(list) {
+            var counts = { pending: 0, approved: 0, arrived: 0, conflict: 0, cancelled: 0 };
+            var seen = {};
+            (list || []).forEach(function (b) {
+                if (!b || seen[b.id]) { return; }
+                seen[b.id] = 1;
+                if (b.conflict) { counts.conflict++; }
+                var st = b.status || 1;
+                if (st === 1) { counts.pending++; }
+                else if (st === 2) { counts.approved++; }
+                else if (st === 5) { counts.arrived++; }
+                else if (st === 3 || st === 4) { counts.cancelled++; }
+            });
+            Object.keys(counts).forEach(function (k) {
+                var el = document.querySelector('[data-stat="' + k + '"]');
+                if (el) { el.textContent = counts[k]; }
+            });
         }
 
         function render(byDay) {

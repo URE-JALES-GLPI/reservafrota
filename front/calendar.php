@@ -39,6 +39,42 @@ try {
     $maintAlerts = [];
 }
 
+$monthStats = ['pending' => 0, 'approved' => 0, 'arrived' => 0, 'conflict' => 0, 'cancelled' => 0];
+try {
+    $mrows = Booking::getBookingsForMonth($month, false);
+    $cIn = [];
+    foreach ($mrows as $mr) {
+        $s = strtotime((string) $mr['departure']);
+        $e = !empty($mr['arrival']) ? strtotime((string) $mr['arrival']) : ($s + 3600);
+        $cIn[] = [
+            'id'         => (int) $mr['id'],
+            'car_id'     => (int) $mr['car_id'],
+            'drivers_id' => (int) ($mr['drivers_id'] ?? 0),
+            'start'      => $s,
+            'end'        => $e,
+            'status'     => (int) $mr['status'],
+        ];
+    }
+    $mconf = Booking::markConflicts($cIn);
+    foreach ($mrows as $mr) {
+        $st = (int) $mr['status'];
+        if (!empty($mconf[(int) $mr['id']])) {
+            $monthStats['conflict']++;
+        }
+        if ($st === Booking::STATUS_PENDING) {
+            $monthStats['pending']++;
+        } elseif ($st === Booking::STATUS_APPROVED) {
+            $monthStats['approved']++;
+        } elseif ($st === Booking::STATUS_ARRIVED) {
+            $monthStats['arrived']++;
+        } elseif ($st === Booking::STATUS_CANCELLED || $st === Booking::STATUS_REJECTED) {
+            $monthStats['cancelled']++;
+        }
+    }
+} catch (\Throwable $e) {
+    $monthStats = ['pending' => 0, 'approved' => 0, 'arrived' => 0, 'conflict' => 0, 'cancelled' => 0];
+}
+
 TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'web_dir'            => Plugin::getWebDir('reservafrota'),
     'month'              => $month,
@@ -61,6 +97,8 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'csrf'               => Session::getNewCSRFToken(),
     'maint_alerts'       => $maintAlerts,
     'school_map'         => \GlpiPlugin\Reservafrota\Schools::getMap(),
+    'month_stats'        => $monthStats,
+    'month_label'        => $month,
 ]);
 
 if ($used_help) {

@@ -37,6 +37,36 @@
         </nav>
     </div>
 
+    {% if month_stats is defined %}
+    <div class="reservafrota-stat-grid">
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-pending"></span></div>
+            <div class="reservafrota-stat-number" style="color:#b8860b;" data-stat="pending">{{ month_stats.pending }}</div>
+            <div class="reservafrota-stat-label">{{ __('Pendentes', 'reservafrota') }}</div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-approved"></span></div>
+            <div class="reservafrota-stat-number" style="color:#059669;" data-stat="approved">{{ month_stats.approved }}</div>
+            <div class="reservafrota-stat-label">{{ __('Aprovados', 'reservafrota') }}</div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-arrived"></span></div>
+            <div class="reservafrota-stat-number" style="color:#3b5bdb;" data-stat="arrived">{{ month_stats.arrived }}</div>
+            <div class="reservafrota-stat-label">{{ __('Concluídos', 'reservafrota') }}</div>
+        </div>
+        <div class="reservafrota-stat-card is-alert">
+            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-conflict"></span></div>
+            <div class="reservafrota-stat-number" style="color:#f97316;" data-stat="conflict">{{ month_stats.conflict }}</div>
+            <div class="reservafrota-stat-label">{{ __('Em conflito', 'reservafrota') }}</div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-dot dot-cancelled"></span></div>
+            <div class="reservafrota-stat-number" style="color:#c92a2a;" data-stat="cancelled">{{ month_stats.cancelled }}</div>
+            <div class="reservafrota-stat-label">{{ __('Cancelados', 'reservafrota') }}</div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if can_approve and maint_alerts is defined and maint_alerts is not empty %}
         <div class="reservafrota-maint-alert">
             <div class="reservafrota-maint-alert__icon"><i class="ti ti-alert-triangle"></i></div>

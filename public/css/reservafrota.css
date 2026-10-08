@@ -1513,3 +1513,21 @@ body.reservafrota-modal-open { overflow: hidden; }
     .reservafrota-pagehead { align-items: flex-start; flex-direction: column; }
     .reservafrota-fleet-grid { grid-template-columns: 1fr; }
 }
+.reservafrota-stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+}
+.reservafrota-stat-card {
+    background: #fff; border: 1.5px solid #e8eaf0; border-radius: 14px;
+    padding: 18px 16px; text-align: center; transition: box-shadow 0.2s ease;
+}
+.reservafrota-stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+.reservafrota-stat-card.is-alert { border-color: #fed7aa; background: #fff7ed; }
+.reservafrota-stat-top { margin-bottom: 10px; }
+.reservafrota-stat-number { font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.reservafrota-stat-label { font-size: 0.75rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+@media (max-width: 640px) {
+    .reservafrota-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .reservafrota-stat-card { padding: 14px; }
+    .reservafrota-stat-number { font-size: 1.6rem; }
+}
