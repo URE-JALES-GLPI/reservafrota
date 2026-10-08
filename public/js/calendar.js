@@ -48,6 +48,18 @@
         var s = String(dt);
         return s.length >= 16 ? s.substr(11, 5) : s;
     }
+    function fmtDT(dt) {
+        var s = String(dt || '');
+        if (s.length < 16) { return s; }
+        return s.substr(8, 2) + '/' + s.substr(5, 2) + ' ' + s.substr(11, 5);
+    }
+    function periodHtml(b) {
+        if (!b.arrival) { return 'Saída ' + esc(fmtDT(b.departure)); }
+        var sameDay = String(b.departure).substr(0, 10) === String(b.arrival).substr(0, 10);
+        var txt = fmtDT(b.departure) + ' → ' + fmtDT(b.arrival);
+        if (!sameDay) { return '<span class="reservafrota-multiday">' + esc(txt) + '</span>'; }
+        return esc(txt);
+    }
 
     function init() {
         var root = document.getElementById('reservafrota-calendar');
@@ -273,12 +285,9 @@
 
         // ----- Tooltip (passar o mouse mostra os agendamentos do dia) -----
         function tipItem(b) {
-            var period = b.arrival
-                ? timeOf(b.departure) + ' → ' + timeOf(b.arrival)
-                : timeOf(b.departure);
             var hasCar = b.car_id && b.car && b.car !== 'A designar';
             return '<div class="reservafrota-tip__item s-' + (b.status || 1) + '">'
-                + '<div class="reservafrota-tip__line"><b>' + esc(period) + '</b>' + (hasCar ? ' · ' + esc(b.car) : '') + '</div>'
+                + '<div class="reservafrota-tip__line"><b>' + periodHtml(b) + '</b>' + (hasCar ? ' · ' + esc(b.car) : '') + '</div>'
                 + '<div class="reservafrota-tip__sub"><i class="ti ti-user"></i> ' + esc(b.user)
                 + ' · <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—')
                 + ' · ' + esc(b.status_label) + '</div>'
@@ -321,9 +330,6 @@
 
             // Lista (somente leitura) dos agendamentos já existentes no dia.
             var listHtml = items.map(function (b) {
-                var period = b.arrival
-                    ? timeOf(b.departure) + ' → ' + timeOf(b.arrival)
-                    : 'Saída ' + timeOf(b.departure);
                 var cancelBtn = b.can_cancel
                     ? '<button type="button" class="reservafrota-btn-cancel" data-cb-cancel'
                         + ' data-id="' + b.id + '" data-bform="' + bform + '" data-csrf="' + esc(csrf) + '">'
@@ -352,7 +358,7 @@
                     + ((b.car_id && b.car && b.car !== 'A designar') ? '<strong>' + esc(b.car) + '</strong>' : '') + '</div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(b.user)
                     + ' &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—') + '</div>'
-                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + esc(period)
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + periodHtml(b)
                     + (b.destination ? ' &nbsp;·&nbsp; <i class="ti ti-map-pin"></i> ' + esc(b.destination) : '')
                     + '</div>'
                     + (b.status === 4 && b.note ? '<div class="reservafrota-day-item__reason"><i class="ti ti-info-circle"></i> Motivo: ' + esc(b.note) + '</div>' : '')

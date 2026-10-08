@@ -1541,6 +1541,11 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-stat-badge.badge-cancelled { background: #fee2e2; color: #991b1b; }
 .reservafrota-stat-number { font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; color: #1e1b4b; }
 .reservafrota-stat-label { font-size: 0.75rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.reservafrota-multiday {
+    color: #7c3aed; font-weight: 700;
+    background: rgba(124, 58, 237, 0.12);
+    padding: 0.1rem 0.45rem; border-radius: 6px; white-space: nowrap;
+}
 @media (max-width: 640px) {
     .reservafrota-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .reservafrota-stat-card { padding: 14px; }
