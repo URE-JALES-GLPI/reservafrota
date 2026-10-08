@@ -83,8 +83,10 @@
         </div>
     </div>
 
-    {# ---------- Agendamentos (abaixo do calendário) ---------- #}
-    {% include '@reservafrota/booking.lists.html.twig' %}
+    {# ---------- Agendamentos (abaixo do calendário) — oculto por enquanto ---------- #}
+    {% if show_booking_lists|default(false) %}
+        {% include '@reservafrota/booking.lists.html.twig' %}
+    {% endif %}
 
     {# Template oculto com motoristas cadastrados — usado pelos modais (Editar/Remarcar). #}
     <select id="reservafrota-drivers-template" hidden>
