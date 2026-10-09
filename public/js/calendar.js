@@ -77,6 +77,19 @@
         var grid = document.getElementById('reservafrota-grid');
         var newBtn = document.getElementById('reservafrota-new-booking-btn');
         var latestByDay = {};
+        var pendingOpenDay = 0;
+        window.cbOpenDayForDate = function (dateStr) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
+            if (!m) { return; }
+            var day = parseInt(m[3], 10);
+            if (parseInt(m[1], 10) === cur.getFullYear() && (parseInt(m[2], 10) - 1) === cur.getMonth()) {
+                openDay(day, latestByDay[day] || []);
+            } else {
+                cur = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
+                pendingOpenDay = day;
+                load();
+            }
+        };
         var titleEl = document.getElementById('reservafrota-cal-title');
         var modal = document.getElementById('reservafrota-day-modal');
         var modalTitle = document.getElementById('reservafrota-modal-title');
@@ -232,6 +245,11 @@
                     var list = Array.isArray(data) ? data : (data && data.bookings) || [];
                     render(groupByDay(list));
                     refreshStats(list);
+                    if (pendingOpenDay) {
+                        var pd = pendingOpenDay;
+                        pendingOpenDay = 0;
+                        openDay(pd, latestByDay[pd] || []);
+                    }
                 })
                 .catch(function (err) {
                     // mantém o erro real visível no console para depuração
