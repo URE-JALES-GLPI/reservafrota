@@ -497,7 +497,12 @@
                     }
                     if (confirmBtn) {
                         confirmBtn.hidden = !(canApprove && b.status === 1);
-                        confirmBtn.disabled = false;
+                        confirmBtn.disabled = !!(b.conflict && b.conflict_approved);
+                        if (b.conflict && b.conflict_approved) {
+                            confirmBtn.title = 'Bloqueado: conflita com agendamento já aprovado';
+                        } else {
+                            confirmBtn.removeAttribute('title');
+                        }
                         confirmBtn.setAttribute('data-id', b.id);
                     }
                     if (arriveBtn) {

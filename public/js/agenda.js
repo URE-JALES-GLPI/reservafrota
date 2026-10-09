@@ -697,7 +697,8 @@
                     data.drivers.forEach(function (d) {
                         var opt = document.createElement('option');
                         opt.value = String(d.id);
-                        opt.textContent = d.name + (d.phone ? ' — ' + d.phone : '') + (d.cnh ? ' (CNH: ' + d.cnh + ')' : '');
+                        opt.textContent = d.name + (d.phone ? ' — ' + d.phone : '') + (d.cnh ? ' (CNH: ' + d.cnh + ')' : '') + (d.blocked ? ' (ocupado)' : '');
+                        if (d.blocked) { opt.disabled = true; }
                         driverSel.appendChild(opt);
                     });
                     if (data.driver_id) { driverSel.value = String(data.driver_id); }

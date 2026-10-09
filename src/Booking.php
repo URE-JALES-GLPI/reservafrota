@@ -548,6 +548,30 @@ class Booking extends CommonDBTM
             }
         }
 
+        // Bloqueia aprovar com carro já ocupado (outro APROVADO sobreposto).
+        $depAp = (string) ($this->fields['date_departure'] ?? '');
+        $arrAp = ($this->fields['date_arrival'] ?? null) ?: null;
+        if ($depAp !== '' && $carId > 0) {
+            $nS = strtotime($depAp);
+            $nE = $arrAp ? strtotime($arrAp) : ($nS + 3600);
+            foreach (self::getBookingsForCarOnDate($carId, substr($depAp, 0, 10)) as $cid => $c) {
+                if ((int) $cid === (int) ($this->fields['id'] ?? 0)
+                    || (int) ($c['status'] ?? 0) !== self::STATUS_APPROVED) {
+                    continue;
+                }
+                $cS = strtotime((string) $c['date_departure']);
+                $cE = !empty($c['date_arrival']) ? strtotime((string) $c['date_arrival']) : ($cS + 3600);
+                if ($nS < $cE && $cS < $nE) {
+                    Session::addMessageAfterRedirect(
+                        __('Conflito: este carro já está aprovado para outra viagem neste horário.', 'reservafrota'),
+                        false,
+                        ERROR
+                    );
+                    return false;
+                }
+            }
+        }
+
         // Nome automático ainda não tinha carro na criação — completa agora.
         $car = new Car();
         if ($car->getFromDB($carId)) {
@@ -1313,9 +1337,20 @@ class Booking extends CommonDBTM
             $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'start' => $s, 'end' => $e, 'status' => (int) $row['status']];
         }
         $conflicts = self::markConflicts($confInput);
+        $statusById = [];
+        foreach ($confInput as $ci) {
+            $statusById[(int) $ci['id']] = (int) $ci['status'];
+        }
 
         $out = [];
         foreach ($rows as $row) {
+            $confApproved = false;
+            foreach ($conflicts[(int) $row['id']] ?? [] as $pid) {
+                if (($statusById[(int) $pid] ?? 0) === self::STATUS_APPROVED) {
+                    $confApproved = true;
+                    break;
+                }
+            }
             $name = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
             if ($name === '') {
                 $name = $row['user_login'] ?? '';
@@ -1351,6 +1386,7 @@ class Booking extends CommonDBTM
                 'has_sheet'    => !empty($row['arrival_sheet']),
                 'obs'          => $row['arrival_obs'] ?: '',
                 'conflict'     => !empty($conflicts[(int) $row['id']]),
+                'conflict_approved' => $confApproved,
                 'status'       => $st,
                 'status_label' => self::getStatusName($st),
                 'car_id'       => (int) $row['car_id'],
