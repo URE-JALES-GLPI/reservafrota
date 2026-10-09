@@ -649,7 +649,8 @@
                 var top = r.bottom + 4;
                 if (top + 260 > window.innerHeight) { top = Math.max(4, r.top - 264); }
                 pop.style.top = top + 'px';
-            }
+                var selH = pop.querySelector('[data-h].is-sel');
+                if (selH && selH.scrollIntoView) { try { selH.scrollIntoView({ block: 'nearest' }); } catch (e2) {} }
             input.addEventListener('click', open);
             input.addEventListener('focus', open);
             input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });

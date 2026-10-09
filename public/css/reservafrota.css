@@ -1017,7 +1017,8 @@ body.reservafrota-modal-open { overflow: hidden; }
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; text-align: center;
 }
-.reservafrota-timegrid__hours { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.reservafrota-timegrid__hours { display: flex; flex-direction: column; gap: 4px; max-height: 212px; overflow-y: auto; padding-right: 2px; scroll-snap-type: y proximity; }
+.reservafrota-timegrid__hours button { scroll-snap-align: center; }
 .reservafrota-timegrid__mins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .reservafrota-timegrid button {
     border: 0; background: #f4f5f7; border-radius: 8px;
