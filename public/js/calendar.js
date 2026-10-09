@@ -400,7 +400,14 @@
                 + ' · ' + weekday;
 
             // Lista (somente leitura) dos agendamentos já existentes no dia.
-            var listHtml = items.map(function (b) {
+            // Cancelados por último, para não misturar com pendentes/aprovados.
+            var ordered = (items || []).slice().sort(function (x, y) {
+                var xc = ((x.status || 1) === 4) ? 1 : 0;
+                var yc = ((y.status || 1) === 4) ? 1 : 0;
+                if (xc !== yc) { return xc - yc; }
+                return String(x.departure || '') < String(y.departure || '') ? -1 : 1;
+            });
+            var listHtml = ordered.map(function (b) {
                 var cancelBtn = b.can_cancel
                     ? '<button type="button" class="reservafrota-btn-cancel" data-cb-cancel'
                         + ' data-id="' + b.id + '" data-bform="' + bform + '" data-csrf="' + esc(csrf) + '">'
