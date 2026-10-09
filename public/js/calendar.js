@@ -517,12 +517,11 @@
                     + ((b.conflict && (b.status || 1) !== 2) ? 'Conflito' : esc(b.status_label)) + '</span>'
                     + (hasObs ? '<span class="reservafrota-obsdot" title="Tem observação"></span> ' : '')
                     + ((b.car_id && b.car && b.car !== 'A designar') ? '<strong>' + esc(b.car) + '</strong>' : '') + '</div>'
-                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(b.user)
-                    + ' &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—') + '</div>'
-                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + periodHtml(b)
-                    + (b.destination ? ' &nbsp;·&nbsp; <i class="ti ti-map-pin"></i> ' + esc(b.destination) : '')
-                    + (b.request_code ? ' &nbsp;·&nbsp; <span class="text-muted">#' + esc(b.request_code) + '</span>' : '')
-                    + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(b.user) + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—') + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + periodHtml(b) + '</div>'
+                    + (b.destination ? '<div class="reservafrota-day-item__meta"><i class="ti ti-map-pin"></i> ' + esc(b.destination) + '</div>' : '')
+                    + (b.request_code ? '<div class="reservafrota-day-item__meta"><span class="text-muted">#' + esc(b.request_code) + '</span></div>' : '')
                     + (b.status === 4 && b.note ? '<div class="reservafrota-day-item__reason"><i class="ti ti-info-circle"></i> Motivo: ' + esc(b.note) + '</div>' : '')
                     + (hasObs ? '<div class="reservafrota-day-item__reason obs"><i class="ti ti-message-circle"></i> Observação: ' + esc(b.obs) + '</div>' : '')
                     + '</div>'
