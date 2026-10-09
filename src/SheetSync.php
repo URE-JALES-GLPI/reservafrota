@@ -348,6 +348,12 @@ class SheetSync extends CommonDBTM
         $startRow = self::rangeStartRow($range);
         $header = array_map('strval', (array) $values[0]);
         $map = self::mapHeader($header);
+        // Sem nenhum cabeçalho reconhecido, a primeira linha já é dado
+        // (caso padrão: cabeçalho na linha 1, range começando em A2).
+        // Usa a ordem documentada em vez do mapa vazio.
+        if ($map['code'] < 0 && $map['event'] < 0 && $map['km'] < 0 && $map['driver'] < 0) {
+            $map = ['code' => 1, 'event' => 2, 'km' => 4, 'driver' => 3, 'obs' => 5, 'ts' => 0];
+        }
         $dataStart = 0;
         if ($map['code'] >= 0) {
             $probe = trim((string) ($header[$map['code']] ?? ''));
