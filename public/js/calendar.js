@@ -408,6 +408,52 @@
             if (tip) { tip.hidden = true; }
         }
 
+        function fmtDate(d) {
+            var s = String(d || '');
+            if (s.length < 10) { return s; }
+            return s.substr(8, 2) + '/' + s.substr(5, 2) + '/' + s.substr(0, 4);
+        }
+
+        function closeConflictPopup() {
+            var old = document.getElementById('reservafrota-conflict-modal');
+            if (old) { old.remove(); }
+        }
+
+        function openConflictPopup(b, dateStr) {
+            closeConflictPopup();
+            var rows = (b.conflict_with || []).map(function (c) {
+                var otherDay = String(c.date || '') !== String(dateStr || '');
+                return '<div class="reservafrota-day-item s-' + (c.status || 1) + '">'
+                    + '<div class="reservafrota-day-item__body">'
+                    + '<div class="reservafrota-day-item__top">'
+                    + '<span class="reservafrota-chip status-' + statusName(c.status) + '">' + esc(c.status_label) + '</span>'
+                    + (otherDay ? '<span class="reservafrota-chip status-conflict">outro dia</span>' : '')
+                    + (c.car ? ' <strong>' + esc(c.car) + '</strong>' : '') + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-calendar"></i> ' + esc(fmtDate(c.date))
+                    + ' &nbsp;·&nbsp; <i class="ti ti-clock"></i> ' + periodHtml(c) + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(c.user) + '</div>'
+                    + '</div></div>';
+            }).join('');
+            var overlay = document.createElement('div');
+            overlay.className = 'reservafrota-modal';
+            overlay.id = 'reservafrota-conflict-modal';
+            overlay.innerHTML = '<div class="reservafrota-modal__backdrop" data-x></div>'
+                + '<div class="reservafrota-modal__dialog" style="max-width:480px;" role="dialog" aria-modal="true">'
+                + '<div class="reservafrota-modal__head"><h3><i class="ti ti-alert-triangle"></i> Conflitos</h3>'
+                + '<button type="button" class="reservafrota-modal__close" data-x><i class="ti ti-x"></i></button></div>'
+                + '<div class="reservafrota-modal__body"><div class="reservafrota-day-list">' + rows + '</div></div>'
+                + '<div class="reservafrota-confirm-actions"><button type="button" class="reservafrota-back" data-x>Fechar</button></div>'
+                + '</div>';
+            document.body.appendChild(overlay);
+            document.body.classList.add('reservafrota-modal-open');
+            overlay.querySelectorAll('[data-x]').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    overlay.remove();
+                    document.body.classList.remove('reservafrota-modal-open');
+                });
+            });
+        }
+
         function openDay(day, items) {
             if (!modal) { return; }
             hideTip();
@@ -425,7 +471,7 @@
                 if (xc !== yc) { return xc - yc; }
                 return String(x.departure || '') < String(y.departure || '') ? -1 : 1;
             });
-            var listHtml = ordered.map(function (b) {
+            var listHtml = ordered.map(function (b, idx) {
                 var cancelBtn = b.can_cancel
                     ? '<button type="button" class="reservafrota-btn-cancel" data-cb-cancel'
                         + ' data-id="' + b.id + '" data-bform="' + bform + '" data-csrf="' + esc(csrf) + '">'
@@ -460,9 +506,20 @@
                     + (b.status === 4 && b.note ? '<div class="reservafrota-day-item__reason"><i class="ti ti-info-circle"></i> Motivo: ' + esc(b.note) + '</div>' : '')
                     + (hasObs ? '<div class="reservafrota-day-item__reason obs"><i class="ti ti-message-circle"></i> Observação: ' + esc(b.obs) + '</div>' : '')
                     + '</div>'
-                    + '<div class="reservafrota-day-item__actions">' + sheetBtn + cancelBtn + uploadSheetBtn + '</div>'
+                    + '<div class="reservafrota-day-item__actions">' + sheetBtn + cancelBtn + uploadSheetBtn
+                    + ((b.conflict_with && b.conflict_with.length) ? '<button type="button" class="reservafrota-btn-conflict" data-cb-conflicts="' + idx + '"><i class="ti ti-alert-triangle"></i> Ver conflito</button>' : '')
+                    + '</div>'
                     + '</div>';
             }).join('');
+
+            modalExisting.querySelectorAll('[data-cb-conflicts]').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var b = ordered[parseInt(btn.getAttribute('data-cb-conflicts'), 10)];
+                    if (b) { openConflictPopup(b, dateStr); }
+                });
+            });
 
             if (items.length) {
                 listHtml = '<div class="reservafrota-modal__existinghead">'
@@ -475,7 +532,7 @@
             modalExisting.querySelectorAll('.reservafrota-day-item').forEach(function (card, idx) {
                 card.addEventListener('click', function (e) {
                     if (e.target.closest('a, button')) { return; }
-                    var b = items[idx];
+                    var b = ordered[idx];
                     if (!b) { return; }
                     
                     // Muda para modo edição

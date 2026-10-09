@@ -1330,11 +1330,27 @@ class Booking extends CommonDBTM
         // Carrega tudo e calcula conflitos de horário por carro e por motorista.
         $rows = [];
         $confInput = [];
+        $byId = [];
         foreach ($iterator as $row) {
             $rows[] = $row;
             $s = strtotime((string) $row['date_departure']);
             $e = !empty($row['date_arrival']) ? strtotime((string) $row['date_arrival']) : ($s + 3600);
             $confInput[] = ['id' => (int) $row['id'], 'car_id' => (int) $row['car_id'], 'start' => $s, 'end' => $e, 'status' => (int) $row['status']];
+            $nm = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
+            if ($nm === '') {
+                $nm = $row['user_login'] ?? '';
+            }
+            $st = (int) $row['status'];
+            $byId[(int) $row['id']] = [
+                'id'           => (int) $row['id'],
+                'date'         => substr((string) $row['date_departure'], 0, 10),
+                'departure'    => (string) $row['date_departure'],
+                'arrival'      => $row['date_arrival'],
+                'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
+                'user'         => $nm,
+                'status'       => $st,
+                'status_label' => self::getStatusName($st),
+            ];
         }
         $conflicts = self::markConflicts($confInput);
         $statusById = [];
@@ -1387,6 +1403,9 @@ class Booking extends CommonDBTM
                 'obs'          => $row['arrival_obs'] ?: '',
                 'conflict'     => !empty($conflicts[(int) $row['id']]),
                 'conflict_approved' => $confApproved,
+                'conflict_with' => array_values(array_filter(array_map(static function ($cid) use ($byId) {
+                    return $byId[(int) $cid] ?? null;
+                }, $conflicts[(int) $row['id']] ?? []))),
                 'status'       => $st,
                 'status_label' => self::getStatusName($st),
                 'car_id'       => (int) $row['car_id'],

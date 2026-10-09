@@ -1349,6 +1349,13 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-day-item__reason.obs { color: #c2410c; }
 .reservafrota-confirm-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
 .reservafrota-confirm-actions .reservafrota-back { margin: 0; }
+.reservafrota-btn-conflict {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.4rem 0.8rem; font-size: 0.82rem; font-weight: 700;
+    color: #9a3412; background: rgba(249,115,22,0.16);
+    border: 1px solid rgba(249,115,22,0.45); border-radius: 8px; cursor: pointer;
+}
+.reservafrota-btn-conflict:hover { background: rgba(249,115,22,0.28); }
 
 /* ---------- v1.0.78: histórico do carro no estilo do projeto ---------- */
 .reservafrota-carhistory { margin-top: 1.6rem; }
