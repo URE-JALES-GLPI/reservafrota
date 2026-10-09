@@ -521,6 +521,7 @@
                     + ' &nbsp;·&nbsp; <i class="ti ti-steering-wheel"></i> ' + esc(b.driver || '—') + '</div>'
                     + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + periodHtml(b)
                     + (b.destination ? ' &nbsp;·&nbsp; <i class="ti ti-map-pin"></i> ' + esc(b.destination) : '')
+                    + (b.request_code ? ' &nbsp;·&nbsp; <span class="text-muted">#' + esc(b.request_code) + '</span>' : '')
                     + '</div>'
                     + (b.status === 4 && b.note ? '<div class="reservafrota-day-item__reason"><i class="ti ti-info-circle"></i> Motivo: ' + esc(b.note) + '</div>' : '')
                     + (hasObs ? '<div class="reservafrota-day-item__reason obs"><i class="ti ti-message-circle"></i> Observação: ' + esc(b.obs) + '</div>' : '')
