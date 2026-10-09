@@ -159,13 +159,14 @@ class SheetSync extends CommonDBTM
      */
     public static function normCode(string $raw): string
     {
-        $raw = trim($raw);
-        $raw = ltrim($raw, '#');
-        $raw = trim($raw);
+        $raw = trim((string) $raw);
+        $raw = trim(ltrim($raw, "# \t"));
+        $raw = preg_replace('/\s+/', '', $raw) ?? '';
         if (!preg_match('/^\d+$/', $raw)) {
             return '';
         }
-        return ltrim($raw, '0') === '' ? '0' : ltrim($raw, '0');
+        $raw = ltrim($raw, '0');
+        return $raw === '' ? '0' : $raw;
     }
 
     /**
