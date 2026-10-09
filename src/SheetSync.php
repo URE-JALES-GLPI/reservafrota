@@ -228,6 +228,7 @@ class SheetSync extends CommonDBTM
                     CURLOPT_FOLLOWLOCATION => true,
                     CURLOPT_MAXREDIRS      => 3,
                     CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
                     CURLOPT_USERAGENT      => 'GLPI-Reservafrota-SheetSync/1.0',
                 ]);
                 $body = curl_exec($ch);
