@@ -1019,10 +1019,12 @@ body.reservafrota-modal-open { overflow: hidden; }
 }
 .reservafrota-timegrid__hours { display: flex; flex-direction: column; gap: 4px; max-height: 212px; overflow-y: auto; padding-right: 2px; scroll-snap-type: y proximity; }
 .reservafrota-timegrid__hours button { scroll-snap-align: center; }
-.reservafrota-timegrid__mins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.reservafrota-timegrid__mins { display: flex; flex-direction: column; gap: 4px; max-height: 212px; overflow-y: auto; padding-right: 2px; scroll-snap-type: y proximity; }
+.reservafrota-timegrid__mins button { scroll-snap-align: center; }
 .reservafrota-timegrid button {
-    border: 0; background: #f4f5f7; border-radius: 8px;
-    padding: 7px 10px; font-size: 0.85rem; font-weight: 600;
+    border: 0; background: #f4f5f7; border-radius: 10px;
+    padding: 9px 18px; font-size: 0.95rem; font-weight: 600;
+    min-width: 76px;
     cursor: pointer; color: #374151;
 }
 .reservafrota-timegrid button:hover { background: #e9ebf0; color: #4f46e5; }

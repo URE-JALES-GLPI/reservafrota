@@ -172,6 +172,9 @@
                 var selH = pop.querySelector('[data-h].is-sel');
                 var hoursBox = pop.querySelector('.reservafrota-timegrid__hours');
                 if (selH && hoursBox) { try { hoursBox.scrollTop = selH.offsetTop - hoursBox.clientHeight / 2; } catch (e2) {} }
+                var selM = pop.querySelector('[data-m].is-sel');
+                var minsBox = pop.querySelector('.reservafrota-timegrid__mins');
+                if (selM && minsBox) { try { minsBox.scrollTop = selM.offsetTop - minsBox.clientHeight / 2; } catch (e3) {} }
             }
             input.addEventListener('click', open);
             input.addEventListener('focus', open);
