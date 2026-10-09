@@ -157,7 +157,8 @@
                 if (top + 260 > window.innerHeight) { top = Math.max(4, r.top - 264); }
                 pop.style.top = top + 'px';
                 var selH = pop.querySelector('[data-h].is-sel');
-                if (selH && selH.scrollIntoView) { try { selH.scrollIntoView({ block: 'nearest' }); } catch (e2) {} }
+                var hoursBox = pop.querySelector('.reservafrota-timegrid__hours');
+                if (selH && hoursBox) { try { hoursBox.scrollTop = selH.offsetTop - hoursBox.clientHeight / 2; } catch (e2) {} }
             }
             input.addEventListener('click', open);
             input.addEventListener('focus', open);
@@ -165,7 +166,10 @@
             document.addEventListener('click', function (e) {
                 if (pop && e.target !== input && !pop.contains(e.target)) { close(); }
             }, true);
-            window.addEventListener('scroll', close, true);
+            window.addEventListener('scroll', function (e) {
+                if (pop && pop.contains(e.target)) { return; }
+                close();
+            }, true);
         }
         if (mTime) { attachTimeGrid(mTime); }
         if (mATime) { attachTimeGrid(mATime); }
