@@ -1556,7 +1556,7 @@ body.reservafrota-modal-open { overflow: hidden; }
     padding: 4px 10px; border-radius: 20px;
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
 }
-.reservafrota-stat-badge.badge-pending { background: #fef3c7; color: #b45309; }
+.reservafrota-stat-badge.badge-pending { background: rgba(134,142,150,0.18); color: #495057; }
 .reservafrota-stat-badge.badge-approved { background: #d1fae5; color: #065f46; }
 .reservafrota-stat-badge.badge-arrived { background: #dbeafe; color: #1d4ed8; }
 .reservafrota-stat-badge.badge-conflict { background: #ffedd5; color: #c2410c; }
