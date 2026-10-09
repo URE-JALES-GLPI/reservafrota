@@ -111,6 +111,7 @@ function plugin_reservafrota_install()
             `arrival_obs`                text         DEFAULT NULL,
             `km_final`                   int unsigned DEFAULT NULL,
             `comment_validation`         text         DEFAULT NULL,
+            `request_code`               varchar(32)  NOT NULL DEFAULT '',
             `is_deleted`                 tinyint      NOT NULL DEFAULT 0,
             `date_creation`              timestamp    NULL DEFAULT NULL,
             `date_mod`                   timestamp    NULL DEFAULT NULL,
@@ -121,6 +122,7 @@ function plugin_reservafrota_install()
             KEY `users_id_approver` (`users_id_approver`),
             KEY `status` (`status`),
             KEY `date_departure` (`date_departure`),
+            KEY `request_code` (`request_code`),
             KEY `is_deleted` (`is_deleted`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
     }
@@ -169,6 +171,20 @@ function plugin_reservafrota_install()
         $DB->doQuery("ALTER TABLE `$bookings`
             ADD COLUMN `plugin_reservafrota_drivers_id` int unsigned NOT NULL DEFAULT 0 AFTER `driver`,
             ADD KEY `plugin_reservafrota_drivers_id` (`plugin_reservafrota_drivers_id`)");
+    }
+
+    // Migração: código da solicitação (agrupa repetições da mesma viagem).
+    if ($DB->tableExists($bookings) && !$DB->fieldExists($bookings, 'request_code')) {
+        $DB->doQuery("ALTER TABLE `$bookings`
+            ADD COLUMN `request_code` varchar(32) NOT NULL DEFAULT '' AFTER `comment_validation`,
+            ADD KEY `request_code` (`request_code`)");
+    }
+    if ($DB->tableExists($bookings) && $DB->fieldExists($bookings, 'request_code')) {
+        try {
+            $DB->doQuery("UPDATE `$bookings`
+                SET `request_code` = CONCAT('RF-', COALESCE(DATE_FORMAT(`date_creation`, '%Y%m%d'), '00000000'), '-', LPAD(`id`, 4, '0'))
+                WHERE `request_code` = ''");
+        } catch (\Throwable $e) {}
     }
 
     // ---- KM atual do carro ----

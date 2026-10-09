@@ -108,6 +108,20 @@ class Booking extends CommonDBTM
         return $value;
     }
 
+    /**
+     * Gera um código único de solicitação (ex.: RF-20261009-A1B2C3).
+     * Repetidos da mesma semana compartilham o código da base.
+     */
+    public static function newRequestCode(): string
+    {
+        try {
+            $rand = strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 6));
+        } catch (\Throwable $e) {
+            $rand = strtoupper(substr(md5((string) mt_rand()), 0, 6));
+        }
+        return 'RF-' . date('Ymd') . '-' . $rand;
+    }
+
     private static function isFiveMinuteSlot(?string $datetime): bool
     {
         if (empty($datetime)) {
@@ -176,6 +190,13 @@ class Booking extends CommonDBTM
         $input['status']            = self::STATUS_PENDING;
         $input['users_id_approver'] = 0;
         $input['date_validation']   = null;
+
+        // Código da solicitação (agrupa repetições da mesma viagem).
+        if (empty($input['request_code'])) {
+            $input['request_code'] = self::newRequestCode();
+        } else {
+            $input['request_code'] = substr(trim((string) $input['request_code']), 0, 32);
+        }
 
         // Motorista: o solicitante sugere um motorista cadastrado; o gestor pode
         // trocar na aprovação. Valida se o motorista existe e está ativo.
@@ -743,9 +764,10 @@ class Booking extends CommonDBTM
      *
      * @param array $base     Dados-base do agendamento (ex.: o $_POST).
      * @param array $weekdays Dias da semana selecionados (1..7).
+     * @param string $groupCode Código da solicitação-base (compartilhado).
      * @return int Quantidade de agendamentos criados.
      */
-    public static function createWeekRepeats(array $base, array $weekdays): int
+    public static function createWeekRepeats(array $base, array $weekdays, string $groupCode = ''): int
     {
         $dep = self::normalizeDatetime($base['date_departure'] ?? null);
         if (!$dep) {
@@ -759,6 +781,9 @@ class Booking extends CommonDBTM
         $baseN  = (int) date('N', strtotime($baseDate));      // 1=Seg … 7=Dom
         $monday = date('Y-m-d', strtotime($baseDate . ' -' . ($baseN - 1) . ' days'));
 
+        if ($groupCode === '') {
+            $groupCode = self::newRequestCode();
+        }
         $created = 0;
         foreach (array_unique(array_map('intval', $weekdays)) as $wd) {
             if ($wd < 1 || $wd > 7) {
@@ -770,6 +795,7 @@ class Booking extends CommonDBTM
             }
             $rep = $base;
             unset($rep['id'], $rep['_repeat_weekdays'], $rep['name']);
+            $rep['request_code'] = $groupCode;
             $rep['date_departure'] = $d . ' ' . $depTime;
             if ($arrTime !== null) {
                 $rep['date_arrival'] = $d . ' ' . $arrTime;
@@ -1273,6 +1299,18 @@ class Booking extends CommonDBTM
         }
     }
 
+    private static function hasRequestCodeSupport(): bool
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+        try {
+            return $DB->tableExists(self::getTable())
+                && $DB->fieldExists(self::getTable(), 'request_code');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     public static function getBookingsForMonth(string $month, bool $expand = true): array
     {
         /** @var \DBmysql $DB */
@@ -1281,6 +1319,7 @@ class Booking extends CommonDBTM
         [$start, $end] = self::getMonthRange($month);
 
         $hasDriver = self::hasDriverSupport();
+        $hasCode = self::hasRequestCodeSupport();
         $select = [
             'b.id', 'b.date_departure', 'b.date_arrival', 'b.destination',
             'b.reason', 'b.status', 'b.driver', 'b.has_companion', 'b.companion', 'b.users_id', 'b.date_returned',
@@ -1293,6 +1332,9 @@ class Booking extends CommonDBTM
             'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
             'g.name AS sector',
         ];
+        if ($hasCode) {
+            $select[] = 'b.request_code AS request_code';
+        }
         $joins = [
             Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
             'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
@@ -1350,6 +1392,7 @@ class Booking extends CommonDBTM
                 'user'         => $nm,
                 'status'       => $st,
                 'status_label' => self::getStatusName($st),
+                'request_code' => (string) ($row['request_code'] ?? ''),
             ];
         }
         $conflicts = self::markConflicts($confInput);
@@ -1384,6 +1427,7 @@ class Booking extends CommonDBTM
             $driverDisplay = $row['driver_name'] ?? $row['driver'] ?? '';
             $base = [
                 'id'           => (int) $row['id'],
+                'request_code' => (string) ($row['request_code'] ?? ''),
                 'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'user'         => $name,
                 'sector'       => $row['sector'] ?: __('Sem setor', 'reservafrota'),
@@ -1554,6 +1598,9 @@ class Booking extends CommonDBTM
             'au.name AS ap_login', 'au.realname AS ap_realname', 'au.firstname AS ap_firstname',
             'g.name AS sector',
         ];
+        if (self::hasRequestCodeSupport()) {
+            $select[] = 'b.request_code AS request_code';
+        }
         $joins = [
             Car::getTable() . ' AS c' => ['ON' => ['b' => 'plugin_reservafrota_cars_id', 'c' => 'id']],
             'glpi_users AS u'         => ['ON' => ['b' => 'users_id', 'u' => 'id']],
@@ -1592,6 +1639,7 @@ class Booking extends CommonDBTM
             $drvDisp = $row['driver_name'] ?? $row['driver'] ?? '';
             $byId[(int) $row['id']] = [
                 'id'           => (int) $row['id'],
+                'date'         => substr((string) $row['date_departure'], 0, 10),
                 'car'          => $row['car'] ?: __('A designar', 'reservafrota'),
                 'user'         => $nm,
                 'driver'       => $drvDisp,
@@ -1604,6 +1652,7 @@ class Booking extends CommonDBTM
                 'reason'       => $row['reason'] ?: '',
                 'status'       => $st,
                 'status_label' => self::getStatusName($st),
+                'request_code' => (string) ($row['request_code'] ?? ''),
             ];
         }
         $conflicts = self::markConflicts($confInput);
@@ -1960,6 +2009,13 @@ class Booking extends CommonDBTM
             'field'    => 'reason',
             'name'     => __('Motivo', 'reservafrota'),
             'datatype' => 'text',
+        ];
+        $options[] = [
+            'id'       => 11,
+            'table'    => self::getTable(),
+            'field'    => 'request_code',
+            'name'     => __('Código da solicitação', 'reservafrota'),
+            'datatype' => 'string',
         ];
 
         return $options;

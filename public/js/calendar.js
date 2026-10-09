@@ -421,17 +421,36 @@
 
         function openConflictPopup(b, dateStr) {
             closeConflictPopup();
-            var rows = (b.conflict_with || []).map(function (c) {
-                var otherDay = String(c.date || '') !== String(dateStr || '');
-                return '<div class="reservafrota-day-item s-' + (c.status || 1) + '">'
+            var groups = {};
+            var order = [];
+            (b.conflict_with || []).forEach(function (c) {
+                var k = c.request_code || ('#' + c.id);
+                if (!groups[k]) { groups[k] = []; order.push(k); }
+                groups[k].push(c);
+            });
+            var rows = order.map(function (k) {
+                var list = groups[k].slice().sort(function (x, y) {
+                    return String(x.departure || '') < String(y.departure || '') ? -1 : 1;
+                });
+                var first = list[0];
+                var start = String(first.departure || '');
+                var end = '';
+                list.forEach(function (c) {
+                    if (c.arrival && String(c.arrival) > end) { end = String(c.arrival); }
+                });
+                var otherDay = list.some(function (c) { return String(c.date || '') !== String(dateStr || ''); });
+                var range = esc(fmtDate(start.substr(0, 10)) + ' ' + start.substr(11, 5))
+                    + (end ? ' → ' + esc(fmtDate(end.substr(0, 10)) + ' ' + end.substr(11, 5)) : '');
+                return '<div class="reservafrota-day-item s-' + (first.status || 1) + '">'
                     + '<div class="reservafrota-day-item__body">'
                     + '<div class="reservafrota-day-item__top">'
-                    + '<span class="reservafrota-chip status-' + statusName(c.status) + '">' + esc(c.status_label) + '</span>'
+                    + '<span class="reservafrota-chip status-' + statusName(first.status) + '">' + esc(first.status_label) + '</span>'
+                    + '<span class="reservafrota-chip status-pending">' + esc(k) + '</span>'
                     + (otherDay ? '<span class="reservafrota-chip status-conflict">outro dia</span>' : '')
-                    + (c.car ? ' <strong>' + esc(c.car) + '</strong>' : '') + '</div>'
-                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-calendar"></i> ' + esc(fmtDate(c.date))
-                    + ' &nbsp;·&nbsp; <i class="ti ti-clock"></i> ' + periodHtml(c) + '</div>'
-                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(c.user) + '</div>'
+                    + (list.length > 1 ? '<span class="reservafrota-chip status-arrived">' + list.length + ' dias</span>' : '')
+                    + (first.car ? ' <strong>' + esc(first.car) + '</strong>' : '') + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-clock"></i> ' + range + '</div>'
+                    + '<div class="reservafrota-day-item__meta"><i class="ti ti-user"></i> ' + esc(first.user) + '</div>'
                     + '</div></div>';
             }).join('');
             var overlay = document.createElement('div');

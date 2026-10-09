@@ -100,6 +100,20 @@ function plugin_init_reservafrota()
                 ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
             }
             $bkTable = Booking::getTable();
+            if ($db->tableExists($bkTable) && !$db->fieldExists($bkTable, 'request_code')) {
+                try {
+                    $db->doQuery("ALTER TABLE `$bkTable`
+                        ADD COLUMN `request_code` varchar(32) NOT NULL DEFAULT '' AFTER `comment_validation`,
+                        ADD KEY `request_code` (`request_code`)");
+                } catch (\Throwable $e) {}
+            }
+            if ($db->tableExists($bkTable) && $db->fieldExists($bkTable, 'request_code')) {
+                try {
+                    $db->doQuery("UPDATE `$bkTable`
+                        SET `request_code` = CONCAT('RF-', COALESCE(DATE_FORMAT(`date_creation`, '%Y%m%d'), '00000000'), '-', LPAD(`id`, 4, '0'))
+                        WHERE `request_code` = ''");
+                } catch (\Throwable $e) {}
+            }
             if ($db->tableExists($bkTable) && !$db->fieldExists($bkTable, 'plugin_reservafrota_drivers_id')) {
                 $db->doQuery("ALTER TABLE `$bkTable`
                     ADD COLUMN `plugin_reservafrota_drivers_id` int unsigned NOT NULL DEFAULT 0 AFTER `driver`,

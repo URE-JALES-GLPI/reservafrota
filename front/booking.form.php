@@ -15,12 +15,13 @@ if (isset($_POST['add'])) {
 
     $newID = $booking->add($_POST);
 
-    // Repetição: cria o mesmo agendamento nos demais dias da semana marcados.
+    // Repetição: cria o mesmo agendamento nos demais dias da semana marcados,
+    // todos sob o mesmo código da solicitação-base.
     if ($newID && !empty($_POST['_repeat_weekdays'])) {
         $wd = is_array($_POST['_repeat_weekdays'])
             ? $_POST['_repeat_weekdays']
             : explode(',', (string) $_POST['_repeat_weekdays']);
-        $n = Booking::createWeekRepeats($_POST, $wd);
+        $n = Booking::createWeekRepeats($_POST, $wd, (string) ($booking->fields['request_code'] ?? ''));
         if ($n > 0) {
             Session::addMessageAfterRedirect(
                 sprintf(__('Mais %d agendamento(s) criados nos dias da semana selecionados.', 'reservafrota'), $n),
