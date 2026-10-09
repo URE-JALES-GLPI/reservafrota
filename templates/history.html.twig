@@ -66,6 +66,7 @@
         <div class="reservafrota-table-wrap">
             <table class="reservafrota-table" id="cb-h-table">
                 <thead><tr>
+                    <th>{{ __('Cód.', 'reservafrota') }}</th>
                     <th>{{ __('Data', 'reservafrota') }}</th>
                     <th>{{ __('Hora', 'reservafrota') }}</th>
                     <th>{{ __('Usuário', 'reservafrota') }}</th>
@@ -78,6 +79,7 @@
                 <tbody>
                 {% for h in history %}
                     <tr data-date="{{ h.date }}" data-time="{{ h.time }}" data-status="{{ h.status }}" data-car="{{ h.car }}">
+                        <td><b>#{{ h.request_code ?: h.id }}</b></td>
                         <td>{{ h.date|slice(8,2) }}/{{ h.date|slice(5,2) }}/{{ h.date|slice(0,4) }}</td>
                         <td>{{ h.time }}{% if h.arrival %} &rarr; {{ h.arrival|slice(11,5) }}{% endif %}</td>
                         <td>{{ h.user }}</td>

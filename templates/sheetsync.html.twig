@@ -1,0 +1,157 @@
+{# Integração com Google Sheets (Forms de saída/chegada) — só gestor #}
+
+<div id="reservafrota-sheetsync" class="reservafrota-agenda">
+
+    <div class="reservafrota-pagehead">
+        <div class="reservafrota-pagehead__title">
+            <span class="reservafrota-pagehead__icon"><i class="ti ti-table-import"></i></span>
+            <div>
+                <h1>{{ __('Integração Sheets', 'reservafrota') }}</h1>
+            </div>
+        </div>
+        <nav class="reservafrota-pagehead__nav">
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+        </nav>
+    </div>
+
+    {# ---------- Estado + sincronizar agora ---------- #}
+    <div class="reservafrota-stat-grid">
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-arrived">{{ __('Estado', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" style="font-size:1.3rem;">{{ cfg.enabled ? __('Ativa', 'reservafrota') : __('Pausada', 'reservafrota') }}</div>
+            <div class="reservafrota-stat-label">{{ __('cron a cada 15 min', 'reservafrota') }}</div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-pending">{{ __('Última leitura', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" style="font-size:1.3rem;">{{ cfg.last_sync ? cfg.last_sync|slice(8,2) ~ '/' ~ cfg.last_sync|slice(5,2) ~ ' ' ~ cfg.last_sync|slice(11,5) : '—' }}</div>
+            <div class="reservafrota-stat-label">{{ __('linha', 'reservafrota') }} {{ cfg.last_row }}</div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-approved">{{ __('Sincronizar', 'reservafrota') }}</span></div>
+            <form method="post" action="{{ web_dir }}/front/sheetsync.php">
+                <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" name="sync_now" value="1" class="reservafrota-submit"><i class="ti ti-refresh"></i> {{ __('Sincronizar agora', 'reservafrota') }}</button>
+            </form>
+        </div>
+    </div>
+
+    {# ---------- Configuração ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-settings"></i> {{ __('Configuração', 'reservafrota') }}</h3>
+        <form method="post" action="{{ web_dir }}/front/sheetsync.php">
+            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+            <div class="row">
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="ss-sheet-id">{{ __('ID da planilha', 'reservafrota') }}</label>
+                    <input type="text" class="form-control" id="ss-sheet-id" name="spreadsheet_id" value="{{ cfg.spreadsheet_id }}" placeholder="1AbC...xyz">
+                    <small class="text-muted">{{ __('O hash no meio da URL do Sheets.', 'reservafrota') }}</small>
+                </div>
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="ss-range">{{ __('Intervalo', 'reservafrota') }}</label>
+                    <input type="text" class="form-control" id="ss-range" name="sheet_range" value="{{ cfg.sheet_range }}" placeholder="Respostas!A2:F">
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label" for="ss-key">{{ __('Chave de API do Google', 'reservafrota') }}</label>
+                    <input type="password" class="form-control" id="ss-key" name="api_key" value="{{ cfg.api_key }}" autocomplete="off">
+                    <small class="text-muted">{{ __('Restrita à Sheets API + IP do servidor. Em branco mantém a atual.', 'reservafrota') }}</small>
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="reservafrota-check"><input type="checkbox" name="enabled" value="1" {{ cfg.enabled ? 'checked' : '' }}> {{ __('Cron ativo (lê sozinho a cada 15 min)', 'reservafrota') }}</label>
+                </div>
+            </div>
+            <button type="submit" name="save_cfg" value="1" class="btn btn-primary"><i class="ti ti-device-floppy"></i> {{ __('Salvar', 'reservafrota') }}</button>
+        </form>
+        <p class="reservafrota-hint">{{ __('Ordem das colunas no Forms: Carimbo | Código da viagem | Tipo (Saída/Chegada) | Motorista | KM | Observação.', 'reservafrota') }}</p>
+    </div>
+
+    {# ---------- Lançamento manual ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-plus"></i> {{ __('Lançamento manual', 'reservafrota') }}</h3>
+        <form method="post" action="{{ web_dir }}/front/sheetsync.php">
+            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+            <div class="row">
+                <div class="col-6 col-md-2 mb-3">
+                    <label class="form-label" for="ss-m-code">{{ __('Código', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                    <input type="text" class="form-control" id="ss-m-code" name="code" required inputmode="numeric">
+                </div>
+                <div class="col-6 col-md-2 mb-3">
+                    <label class="form-label" for="ss-m-event">{{ __('Tipo', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                    <select class="form-select" id="ss-m-event" name="event" required>
+                        <option value="departure">{{ __('Saída', 'reservafrota') }}</option>
+                        <option value="arrival">{{ __('Chegada', 'reservafrota') }}</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2 mb-3">
+                    <label class="form-label" for="ss-m-km">{{ __('KM', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                    <input type="number" class="form-control" id="ss-m-km" name="km" min="1" step="1" required>
+                </div>
+                <div class="col-12 col-md-3 mb-3">
+                    <label class="form-label" for="ss-m-driver">{{ __('Motorista', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                    <input type="text" class="form-control" id="ss-m-driver" name="driver" required>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <label class="form-label" for="ss-m-date">{{ __('Data do evento', 'reservafrota') }}</label>
+                    <input type="date" class="form-control" id="ss-m-date" name="event_date">
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label" for="ss-m-obs">{{ __('Observação', 'reservafrota') }}</label>
+                    <input type="text" class="form-control" id="ss-m-obs" name="obs">
+                </div>
+            </div>
+            <button type="submit" name="manual_apply" value="1" class="reservafrota-submit"><i class="ti ti-check"></i> {{ __('Aplicar (força, com log)', 'reservafrota') }}</button>
+        </form>
+    </div>
+
+    {# ---------- Auditoria ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-list-check"></i> {{ __('Auditoria', 'reservafrota') }}</h3>
+        <div class="reservafrota-filters">
+            <a href="{{ web_dir }}/front/sheetsync.php" class="reservafrota-pill {{ filter == '' ? 'is-active' : '' }}">{{ __('Todas', 'reservafrota') }}</a>
+            <a href="{{ web_dir }}/front/sheetsync.php?f=applied" class="reservafrota-pill {{ filter == 'applied' ? 'is-active' : '' }}">{{ __('Aplicadas', 'reservafrota') }}</a>
+            <a href="{{ web_dir }}/front/sheetsync.php?f=error" class="reservafrota-pill {{ filter == 'error' ? 'is-active' : '' }}">{{ __('Erros', 'reservafrota') }}</a>
+        </div>
+        {% if logs is empty %}
+            <p class="reservafrota-blist-empty">{{ __('Nenhum registro.', 'reservafrota') }}</p>
+        {% else %}
+        <div class="reservafrota-tablewrap">
+            <table class="reservafrota-arrived-table">
+                <thead><tr>
+                    <th>{{ __('Quando', 'reservafrota') }}</th>
+                    <th>{{ __('Linha', 'reservafrota') }}</th>
+                    <th>{{ __('Código', 'reservafrota') }}</th>
+                    <th>{{ __('Evento', 'reservafrota') }}</th>
+                    <th>{{ __('KM', 'reservafrota') }}</th>
+                    <th>{{ __('Motorista', 'reservafrota') }}</th>
+                    <th>{{ __('Situação', 'reservafrota') }}</th>
+                    <th>{{ __('Detalhe', 'reservafrota') }}</th>
+                    <th></th>
+                </tr></thead>
+                <tbody>
+                {% for l in logs %}
+                    <tr>
+                        <td><small>{{ l.received_at ?: l.date_creation }}</small></td>
+                        <td>{{ l.source == 'manual' ? '—' : l.row_num }}</td>
+                        <td><b>#{{ l.request_code }}</b>{% if l.bookings_id %} <a href="{{ web_dir }}/front/booking.form.php?id={{ l.bookings_id }}"><i class="ti ti-external-link"></i></a>{% endif %}</td>
+                        <td>{{ l.event == 'arrival' ? __('Chegada', 'reservafrota') : __('Saída', 'reservafrota') }}</td>
+                        <td>{{ l.km }}</td>
+                        <td>{{ l.driver_name }}</td>
+                        <td><span class="reservafrota-chip status-{{ l.status == 'applied' ? 'approved' : 'rejected' }}">{{ l.status == 'applied' ? __('Aplicado', 'reservafrota') : __('Erro', 'reservafrota') }}</span></td>
+                        <td><small>{{ l.message }}</small></td>
+                        <td>
+                            {% if l.status == 'error' %}
+                            <form method="post" action="{{ web_dir }}/front/sheetsync.php" style="display:inline;">
+                                <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="log_id" value="{{ l.id }}">
+                                <button type="submit" name="reprocess" value="1" class="reservafrota-btn-info"><i class="ti ti-refresh"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>

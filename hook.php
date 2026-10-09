@@ -109,6 +109,7 @@ function plugin_reservafrota_install()
             `date_returned`              datetime     DEFAULT NULL,
             `arrival_sheet`              varchar(255) DEFAULT NULL,
             `arrival_obs`                text         DEFAULT NULL,
+            `km_initial`                 int unsigned DEFAULT NULL,
             `km_final`                   int unsigned DEFAULT NULL,
             `comment_validation`         text         DEFAULT NULL,
             `request_code`               varchar(32)  NOT NULL DEFAULT '',
@@ -165,6 +166,12 @@ function plugin_reservafrota_install()
             ADD COLUMN `km_final` int unsigned DEFAULT NULL AFTER `arrival_obs`");
     }
 
+    // Migração: KM inicial do veículo, informado na saída (Forms/Sheets).
+    if ($DB->tableExists($bookings) && !$DB->fieldExists($bookings, 'km_initial')) {
+        $DB->doQuery("ALTER TABLE `$bookings`
+            ADD COLUMN `km_initial` int unsigned DEFAULT NULL AFTER `arrival_obs`");
+    }
+
     // Migração: motorista cadastrado (drivers_id) — novos agendamentos usam
     // FK para a tabela de motoristas; mantém `driver` legado para compatibilidade.
     if ($DB->tableExists($bookings) && !$DB->fieldExists($bookings, 'plugin_reservafrota_drivers_id')) {
@@ -181,10 +188,52 @@ function plugin_reservafrota_install()
     }
     if ($DB->tableExists($bookings) && $DB->fieldExists($bookings, 'request_code')) {
         try {
+            // Código numérico crescente: o próprio id (base das repetições).
             $DB->doQuery("UPDATE `$bookings`
-                SET `request_code` = CONCAT('RF-', COALESCE(DATE_FORMAT(`date_creation`, '%Y%m%d'), '00000000'), '-', LPAD(`id`, 4, '0'))
-                WHERE `request_code` = ''");
+                SET `request_code` = `id`
+                WHERE `request_code` = '' OR `request_code` LIKE 'RF-%'");
         } catch (\Throwable $e) {}
+    }
+
+    // ---- Sincronização com Google Sheets (Forms de saída/chegada) ----
+    $sheetCfg = 'glpi_plugin_reservafrota_sheetcfg';
+    if (!$DB->tableExists($sheetCfg)) {
+        $DB->doQuery("CREATE TABLE `$sheetCfg` (
+            `id`             int unsigned NOT NULL AUTO_INCREMENT,
+            `spreadsheet_id` varchar(128) NOT NULL DEFAULT '',
+            `api_key`        varchar(255) NOT NULL DEFAULT '',
+            `sheet_range`    varchar(64)  NOT NULL DEFAULT 'Respostas!A2:F',
+            `last_row`       int unsigned NOT NULL DEFAULT 1,
+            `last_sync`      datetime     DEFAULT NULL,
+            `enabled`        tinyint      NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+    $sheetLog = 'glpi_plugin_reservafrota_sheetlog';
+    if (!$DB->tableExists($sheetLog)) {
+        $DB->doQuery("CREATE TABLE `$sheetLog` (
+            `id`            int unsigned NOT NULL AUTO_INCREMENT,
+            `row_num`       int unsigned NOT NULL DEFAULT 0,
+            `received_at`   datetime     DEFAULT NULL,
+            `request_code`  varchar(32)  NOT NULL DEFAULT '',
+            `bookings_id`   int unsigned NOT NULL DEFAULT 0,
+            `event`         varchar(16)  NOT NULL DEFAULT '',
+            `km`            int          NOT NULL DEFAULT 0,
+            `driver_name`   varchar(255) NOT NULL DEFAULT '',
+            `obs`           text         DEFAULT NULL,
+            `status`        varchar(16)  NOT NULL DEFAULT '',
+            `message`       text         DEFAULT NULL,
+            `source`        varchar(16)  NOT NULL DEFAULT 'sheet',
+            `date_creation` timestamp    NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `request_code` (`request_code`),
+            KEY `status` (`status`),
+            KEY `row_num` (`row_num`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+    if ($DB->tableExists($sheetLog) && !$DB->fieldExists($sheetLog, 'obs')) {
+        $DB->doQuery("ALTER TABLE `$sheetLog`
+            ADD COLUMN `obs` text DEFAULT NULL AFTER `driver_name`");
     }
 
     // ---- KM atual do carro ----
@@ -289,6 +338,22 @@ function plugin_reservafrota_install()
         ]);
     }
 
+    // ---- Ação automática: leitura do Sheets (Forms de saída/chegada) ----
+    // A cada 15 minutos. O método executado é SheetSync::cronSheetsync().
+    try {
+        if (class_exists('CronTask') && method_exists('CronTask', 'register')) {
+            \CronTask::register(
+                'GlpiPlugin\\Reservafrota\\SheetSync',
+                'sheetsync',
+                15 * MINUTE_TIMESTAMP,
+                [
+                    'comment' => 'Reserva de Frota: importa eventos de saída/chegada do Google Sheets',
+                    'mode'    => \CronTask::MODE_INTERNAL,
+                ]
+            );
+        }
+    } catch (\Throwable $e) {}
+
     // ---- Colunas padrão exibidas na listagem ----
     $prefs = [
         Car::class    => [2, 3, 4],     // placa, ano, ativo
@@ -336,11 +401,20 @@ function plugin_reservafrota_uninstall()
     }
 
     // Remove as tabelas.
-    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(), Maintenance::getTable()] as $table) {
+    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(), Maintenance::getTable(), 'glpi_plugin_reservafrota_sheetcfg', 'glpi_plugin_reservafrota_sheetlog'] as $table) {
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `$table`");
         }
     }
+
+    // Remove a ação automática do Sheets.
+    try {
+        if (class_exists('CronTask') && method_exists('CronTask', 'unregister')) {
+            \CronTask::unregister('GlpiPlugin\\Reservafrota\\SheetSync');
+        } else {
+            $DB->delete('glpi_crontasks', ['itemtype' => 'GlpiPlugin\\Reservafrota\\SheetSync']);
+        }
+    } catch (\Throwable $e) {}
 
     return true;
 }

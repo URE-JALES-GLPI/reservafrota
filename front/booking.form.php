@@ -16,12 +16,23 @@ if (isset($_POST['add'])) {
     $newID = $booking->add($_POST);
 
     // Repetição: cria o mesmo agendamento nos demais dias da semana marcados,
-    // todos sob o mesmo código da solicitação-base.
+    // todos sob o mesmo código da solicitação-base (= id da base).
+    // Recarrega a base para garantir o request_code preenchido pelo post_addItem.
+    $baseCode = '';
+    if ($newID) {
+        $baseCode = (string) $newID;
+        if ($booking->getFromDB($newID)) {
+            $baseCode = trim((string) ($booking->fields['request_code'] ?? ''));
+            if ($baseCode === '') {
+                $baseCode = (string) $newID;
+            }
+        }
+    }
     if ($newID && !empty($_POST['_repeat_weekdays'])) {
         $wd = is_array($_POST['_repeat_weekdays'])
             ? $_POST['_repeat_weekdays']
             : explode(',', (string) $_POST['_repeat_weekdays']);
-        $n = Booking::createWeekRepeats($_POST, $wd, (string) ($booking->fields['request_code'] ?? ''));
+        $n = Booking::createWeekRepeats($_POST, $wd, $baseCode);
         if ($n > 0) {
             Session::addMessageAfterRedirect(
                 sprintf(__('Mais %d agendamento(s) criados nos dias da semana selecionados.', 'reservafrota'), $n),
@@ -38,7 +49,7 @@ if (isset($_POST['add'])) {
         unset($_SESSION['MESSAGE_AFTER_REDIRECT']);
         $newToken = Session::getNewCSRFToken();
         if ($newID) {
-            echo json_encode(['success' => true, 'id' => $newID, 'messages' => $messages, 'csrf_token' => $newToken]);
+            echo json_encode(['success' => true, 'id' => $newID, 'code' => $baseCode, 'messages' => $messages, 'csrf_token' => $newToken]);
         } else {
             // Tenta extrair mensagem de erro já adicionada em prepareInputForAdd
             $error = 'Falha ao criar reserva. Verifique os dados e tente novamente.';

@@ -964,7 +964,8 @@
                             var toast = document.createElement('div');
                             toast.className = 'reservafrota-toast';
                             toast.style.background = '#059669';
-                            toast.innerHTML = '<i class="ti ti-check"></i> Reserva solicitada com sucesso! <button class="reservafrota-toast__close" onclick="this.parentElement.remove()"><i class="ti ti-x"></i></button>';
+                            var codeTxt = (res.data && res.data.code) ? ' Código <b>#' + res.data.code + '</b> — anote para o Forms de saída/chegada.' : '';
+                            toast.innerHTML = '<i class="ti ti-check"></i> Reserva solicitada com sucesso!' + codeTxt + ' <button class="reservafrota-toast__close" onclick="this.parentElement.remove()"><i class="ti ti-x"></i></button>';
                             document.body.appendChild(toast);
                             setTimeout(function(){ if(toast.parentElement) toast.remove(); }, 4000);
                         } else if (res.data && !res.data.success) {

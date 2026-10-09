@@ -108,20 +108,6 @@ class Booking extends CommonDBTM
         return $value;
     }
 
-    /**
-     * Gera um código único de solicitação (ex.: RF-20261009-A1B2C3).
-     * Repetidos da mesma semana compartilham o código da base.
-     */
-    public static function newRequestCode(): string
-    {
-        try {
-            $rand = strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 6));
-        } catch (\Throwable $e) {
-            $rand = strtoupper(substr(md5((string) mt_rand()), 0, 6));
-        }
-        return 'RF-' . date('Ymd') . '-' . $rand;
-    }
-
     private static function isFiveMinuteSlot(?string $datetime): bool
     {
         if (empty($datetime)) {
@@ -191,11 +177,13 @@ class Booking extends CommonDBTM
         $input['users_id_approver'] = 0;
         $input['date_validation']   = null;
 
-        // Código da solicitação (agrupa repetições da mesma viagem).
-        if (empty($input['request_code'])) {
-            $input['request_code'] = self::newRequestCode();
-        } else {
+        // Código da solicitação: número crescente = id da base.
+        // Deixa vazio aqui; o post_addItem preenche com o próprio id.
+        // Repetições da semana trazem o id da base em request_code.
+        if (!empty($input['request_code'])) {
             $input['request_code'] = substr(trim((string) $input['request_code']), 0, 32);
+        } else {
+            unset($input['request_code']);
         }
 
         // Motorista: o solicitante sugere um motorista cadastrado; o gestor pode
@@ -512,6 +500,23 @@ class Booking extends CommonDBTM
         return $input;
     }
 
+    public function post_addItem()
+    {
+        parent::post_addItem();
+        // Código numérico crescente = próprio id (sem corrida de MAX+1).
+        // Repetições da semana já trazem o id da base em request_code.
+        try {
+            $id = (int) ($this->fields['id'] ?? 0);
+            $code = trim((string) ($this->fields['request_code'] ?? ''));
+            if ($id > 0 && $code === '') {
+                /** @var \DBmysql $DB */
+                global $DB;
+                $DB->update(self::getTable(), ['request_code' => (string) $id], ['id' => $id]);
+                $this->fields['request_code'] = (string) $id;
+            }
+        } catch (\Throwable $e) {}
+    }
+
     /**
      * Aprova o agendamento (exige direito de aprovação). O carro e o
      * motorista são designados neste momento pelo gestor.
@@ -781,9 +786,8 @@ class Booking extends CommonDBTM
         $baseN  = (int) date('N', strtotime($baseDate));      // 1=Seg … 7=Dom
         $monday = date('Y-m-d', strtotime($baseDate . ' -' . ($baseN - 1) . ' days'));
 
-        if ($groupCode === '') {
-            $groupCode = self::newRequestCode();
-        }
+        // Sem código do grupo: deixa vazio e cada repetição ganha o próprio
+        // id via post_addItem (fallback seguro, sem corrida de MAX+1).
         $created = 0;
         foreach (array_unique(array_map('intval', $weekdays)) as $wd) {
             if ($wd < 1 || $wd > 7) {
@@ -795,7 +799,11 @@ class Booking extends CommonDBTM
             }
             $rep = $base;
             unset($rep['id'], $rep['_repeat_weekdays'], $rep['name']);
-            $rep['request_code'] = $groupCode;
+            if ($groupCode !== '') {
+                $rep['request_code'] = $groupCode;
+            } else {
+                unset($rep['request_code']);
+            }
             $rep['date_departure'] = $d . ' ' . $depTime;
             if ($arrTime !== null) {
                 $rep['date_arrival'] = $d . ' ' . $arrTime;
@@ -1749,6 +1757,15 @@ class Booking extends CommonDBTM
         }
 
         $hasDriver = self::hasDriverSupport();
+        $hasCode = self::hasRequestCodeSupport();
+        $hasKmInit = false;
+        $hasKmFinal = false;
+        try {
+            $hasKmInit = $DB->tableExists(self::getTable())
+                && $DB->fieldExists(self::getTable(), 'km_initial');
+            $hasKmFinal = $DB->tableExists(self::getTable())
+                && $DB->fieldExists(self::getTable(), 'km_final');
+        } catch (\Throwable $e) {}
         $select = [
             'b.id', 'b.date_departure', 'b.date_arrival', 'b.status',
             'b.driver', 'b.has_companion', 'b.companion',
@@ -1769,6 +1786,15 @@ class Booking extends CommonDBTM
             $select[] = 'b.plugin_reservafrota_drivers_id AS drivers_id';
             $select[] = 'd.name AS driver_name';
             $joins[Driver::getTable() . ' AS d'] = ['ON' => ['b' => 'plugin_reservafrota_drivers_id', 'd' => 'id']];
+        }
+        if ($hasCode) {
+            $select[] = 'b.request_code AS request_code';
+        }
+        if ($hasKmInit) {
+            $select[] = 'b.km_initial';
+        }
+        if ($hasKmFinal) {
+            $select[] = 'b.km_final';
         }
         $iterator = $DB->request([
             'SELECT'    => $select,
@@ -1793,6 +1819,7 @@ class Booking extends CommonDBTM
             $drv = $row['driver_name'] ?? $row['driver'] ?? '';
             $out[] = [
                 'id'           => (int) $row['id'],
+                'request_code' => (string) ($row['request_code'] ?? ''),
                 'date'         => substr($dep, 0, 10),
                 'time'         => substr($dep, 11, 5),
                 'departure'    => $dep,
@@ -1812,6 +1839,8 @@ class Booking extends CommonDBTM
                 'acted_by'     => $apName,
                 'acted_at'     => $row['date_validation'],
                 'note'         => $row['comment_validation'] ?: '',
+                'km_initial'   => $row['km_initial'] !== null ? (int) $row['km_initial'] : null,
+                'km_final'     => $row['km_final'] !== null ? (int) $row['km_final'] : null,
             ];
         }
         return $out;
@@ -2017,6 +2046,20 @@ class Booking extends CommonDBTM
             'name'     => __('Código da solicitação', 'reservafrota'),
             'datatype' => 'string',
         ];
+        $options[] = [
+            'id'       => 12,
+            'table'    => self::getTable(),
+            'field'    => 'km_initial',
+            'name'     => __('KM inicial', 'reservafrota'),
+            'datatype' => 'number',
+        ];
+        $options[] = [
+            'id'       => 13,
+            'table'    => self::getTable(),
+            'field'    => 'km_final',
+            'name'     => __('KM final', 'reservafrota'),
+            'datatype' => 'number',
+        ];
 
         return $options;
     }
@@ -2137,6 +2180,12 @@ class Booking extends CommonDBTM
                 'title' => __('Análise', 'reservafrota'),
                 'icon'  => 'ti ti-chart-pie',
                 'page'  => $web . '/front/analytics.php',
+            ];
+            // Integração Sheets (Forms de saída/chegada) — mesmo público.
+            $menu['options']['sheetsync'] = [
+                'title' => __('Integração Sheets', 'reservafrota'),
+                'icon'  => 'ti ti-table-import',
+                'page'  => $web . '/front/sheetsync.php',
             ];
         }
 
