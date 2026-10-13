@@ -18,7 +18,7 @@ class Booking extends CommonDBTM
 {
     public static $rightname = 'reservafrota::booking';
 
-    public $dohistory = true;
+    public bool $dohistory = true;
 
     // Status do agendamento.
     public const STATUS_PENDING   = 1;

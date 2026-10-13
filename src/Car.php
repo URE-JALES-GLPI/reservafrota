@@ -17,7 +17,7 @@ class Car extends CommonDBTM
     public static $rightname = 'reservafrota::car';
 
     // Mantém histórico de alterações na aba "Histórico".
-    public $dohistory = true;
+    public bool $dohistory = true;
 
     public static function getTypeName($nb = 0)
     {

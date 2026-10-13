@@ -16,7 +16,7 @@ class Maintenance extends CommonDBTM
 {
     public static $rightname = 'reservafrota::car';
 
-    public $dohistory = true;
+    public bool $dohistory = true;
 
     public static function getTypeName($nb = 0)
     {
