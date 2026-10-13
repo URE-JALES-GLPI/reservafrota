@@ -34,12 +34,15 @@ function plugin_reservafrota_webdir(): string
 /**
  * Inicialização do plugin — chamada em todas as páginas do GLPI.
  */
-function plugin_init_reservafrota()
+function plugin_init_reservafrota(): void
 {
     global $PLUGIN_HOOKS;
 
-    // O plugin segue a proteção CSRF do GLPI (formulários enviam o token).
-    $PLUGIN_HOOKS['csrf_compliant']['reservafrota'] = true;
+    // CSRF: no GLPI 12 o hook csrf_compliant foi removido (CheckCsrfListener
+    // valida headers); mantém true apenas no GLPI <12.
+    if (version_compare(GLPI_VERSION, '12.0', '<')) {
+        $PLUGIN_HOOKS['csrf_compliant']['reservafrota'] = true;
+    }
 
     // Folha de estilo e script. Os arquivos ficam em public/ (exigência do
     // GLPI 11), mas o caminho registrado NÃO inclui "public/" — o GLPI resolve
@@ -377,7 +380,7 @@ function plugin_init_reservafrota()
 /**
  * Metadados exibidos em Configurar > Plugins.
  */
-function plugin_version_reservafrota()
+function plugin_version_reservafrota(): array
 {
     return [
         'name'         => 'Reserva de Frota',
@@ -397,7 +400,7 @@ function plugin_version_reservafrota()
 /**
  * Checagem de pré-requisitos antes da instalação.
  */
-function plugin_reservafrota_check_prerequisites()
+function plugin_reservafrota_check_prerequisites(): bool
 {
     // A faixa de versões já é validada pelo GLPI a partir de plugin_version.
     return true;
@@ -407,7 +410,7 @@ function plugin_reservafrota_check_prerequisites()
  * Checagem de configuração — chamada em todas as páginas.
  * Retornar false desativa o plugin automaticamente.
  */
-function plugin_reservafrota_check_config($verbose = false)
+function plugin_reservafrota_check_config(bool $verbose = false): bool
 {
     return true;
 }

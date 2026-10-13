@@ -15,7 +15,7 @@ use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 /**
  * Instalação: cria as tabelas e configura permissões.
  */
-function plugin_reservafrota_install()
+function plugin_reservafrota_install(): bool
 {
     /** @var DBmysql $DB */
     global $DB;
@@ -414,7 +414,7 @@ function plugin_reservafrota_install()
 /**
  * Desinstalação: remove tabelas, direitos e preferências de exibição.
  */
-function plugin_reservafrota_uninstall()
+function plugin_reservafrota_uninstall(): bool
 {
     /** @var DBmysql $DB */
     global $DB;
