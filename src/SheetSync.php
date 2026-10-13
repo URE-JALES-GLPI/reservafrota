@@ -18,7 +18,7 @@ use Session;
  */
 class SheetSync extends CommonDBTM
 {
-    public static $rightname = 'reservafrota::booking';
+    public static string $rightname = 'reservafrota::booking';
 
     public const CFG_TABLE = 'glpi_plugin_reservafrota_sheetcfg';
     public const LOG_TABLE = 'glpi_plugin_reservafrota_sheetlog';

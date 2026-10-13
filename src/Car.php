@@ -14,7 +14,7 @@ use Session;
  */
 class Car extends CommonDBTM
 {
-    public static $rightname = 'reservafrota::car';
+    public static string $rightname = 'reservafrota::car';
 
     // Mantém histórico de alterações na aba "Histórico".
     public bool $dohistory = true;

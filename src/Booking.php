@@ -16,7 +16,7 @@ use Session;
  */
 class Booking extends CommonDBTM
 {
-    public static $rightname = 'reservafrota::booking';
+    public static string $rightname = 'reservafrota::booking';
 
     public bool $dohistory = true;
 

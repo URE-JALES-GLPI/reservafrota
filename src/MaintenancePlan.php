@@ -17,7 +17,7 @@ use Session;
  */
 class MaintenancePlan extends CommonDBTM
 {
-    public static $rightname = 'reservafrota::car';
+    public static string $rightname = 'reservafrota::car';
 
     public bool $dohistory = true;
 

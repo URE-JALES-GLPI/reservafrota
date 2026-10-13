@@ -13,7 +13,7 @@ use Session;
  */
 class Driver extends CommonDBTM
 {
-    public static $rightname = 'reservafrota::driver';
+    public static string $rightname = 'reservafrota::driver';
 
     public bool $dohistory = true;
 

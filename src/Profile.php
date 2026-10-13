@@ -22,7 +22,7 @@ class Profile extends CommonDBTM
     // Usamos o direito nativo 'profile' apenas para decidir quem pode EDITAR
     // esta aba. Os direitos do plugin (reservafrota::car / reservafrota::booking)
     // são gravados em glpi_profilerights.
-    public static $rightname = 'profile';
+    public static string $rightname = 'profile';
 
     public static function getTypeName($nb = 0)
     {
