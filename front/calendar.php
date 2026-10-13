@@ -76,7 +76,7 @@ try {
 }
 
 TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
-    'web_dir'            => Plugin::getWebDir('reservafrota'),
+    'web_dir'            => plugin_reservafrota_webdir(),
     'month'              => $month,
     'is_helpdesk'        => $used_help,
     'can_manage_cars'    => Session::haveRight(Car::$rightname, READ),
@@ -92,8 +92,8 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'blist'              => Booking::getGroupedByStatus(),
     'pending_count'      => Booking::countPending(),
     'can_approve'        => Booking::canApprove(),
-    'agenda_url'         => Plugin::getWebDir('reservafrota') . '/front/agenda.php',
-    'blist_url'          => Plugin::getWebDir('reservafrota') . '/ajax/bookinglist.php',
+    'agenda_url'         => plugin_reservafrota_webdir() . '/front/agenda.php',
+    'blist_url'          => plugin_reservafrota_webdir() . '/ajax/bookinglist.php',
     'csrf'               => Session::getNewCSRFToken(),
     'maint_alerts'       => $maintAlerts,
     'school_map'         => \GlpiPlugin\Reservafrota\Schools::getMap(),

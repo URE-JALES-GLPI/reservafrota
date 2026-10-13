@@ -8,7 +8,7 @@ Session::checkRight(Booking::$rightname, READ);
 header('Content-Type: text/html; charset=utf-8');
 
 TemplateRenderer::getInstance()->display('@reservafrota/booking.lists.html.twig', [
-    'web_dir'       => Plugin::getWebDir('reservafrota'),
+    'web_dir'       => plugin_reservafrota_webdir(),
     'blist'         => Booking::getGroupedByStatus(),
     'pending_count' => Booking::countPending(),
     'can_approve'   => Booking::canApprove(),

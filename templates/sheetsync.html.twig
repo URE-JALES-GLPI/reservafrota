@@ -62,7 +62,7 @@
             </div>
             <button type="submit" name="save_cfg" value="1" class="btn btn-primary"><i class="ti ti-device-floppy"></i> {{ __('Salvar', 'reservafrota') }}</button>
         </form>
-        <p class="reservafrota-hint">{{ __('Ordem das colunas no Forms: Carimbo | Código da viagem | Tipo (Saída/Chegada) | Motorista | KM | Observação.', 'reservafrota') }}</p>
+        <p class="reservafrota-hint">{{ __('Colunas no Forms (qualquer ordem, pelo nome): Código da viagem | Data/Hora do evento | Local | KM | Tipo (Saída/Chegada) | Motorista | Observação.', 'reservafrota') }}</p>
     </div>
 
     {# ---------- Lançamento manual ---------- #}
@@ -89,6 +89,10 @@
                 <div class="col-12 col-md-3 mb-3">
                     <label class="form-label" for="ss-m-driver">{{ __('Motorista', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                     <input type="text" class="form-control" id="ss-m-driver" name="driver" required>
+                </div>
+                <div class="col-12 col-md-3 mb-3">
+                    <label class="form-label" for="ss-m-local">{{ __('Local', 'reservafrota') }}</label>
+                    <input type="text" class="form-control" id="ss-m-local" name="local" placeholder="URE, Escola...">
                 </div>
                 <div class="col-6 col-md-3 mb-3">
                     <label class="form-label" for="ss-m-date">{{ __('Data do evento', 'reservafrota') }}</label>
@@ -121,6 +125,7 @@
                     <th>{{ __('Linha', 'reservafrota') }}</th>
                     <th>{{ __('Código', 'reservafrota') }}</th>
                     <th>{{ __('Evento', 'reservafrota') }}</th>
+                    <th>{{ __('Local', 'reservafrota') }}</th>
                     <th>{{ __('KM', 'reservafrota') }}</th>
                     <th>{{ __('Motorista', 'reservafrota') }}</th>
                     <th>{{ __('Situação', 'reservafrota') }}</th>
@@ -134,6 +139,7 @@
                         <td>{{ l.source == 'manual' ? '—' : l.row_num }}</td>
                         <td><b>#{{ l.request_code }}</b>{% if l.bookings_id %} <a href="{{ web_dir }}/front/booking.form.php?id={{ l.bookings_id }}"><i class="ti ti-external-link"></i></a>{% endif %}</td>
                         <td>{{ l.event == 'arrival' ? __('Chegada', 'reservafrota') : __('Saída', 'reservafrota') }}</td>
+                        <td>{{ l.local ?? '' }}</td>
                         <td>{{ l.km }}</td>
                         <td>{{ l.driver_name }}</td>
                         <td><span class="reservafrota-chip status-{{ l.status == 'applied' ? 'approved' : 'rejected' }}">{{ l.status == 'applied' ? __('Aplicado', 'reservafrota') : __('Erro', 'reservafrota') }}</span></td>

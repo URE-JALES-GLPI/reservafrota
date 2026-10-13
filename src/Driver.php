@@ -40,7 +40,7 @@ class Driver extends CommonDBTM
         if (empty($this->fields['picture'])) {
             return null;
         }
-        return Plugin::getWebDir('reservafrota')
+        return plugin_reservafrota_webdir()
             . '/front/driver.picture.php?id=' . (int) $this->fields['id'];
     }
 
@@ -116,7 +116,7 @@ class Driver extends CommonDBTM
         }
         foreach ($iterator as $row) {
             $row['picture_url'] = !empty($row['picture'])
-                ? (Plugin::getWebDir('reservafrota') . '/front/driver.picture.php?id=' . (int) $row['id'])
+                ? (plugin_reservafrota_webdir() . '/front/driver.picture.php?id=' . (int) $row['id'])
                 : null;
             $drivers[(int) $row['id']] = $row;
         }
@@ -142,7 +142,7 @@ class Driver extends CommonDBTM
         }
         foreach ($iterator as $row) {
             $row['picture_url'] = !empty($row['picture'])
-                ? (Plugin::getWebDir('reservafrota') . '/front/driver.picture.php?id=' . (int) $row['id'])
+                ? (plugin_reservafrota_webdir() . '/front/driver.picture.php?id=' . (int) $row['id'])
                 : null;
             $drivers[] = $row;
         }
@@ -315,7 +315,7 @@ class Driver extends CommonDBTM
             'params'      => $options,
             'can_edit'    => $can_edit,
             'picture_url' => $this->getPictureUrl(),
-            'web_dir'     => Plugin::getWebDir('reservafrota'),
+            'web_dir'     => plugin_reservafrota_webdir(),
             'history'     => $history,
             'users'       => self::getUsersForSelect(),
         ]);

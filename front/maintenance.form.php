@@ -4,7 +4,7 @@ use GlpiPlugin\Reservafrota\Car;
 use GlpiPlugin\Reservafrota\Maintenance;
 use GlpiPlugin\Reservafrota\MaintenancePlan;
 
-$redirect = Plugin::getWebDir('reservafrota') . '/front/maintenance.php';
+$redirect = plugin_reservafrota_webdir() . '/front/maintenance.php';
 if (!empty($_REQUEST['cars_id'])) {
     $redirect .= '?cars_id=' . (int) $_REQUEST['cars_id'];
 }

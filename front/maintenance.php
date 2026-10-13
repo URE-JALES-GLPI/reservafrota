@@ -46,7 +46,7 @@ if ($carFilter > 0) {
 }
 
 TemplateRenderer::getInstance()->display('@reservafrota/maintenance.list.html.twig', [
-    'web_dir'            => Plugin::getWebDir('reservafrota'),
+    'web_dir'            => plugin_reservafrota_webdir(),
     'cars'               => $cars,
     'car_filter'         => $carFilter,
     'pending'            => $pending,

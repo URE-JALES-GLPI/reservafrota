@@ -15,11 +15,21 @@ use GlpiPlugin\Reservafrota\Maintenance;
 use GlpiPlugin\Reservafrota\MaintenancePlan;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 
-define('PLUGIN_RESERVAFROTA_VERSION', '1.1.0');
+define('PLUGIN_RESERVAFROTA_VERSION', '1.2.0');
 
 // Faixa de versões do GLPI suportadas
 define('PLUGIN_RESERVAFROTA_MIN_GLPI_VERSION', '11.0.0');
-define('PLUGIN_RESERVAFROTA_MAX_GLPI_VERSION', '11.0.99');
+define('PLUGIN_RESERVAFROTA_MAX_GLPI_VERSION', '12.0.99');
+
+/**
+ * Base URL do plugin (GLPI 11 e 12).
+ * Substitui Plugin::getWebDir() (removido no GLPI 12).
+ */
+function plugin_reservafrota_webdir(): string
+{
+    global $CFG_GLPI;
+    return rtrim((string) ($CFG_GLPI['root_doc'] ?? ''), '/') . '/plugins/reservafrota';
+}
 
 /**
  * Inicialização do plugin — chamada em todas as páginas do GLPI.
@@ -150,6 +160,7 @@ function plugin_init_reservafrota()
                         `km`            int          NOT NULL DEFAULT 0,
                         `driver_name`   varchar(255) NOT NULL DEFAULT '',
                         `obs`           text         DEFAULT NULL,
+                        `local`         varchar(255) NOT NULL DEFAULT '',
                         `status`        varchar(16)  NOT NULL DEFAULT '',
                         `message`       text         DEFAULT NULL,
                         `source`        varchar(16)  NOT NULL DEFAULT 'sheet',
@@ -165,6 +176,32 @@ function plugin_init_reservafrota()
                 try {
                     $db->doQuery("ALTER TABLE `$sheetLog`
                         ADD COLUMN `obs` text DEFAULT NULL AFTER `driver_name`");
+                } catch (\Throwable $e) {}
+            }
+            if ($db->tableExists($sheetLog) && !$db->fieldExists($sheetLog, 'local')) {
+                try {
+                    $db->doQuery("ALTER TABLE `$sheetLog`
+                        ADD COLUMN `local` varchar(255) NOT NULL DEFAULT '' AFTER `obs`");
+                } catch (\Throwable $e) {}
+            }
+            $legsTable = 'glpi_plugin_reservafrota_legs';
+            if (!$db->tableExists($legsTable)) {
+                try {
+                    $db->doQuery("CREATE TABLE `$legsTable` (
+                        `id`            int unsigned NOT NULL AUTO_INCREMENT,
+                        `bookings_id`   int unsigned NOT NULL DEFAULT 0,
+                        `request_code`  varchar(32)  NOT NULL DEFAULT '',
+                        `event_at`      datetime     DEFAULT NULL,
+                        `local`         varchar(255) NOT NULL DEFAULT '',
+                        `km`            int unsigned NOT NULL DEFAULT 0,
+                        `event`         varchar(16)  NOT NULL DEFAULT '',
+                        `driver_name`   varchar(255) NOT NULL DEFAULT '',
+                        `row_num`       int unsigned NOT NULL DEFAULT 0,
+                        `date_creation` timestamp    NULL DEFAULT NULL,
+                        PRIMARY KEY (`id`),
+                        KEY `bookings_id` (`bookings_id`),
+                        KEY `request_code` (`request_code`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
                 } catch (\Throwable $e) {}
             }
             if ($db->tableExists($bkTable) && !$db->fieldExists($bkTable, 'plugin_reservafrota_drivers_id')) {
@@ -228,10 +265,15 @@ function plugin_init_reservafrota()
             // Garante a ação automática do Sheets (instalação por cópia de arquivos).
             try {
                 if (class_exists('CronTask') && method_exists('CronTask', 'register') && $db->tableExists('glpi_crontasks')) {
-                    $hasCron = (int) countElementsInTable('glpi_crontasks', [
-                        'itemtype' => 'GlpiPlugin\\Reservafrota\\SheetSync',
-                        'name'     => 'sheetsync',
-                    ]);
+                    $hasCron = $db->request([
+                        'SELECT' => ['id'],
+                        'FROM'   => 'glpi_crontasks',
+                        'WHERE'  => [
+                            'itemtype' => 'GlpiPlugin\\Reservafrota\\SheetSync',
+                            'name'     => 'sheetsync',
+                        ],
+                        'LIMIT'  => 1,
+                    ])->current() ? 1 : 0;
                     if ($hasCron === 0) {
                         \CronTask::register(
                             'GlpiPlugin\\Reservafrota\\SheetSync',

@@ -12,13 +12,15 @@ $id  = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $car = new Car();
 
 if (!$car->getFromDB($id) || empty($car->fields['picture'])) {
-    Html::displayErrorAndDie(__('Foto não encontrada.', 'reservafrota'), true);
+    http_response_code(404);
+    exit;
 }
 
 // basename() evita path traversal.
 $path = Car::getPictureDir() . '/' . basename($car->fields['picture']);
 if (!is_file($path)) {
-    Html::displayErrorAndDie(__('Foto não encontrada.', 'reservafrota'), true);
+    http_response_code(404);
+    exit;
 }
 
 $finfo = new finfo(FILEINFO_MIME_TYPE);

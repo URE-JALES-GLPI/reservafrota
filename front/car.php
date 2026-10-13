@@ -24,7 +24,7 @@ try {
 } catch (\Throwable $e) {}
 
 TemplateRenderer::getInstance()->display('@reservafrota/car.list.html.twig', [
-    'web_dir'            => Plugin::getWebDir('reservafrota'),
+    'web_dir'            => plugin_reservafrota_webdir(),
     'cars'               => Car::getAllForFleet(),
     'can_edit'           => Session::haveRight(Car::$rightname, UPDATE),
     'can_add'            => Session::haveRight(Car::$rightname, CREATE),

@@ -13,7 +13,7 @@ if (isset($_POST['add'])) {
         }
     }
     $driver->add($_POST);
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/driver.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/driver.php');
 
 } elseif (isset($_POST['update'])) {
     $driver->check($_POST['id'], UPDATE);
@@ -27,7 +27,7 @@ if (isset($_POST['add'])) {
         }
     }
     $driver->update($_POST);
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/driver.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/driver.php');
 
 } elseif (isset($_POST['delete'])) {
     $driver->check($_POST['id'], DELETE);

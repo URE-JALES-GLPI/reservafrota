@@ -1,6 +1,6 @@
 # Reserva de Frota (reservafrota)
 
-Plugin para **GLPI 11.0.x** de **reserva de veiculos da frota**.
+Plugin para **GLPI 11.0.x e 12.0.x** de **reserva de veiculos da frota**.
 
 ## Funcionalidades
 
@@ -27,8 +27,8 @@ Plugin para **GLPI 11.0.x** de **reserva de veiculos da frota**.
 
 ## Requisitos
 
-- GLPI **11.0.0** a **11.0.99**
-- PHP compativel com o GLPI 11
+- GLPI **11.0.0** a **12.0.99** (versão 1.2.0+ do plugin)
+- PHP compatível com o GLPI instalado (8.3+ no GLPI 12)
 
 ## Instalacao
 

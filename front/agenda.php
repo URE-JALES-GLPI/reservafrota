@@ -10,4 +10,4 @@ $date = isset($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'
     ? ('?month=' . substr($_GET['date'], 0, 7))
     : '';
 
-Html::redirect(Plugin::getWebDir('reservafrota') . '/front/calendar.php' . $date);
+Html::redirect(plugin_reservafrota_webdir() . '/front/calendar.php' . $date);

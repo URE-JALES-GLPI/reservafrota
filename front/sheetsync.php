@@ -18,7 +18,7 @@ if (isset($_POST['save_cfg'])) {
         !empty($_POST['enabled']) ? 1 : 0
     );
     Session::addMessageAfterRedirect(__('Configuração da integração salva.', 'reservafrota'), true);
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/sheetsync.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
 } elseif (isset($_POST['sync_now'])) {
     $res = SheetSync::runSync(true);
     if (!empty($res['ok'])) {
@@ -26,7 +26,7 @@ if (isset($_POST['save_cfg'])) {
     } else {
         Session::addMessageAfterRedirect((string) ($res['message'] ?? __('Falha na sincronização.', 'reservafrota')), false, ERROR);
     }
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/sheetsync.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
 } elseif (isset($_POST['reprocess'])) {
     $res = SheetSync::reprocess((int) ($_POST['log_id'] ?? 0));
     if (!empty($res['ok'])) {
@@ -34,7 +34,7 @@ if (isset($_POST['save_cfg'])) {
     } else {
         Session::addMessageAfterRedirect((string) ($res['message'] ?? __('Falha ao reprocessar.', 'reservafrota')), false, ERROR);
     }
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/sheetsync.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
 } elseif (isset($_POST['manual_apply'])) {
     $res = SheetSync::applyEvent(
         (string) ($_POST['code'] ?? ''),
@@ -43,18 +43,19 @@ if (isset($_POST['save_cfg'])) {
         (string) ($_POST['driver'] ?? ''),
         trim((string) ($_POST['event_date'] ?? '')) !== '' ? trim((string) $_POST['event_date']) . ' 12:00:00' : null,
         trim((string) ($_POST['obs'] ?? '')),
+        trim((string) ($_POST['local'] ?? '')),
         'manual',
         true
     );
     try {
-        SheetSync::logRow(0, date('Y-m-d H:i:s'), (string) ($_POST['code'] ?? ''), (int) ($res['bookings_id'] ?? 0), (string) ($_POST['event'] ?? ''), (int) ($_POST['km'] ?? 0), (string) ($_POST['driver'] ?? ''), (string) ($_POST['obs'] ?? ''), !empty($res['ok']) ? 'applied' : 'error', (string) ($res['message'] ?? ''), 'manual');
+        SheetSync::logRow(0, date('Y-m-d H:i:s'), (string) ($_POST['code'] ?? ''), (int) ($res['bookings_id'] ?? 0), (string) ($_POST['event'] ?? ''), (int) ($_POST['km'] ?? 0), (string) ($_POST['driver'] ?? ''), (string) ($_POST['obs'] ?? ''), trim((string) ($_POST['local'] ?? '')), !empty($res['ok']) ? 'applied' : 'error', (string) ($res['message'] ?? ''), 'manual');
     } catch (\Throwable $e) {}
     if (!empty($res['ok'])) {
         Session::addMessageAfterRedirect((string) ($res['message'] ?? __('Lançamento aplicado.', 'reservafrota')), true);
     } else {
         Session::addMessageAfterRedirect((string) ($res['message'] ?? __('Falha ao aplicar.', 'reservafrota')), false, ERROR);
     }
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/sheetsync.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
 }
 
 $used_help = false;
@@ -75,7 +76,7 @@ $cfg = SheetSync::getConfig();
 $filter = isset($_GET['f']) && in_array($_GET['f'], ['applied', 'error'], true) ? $_GET['f'] : '';
 
 TemplateRenderer::getInstance()->display('@reservafrota/sheetsync.html.twig', [
-    'web_dir'   => Plugin::getWebDir('reservafrota'),
+    'web_dir'   => plugin_reservafrota_webdir(),
     'cfg'       => $cfg,
     'logs'      => SheetSync::getLogs(100, $filter),
     'filter'    => $filter,

@@ -221,6 +221,7 @@ function plugin_reservafrota_install()
             `km`            int          NOT NULL DEFAULT 0,
             `driver_name`   varchar(255) NOT NULL DEFAULT '',
             `obs`           text         DEFAULT NULL,
+            `local`         varchar(255) NOT NULL DEFAULT '',
             `status`        varchar(16)  NOT NULL DEFAULT '',
             `message`       text         DEFAULT NULL,
             `source`        varchar(16)  NOT NULL DEFAULT 'sheet',
@@ -234,6 +235,29 @@ function plugin_reservafrota_install()
     if ($DB->tableExists($sheetLog) && !$DB->fieldExists($sheetLog, 'obs')) {
         $DB->doQuery("ALTER TABLE `$sheetLog`
             ADD COLUMN `obs` text DEFAULT NULL AFTER `driver_name`");
+    }
+    if ($DB->tableExists($sheetLog) && !$DB->fieldExists($sheetLog, 'local')) {
+        $DB->doQuery("ALTER TABLE `$sheetLog`
+            ADD COLUMN `local` varchar(255) NOT NULL DEFAULT '' AFTER `obs`");
+    }
+    // ---- Diário de bordo: uma linha por parada (saída/chegada) ----
+    $legsTable = 'glpi_plugin_reservafrota_legs';
+    if (!$DB->tableExists($legsTable)) {
+        $DB->doQuery("CREATE TABLE `$legsTable` (
+            `id`            int unsigned NOT NULL AUTO_INCREMENT,
+            `bookings_id`   int unsigned NOT NULL DEFAULT 0,
+            `request_code`  varchar(32)  NOT NULL DEFAULT '',
+            `event_at`      datetime     DEFAULT NULL,
+            `local`         varchar(255) NOT NULL DEFAULT '',
+            `km`            int unsigned NOT NULL DEFAULT 0,
+            `event`         varchar(16)  NOT NULL DEFAULT '',
+            `driver_name`   varchar(255) NOT NULL DEFAULT '',
+            `row_num`       int unsigned NOT NULL DEFAULT 0,
+            `date_creation` timestamp    NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `bookings_id` (`bookings_id`),
+            KEY `request_code` (`request_code`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
     }
 
     // ---- KM atual do carro ----
@@ -363,11 +387,16 @@ function plugin_reservafrota_install()
     foreach ($prefs as $itemtype => $columns) {
         $rank = 1;
         foreach ($columns as $num) {
-            $exists = countElementsInTable('glpi_displaypreferences', [
-                'itemtype' => $itemtype,
-                'num'      => $num,
-                'users_id' => 0,
-            ]);
+            $exists = $DB->request([
+                'SELECT' => ['id'],
+                'FROM'   => 'glpi_displaypreferences',
+                'WHERE'  => [
+                    'itemtype' => $itemtype,
+                    'num'      => $num,
+                    'users_id' => 0,
+                ],
+                'LIMIT'  => 1,
+            ])->current();
             if (!$exists) {
                 $DB->insert('glpi_displaypreferences', [
                     'itemtype' => $itemtype,
@@ -401,7 +430,7 @@ function plugin_reservafrota_uninstall()
     }
 
     // Remove as tabelas.
-    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(), Maintenance::getTable(), 'glpi_plugin_reservafrota_sheetcfg', 'glpi_plugin_reservafrota_sheetlog'] as $table) {
+    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(), Maintenance::getTable(), 'glpi_plugin_reservafrota_sheetcfg', 'glpi_plugin_reservafrota_sheetlog', 'glpi_plugin_reservafrota_legs'] as $table) {
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `$table`");
         }

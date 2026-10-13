@@ -20,7 +20,7 @@ if (isset($_POST['add'])) {
 
     $car->add($_POST);
 
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/car.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/car.php');
 
 } elseif (isset($_POST['update'])) {
     $car->check($_POST['id'], UPDATE);
@@ -41,7 +41,7 @@ if (isset($_POST['add'])) {
 
     $car->update($_POST);
 
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/car.php');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/car.php');
 
 } elseif (isset($_POST['delete'])) {
     $car->check($_POST['id'], DELETE);

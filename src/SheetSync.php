@@ -196,7 +196,7 @@ class SheetSync extends CommonDBTM
     {
         $raw = trim($raw);
         if ($raw !== '') {
-            foreach (['d/m/Y H:i:s', 'd/m/Y H:i', 'd-m-Y H:i:s', 'd-m-Y H:i'] as $fmt) {
+            foreach (['d/m/Y H:i:s', 'd/m/Y H:i', 'd-m-Y H:i:s', 'd-m-Y H:i', 'd/m/Y', 'd-m-Y', 'Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d'] as $fmt) {
                 $dt = \DateTime::createFromFormat($fmt, $raw);
                 if ($dt instanceof \DateTime) {
                     return $dt->format('Y-m-d H:i:s');
@@ -278,7 +278,7 @@ class SheetSync extends CommonDBTM
      */
     private static function mapHeader(array $header): array
     {
-        $map = ['code' => -1, 'event' => -1, 'km' => -1, 'driver' => -1, 'obs' => -1, 'ts' => 0];
+        $map = ['code' => -1, 'event' => -1, 'km' => -1, 'driver' => -1, 'obs' => -1, 'ts' => 0, 'when' => -1, 'local' => -1, 'marker' => -1, 'datepart' => -1, 'timepart' => -1];
         foreach ($header as $i => $col) {
             $n = self::norm((string) $col);
             if ($n === '') {
@@ -306,6 +306,26 @@ class SheetSync extends CommonDBTM
             }
             if ($map['obs'] < 0 && ($n === 'observacao' || $n === 'obs' || $n === 'comentario' || $n === 'observacoes')) {
                 $map['obs'] = $i;
+                continue;
+            }
+            if ($map['when'] < 0 && ($n === 'data hora' || $n === 'datahora' || $n === 'data e hora' || $n === 'quando' || $n === 'horario' || $n === 'data do evento' || $n === 'datahora do evento')) {
+                $map['when'] = $i;
+                continue;
+            }
+            if ($n === 'data' || $n === 'dia') {
+                $map['datepart'] = $i;
+                continue;
+            }
+            if ($n === 'hora' || $n === 'horario evento') {
+                $map['timepart'] = $i;
+                continue;
+            }
+            if ($map['local'] < 0 && ($n === 'local' || $n === 'lugar' || $n === 'destino' || $n === 'origem' || $n === 'parada' || $n === 'place' || $n === 'location' || $n === 'escola')) {
+                $map['local'] = $i;
+                continue;
+            }
+            if ($map['marker'] < 0 && self::isArrivalMarker($n)) {
+                $map['marker'] = $i;
             }
         }
         return $map;
@@ -314,7 +334,7 @@ class SheetSync extends CommonDBTM
     /**
      * Lê as linhas novas da planilha via Sheets API v4.
      *
-     * @return array{ok:bool,message:string,rows:list<array{row:int,ts:string,code:string,event:string,km:int,driver:string,obs:string}>,last_row:int}
+     * @return array{ok:bool,message:string,rows:list<array{row:int,ts:string,code:string,when:string,local:string,event:string,km:int,driver:string,obs:string}>,last_row:int}
      */
     public static function fetchRows(array $cfg, int $maxRows = 200): array
     {
@@ -350,9 +370,10 @@ class SheetSync extends CommonDBTM
         $map = self::mapHeader($header);
         // Sem nenhum cabeçalho reconhecido, a primeira linha já é dado
         // (caso padrão: cabeçalho na linha 1, range começando em A2).
-        // Usa a ordem documentada em vez do mapa vazio.
-        if ($map['code'] < 0 && $map['event'] < 0 && $map['km'] < 0 && $map['driver'] < 0) {
-            $map = ['code' => 1, 'event' => 2, 'km' => 4, 'driver' => 3, 'obs' => 5, 'ts' => 0];
+        // Usa a ordem documentada em vez do mapa vazio:
+        // Carimbo | Código | Data/Hora | Local | KM | Tipo | Motorista | Obs.
+        if ($map['code'] < 0 && $map['event'] < 0 && $map['km'] < 0 && $map['driver'] < 0 && $map['when'] < 0 && $map['local'] < 0) {
+            $map = ['code' => 1, 'event' => 5, 'km' => 4, 'driver' => 6, 'obs' => 7, 'ts' => 0, 'when' => 2, 'local' => 3, 'marker' => -1, 'datepart' => -1, 'timepart' => -1];
         }
         $dataStart = 0;
         if ($map['code'] >= 0) {
@@ -395,11 +416,29 @@ class SheetSync extends CommonDBTM
             }
             $kmRaw = $map['km'] >= 0 ? $cell($map['km']) : '';
             $kmDigits = preg_replace('/\D/', '', $kmRaw) ?? '';
+            $eventRaw = $map['event'] >= 0 ? $cell($map['event']) : '';
+            // Marcador de chegada (coluna "Chegada" com X): marcada = chegada,
+            // vazia = saída. Só vale quando não há tipo textual.
+            if ($eventRaw === '' && $map['marker'] >= 0 && trim($cell($map['marker'])) !== '') {
+                $eventRaw = 'Chegada';
+            } elseif ($eventRaw === '' && $map['marker'] >= 0) {
+                $eventRaw = 'Saída';
+            }
+            $whenVal = $map['when'] >= 0 ? $cell($map['when']) : '';
+            if ($whenVal === '' && $map['datepart'] >= 0) {
+                $dp = $cell($map['datepart']);
+                $tp = $map['timepart'] >= 0 ? $cell($map['timepart']) : '';
+                if ($dp !== '') {
+                    $whenVal = trim($dp . ' ' . $tp);
+                }
+            }
             $rows[] = [
                 'row'    => $absRow,
                 'ts'     => $map['ts'] >= 0 ? $cell($map['ts']) : '',
                 'code'   => $map['code'] >= 0 ? $cell($map['code']) : '',
-                'event'  => $map['event'] >= 0 ? $cell($map['event']) : '',
+                'when'   => $whenVal,
+                'local'  => $map['local'] >= 0 ? $cell($map['local']) : '',
+                'event'  => $eventRaw,
                 'km'     => $kmDigits === '' ? 0 : (int) $kmDigits,
                 'driver' => $map['driver'] >= 0 ? $cell($map['driver']) : '',
                 'obs'    => $map['obs'] >= 0 ? $cell($map['obs']) : '',
@@ -486,10 +525,114 @@ class SheetSync extends CommonDBTM
         return ['ok' => false, 'message' => sprintf(__('Código #%s é de outra data (%s). Confira o código.', 'reservafrota'), $code, $dd)];
     }
 
+    public const LEGS_TABLE = 'glpi_plugin_reservafrota_legs';
+
+    /**
+     * O local é a base (URE)? Compara por palavra exata ("URE Jales" vale;
+     * "Pureza" não, graças à fronteira de palavra).
+     */
+    public static function isBaseLocal(string $local): bool
+    {
+        $n = ' ' . self::norm($local) . ' ';
+        return str_contains($n, ' ure ');
+    }
+
+    /**
+     * Maior KM já registrado na reserva (inicial + pernas).
+     */
+    private static function maxRecordedKm(int $bookingsId, ?int $kmInitial): int
+    {
+        $max = (int) ($kmInitial ?? 0);
+        try {
+            /** @var \DBmysql $DB */
+            global $DB;
+            if ($DB->tableExists(self::LEGS_TABLE)) {
+                $row = $DB->request([
+                    'SELECT' => ['MAX' => 'km AS max_km'],
+                    'FROM'   => self::LEGS_TABLE,
+                    'WHERE'  => ['bookings_id' => $bookingsId],
+                ])->current();
+                if (is_array($row) && $row['max_km'] !== null) {
+                    $max = max($max, (int) $row['max_km']);
+                }
+            }
+        } catch (\Throwable $e) {}
+        return $max;
+    }
+
+    /**
+     * Grava uma perna no diário de bordo. Devolve false se a perna exata
+     * já existe (proteção contra duplo processamento).
+     */
+    private static function insertLeg(int $bookingsId, string $code, string $when, string $local, int $km, string $event, string $driver, int $rowNum): bool
+    {
+        try {
+            /** @var \DBmysql $DB */
+            global $DB;
+            if (!$DB->tableExists(self::LEGS_TABLE)) {
+                return true;
+            }
+            $dup = $DB->request([
+                'SELECT' => ['id'],
+                'FROM'   => self::LEGS_TABLE,
+                'WHERE'  => [
+                    'bookings_id' => $bookingsId,
+                    'event_at'    => $when,
+                    'km'          => $km,
+                    'event'       => $event,
+                ],
+                'LIMIT'  => 1,
+            ])->current();
+            if (is_array($dup)) {
+                return false;
+            }
+            return (bool) $DB->insert(self::LEGS_TABLE, [
+                'bookings_id'   => $bookingsId,
+                'request_code'  => substr($code, 0, 32),
+                'event_at'      => $when,
+                'local'         => substr($local, 0, 255),
+                'km'            => $km,
+                'event'         => substr($event, 0, 16),
+                'driver_name'   => substr($driver, 0, 255),
+                'row_num'       => $rowNum,
+                'date_creation' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            return true;
+        }
+    }
+
+    /**
+     * Pernas de uma reserva (mais antigas primeiro) — para a auditoria.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public static function getLegs(int $bookingsId, int $limit = 100): array
+    {
+        $out = [];
+        try {
+            /** @var \DBmysql $DB */
+            global $DB;
+            if (!$DB->tableExists(self::LEGS_TABLE)) {
+                return [];
+            }
+            $it = $DB->request([
+                'FROM'  => self::LEGS_TABLE,
+                'WHERE' => ['bookings_id' => $bookingsId],
+                'ORDER' => ['event_at ASC', 'id ASC'],
+                'LIMIT' => max(1, min(500, $limit)),
+            ]);
+            foreach ($it as $row) {
+                $out[] = $row;
+            }
+        } catch (\Throwable $e) {}
+        return $out;
+    }
+
     /**
      * Registra uma linha no log de sincronização.
      */
-    public static function logRow(int $rowNum, string $receivedAt, string $code, int $bookingsId, string $event, int $km, string $driver, string $obs, string $status, string $message, string $source): void
+    public static function logRow(int $rowNum, string $receivedAt, string $code, int $bookingsId, string $event, int $km, string $driver, string $obs, string $local, string $status, string $message, string $source): void
     {
         try {
             /** @var \DBmysql $DB */
@@ -506,6 +649,7 @@ class SheetSync extends CommonDBTM
                 'km'           => $km,
                 'driver_name'  => substr($driver, 0, 255),
                 'obs'          => ($obs !== '' && $DB->fieldExists(self::LOG_TABLE, 'obs')) ? $obs : null,
+                'local'        => ($local !== '' && $DB->fieldExists(self::LOG_TABLE, 'local')) ? substr($local, 0, 255) : '',
                 'status'       => substr($status, 0, 16),
                 'message'      => $message !== '' ? $message : null,
                 'source'       => substr($source, 0, 16),
@@ -515,13 +659,16 @@ class SheetSync extends CommonDBTM
     }
 
     /**
-     * Aplica um evento de saída/chegada numa reserva.
+     * Aplica um evento do diário de bordo (uma parada: saída ou chegada).
      * Roda em contexto de sistema (cron/botão): usa UPDATE direto, sem
      * checagem de perfil — as travas de negócio estão todas aqui dentro.
      *
+     * Regras: primeira saída define o KM inicial; toda perna atualiza o KM
+     * do carro; só conclui (Concluído) a chegada com local na URE (base).
+     *
      * @return array{ok:bool,message:string,bookings_id:int}
      */
-    public static function applyEvent(string $codeRaw, string $eventRaw, int $km, string $driverRaw, ?string $whenRaw, string $obs = '', string $source = 'sheet', bool $force = false): array
+    public static function applyEvent(string $codeRaw, string $eventRaw, int $km, string $driverRaw, ?string $whenRaw, string $obs = '', string $local = '', string $source = 'sheet', bool $force = false, int $rowNum = 0): array
     {
         $fail = static function (string $msg, int $bid = 0) {
             return ['ok' => false, 'message' => $msg, 'bookings_id' => $bid];
@@ -593,47 +740,18 @@ class SheetSync extends CommonDBTM
         try {
             /** @var \DBmysql $DB */
             global $DB;
-            $now = date('Y-m-d H:i:s');
-            if ($event === self::EVENT_DEPARTURE) {
-                $curInit = $booking->fields['km_initial'] ?? null;
-                if ($curInit !== null && (int) $curInit > 0 && !$force) {
-                    return $fail(__('Saída já registrada (lançamento duplicado?).', 'reservafrota'), $bid);
-                }
-                $upd = ['km_initial' => $km];
-                if ($adopted) {
-                    $upd['plugin_reservafrota_drivers_id'] = $drvId;
-                    $upd['driver'] = $driverName;
-                }
-                if (!$DB->update(Booking::getTable(), $upd, ['id' => $bid])) {
-                    return $fail(__('Falha ao gravar a saída.', 'reservafrota'), $bid);
-                }
-                $msg = sprintf(__('Saída registrada via Forms: KM %s em %s (motorista %s).', 'reservafrota'), number_format($km, 0, ',', '.'), $when, $driverName);
-                \Log::history($bid, Booking::class, [0, '', $msg], '', \Log::HISTORY_LOG_SIMPLE_MESSAGE);
-                return ['ok' => true, 'message' => $adopted ? $msg . ' ' . __('Motorista adotado na reserva.', 'reservafrota') : $msg, 'bookings_id' => $bid];
+            $local = trim((string) $local);
+            // Hodômetro nunca anda para trás (salvo força do gestor).
+            $maxKm = self::maxRecordedKm($bid, isset($booking->fields['km_initial']) && $booking->fields['km_initial'] !== null ? (int) $booking->fields['km_initial'] : null);
+            if ($km < $maxKm && !$force) {
+                return $fail(sprintf(__('KM %s menor que o último registrado (%s).', 'reservafrota'), number_format($km, 0, ',', '.'), number_format($maxKm, 0, ',', '.')), $bid);
             }
-
-            // Chegada: exige saída registrada (salvo força do gestor).
-            $curInit = $booking->fields['km_initial'] ?? null;
-            if (($curInit === null || (int) $curInit <= 0) && !$force) {
-                return $fail(__('Sem saída registrada para esta viagem.', 'reservafrota'), $bid);
-            }
-            if ($km < (int) ($curInit ?? 0)) {
-                return $fail(sprintf(__('KM final (%s) menor que o inicial (%s).', 'reservafrota'), number_format($km, 0, ',', '.'), number_format((int) ($curInit ?? 0), 0, ',', '.')), $bid);
-            }
-            $upd = [
-                'km_final'      => $km,
-                'date_returned' => $when,
-                'status'        => Booking::STATUS_ARRIVED,
-            ];
-            if (trim($obs) !== '') {
-                $upd['arrival_obs'] = trim($obs);
-            }
+            // Grava a perna no diário de bordo (idempotente).
+            self::insertLeg($bid, $code, $when, $local, $km, $event, $driverName, $rowNum);
+            $upd = [];
             if ($adopted) {
                 $upd['plugin_reservafrota_drivers_id'] = $drvId;
                 $upd['driver'] = $driverName;
-            }
-            if (!$DB->update(Booking::getTable(), $upd, ['id' => $bid])) {
-                return $fail(__('Falha ao gravar a chegada.', 'reservafrota'), $bid);
             }
             $carId = (int) ($booking->fields['plugin_reservafrota_cars_id'] ?? 0);
             $carNote = '';
@@ -646,7 +764,40 @@ class SheetSync extends CommonDBTM
                     $carNote = ' ' . __('(KM do carro mantido.)', 'reservafrota');
                 }
             }
-            $msg = sprintf(__('Chegada registrada via Forms: KM %s em %s (motorista %s). Viagem concluída.', 'reservafrota'), number_format($km, 0, ',', '.'), $when, $driverName);
+            if ($event === self::EVENT_DEPARTURE) {
+                $curInit = $booking->fields['km_initial'] ?? null;
+                if ($curInit === null || (int) $curInit <= 0) {
+                    $upd['km_initial'] = $km;
+                }
+                if (!empty($upd) && !$DB->update(Booking::getTable(), $upd, ['id' => $bid])) {
+                    return $fail(__('Falha ao gravar a saída.', 'reservafrota'), $bid);
+                }
+                $msg = sprintf(__('Saída registrada via Forms: %s, KM %s em %s (motorista %s).', 'reservafrota'), $local !== '' ? $local : '—', number_format($km, 0, ',', '.'), $when, $driverName);
+                \Log::history($bid, Booking::class, [0, '', $msg], '', \Log::HISTORY_LOG_SIMPLE_MESSAGE);
+                return ['ok' => true, 'message' => $msg . $carNote, 'bookings_id' => $bid];
+            }
+
+            // Chegada fora da base: só registra a parada, a viagem continua.
+            if (!self::isBaseLocal($local)) {
+                if (!empty($upd) && !$DB->update(Booking::getTable(), $upd, ['id' => $bid])) {
+                    return $fail(__('Falha ao gravar a parada.', 'reservafrota'), $bid);
+                }
+                $msg = sprintf(__('Parada registrada via Forms: %s, KM %s em %s.', 'reservafrota'), $local !== '' ? $local : '—', number_format($km, 0, ',', '.'), $when);
+                \Log::history($bid, Booking::class, [0, '', $msg], '', \Log::HISTORY_LOG_SIMPLE_MESSAGE);
+                return ['ok' => true, 'message' => $msg . $carNote, 'bookings_id' => $bid];
+            }
+
+            // Chegada na URE (base): conclui a viagem.
+            $upd['km_final'] = $km;
+            $upd['date_returned'] = $when;
+            $upd['status'] = Booking::STATUS_ARRIVED;
+            if (trim($obs) !== '') {
+                $upd['arrival_obs'] = trim($obs);
+            }
+            if (!$DB->update(Booking::getTable(), $upd, ['id' => $bid])) {
+                return $fail(__('Falha ao gravar a chegada.', 'reservafrota'), $bid);
+            }
+            $msg = sprintf(__('Chegada registrada via Forms: %s, KM %s em %s (motorista %s). Viagem concluída.', 'reservafrota'), $local, number_format($km, 0, ',', '.'), $when, $driverName);
             \Log::history($bid, Booking::class, [0, '', $msg], '', \Log::HISTORY_LOG_SIMPLE_MESSAGE);
             if (trim($obs) !== '' && $carId > 0) {
                 \Log::history($carId, Car::class, [0, '', sprintf(__('Observação de viagem (agendamento #%d): %s', 'reservafrota'), $bid, trim($obs))], '', \Log::HISTORY_LOG_SIMPLE_MESSAGE);
@@ -682,15 +833,18 @@ class SheetSync extends CommonDBTM
         $maxRow = (int) ($cfg['last_row'] ?? 1);
         foreach ($fetch['rows'] as $r) {
             $maxRow = max($maxRow, (int) $r['row']);
+            $eventWhen = ($r['when'] ?? '') !== '' ? (string) $r['when'] : (($r['ts'] ?? '') !== '' ? (string) $r['ts'] : null);
             $res = self::applyEvent(
                 (string) $r['code'],
                 (string) $r['event'],
                 (int) $r['km'],
                 (string) $r['driver'],
-                (string) $r['ts'] !== '' ? (string) $r['ts'] : null,
+                $eventWhen,
                 (string) $r['obs'],
+                (string) ($r['local'] ?? ''),
                 'sheet',
-                false
+                false,
+                (int) $r['row']
             );
             self::logRow(
                 (int) $r['row'],
@@ -701,6 +855,7 @@ class SheetSync extends CommonDBTM
                 (int) $r['km'],
                 (string) $r['driver'],
                 (string) $r['obs'],
+                (string) ($r['local'] ?? ''),
                 !empty($res['ok']) ? 'applied' : 'error',
                 (string) ($res['message'] ?? ''),
                 'sheet'
@@ -804,8 +959,10 @@ class SheetSync extends CommonDBTM
                 (string) ($row['driver_name'] ?? ''),
                 ($row['received_at'] ?? null) ?: null,
                 (string) ($row['obs'] ?? ''),
+                (string) ($row['local'] ?? ''),
                 'sheet',
-                true
+                true,
+                (int) ($row['row_num'] ?? 0)
             );
             self::logRow(
                 (int) ($row['row_num'] ?? 0),
@@ -816,6 +973,7 @@ class SheetSync extends CommonDBTM
                 (int) ($row['km'] ?? 0),
                 (string) ($row['driver_name'] ?? ''),
                 (string) ($row['obs'] ?? ''),
+                (string) ($row['local'] ?? ''),
                 !empty($res['ok']) ? 'applied' : 'error',
                 __('Reprocessado: ', 'reservafrota') . (string) ($res['message'] ?? ''),
                 'sheet'

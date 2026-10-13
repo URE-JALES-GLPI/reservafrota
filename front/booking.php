@@ -10,4 +10,4 @@ $anchor = (isset($_GET['anchor']) && preg_match('/^[a-z0-9_-]+$/i', $_GET['ancho
     ? ('#' . $_GET['anchor'])
     : '#reservafrota-booking-list';
 
-Html::redirect(Plugin::getWebDir('reservafrota') . '/front/calendar.php' . $anchor);
+Html::redirect(plugin_reservafrota_webdir() . '/front/calendar.php' . $anchor);

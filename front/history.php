@@ -28,7 +28,7 @@ try {
 } catch (\Throwable $e) {}
 
 TemplateRenderer::getInstance()->display('@reservafrota/history.html.twig', [
-    'web_dir'            => Plugin::getWebDir('reservafrota'),
+    'web_dir'            => plugin_reservafrota_webdir(),
     'history'            => Booking::getHistory(),
     'is_manager'         => Booking::canApprove(),
     'can_manage_cars'    => Session::haveRight(Car::$rightname, READ),

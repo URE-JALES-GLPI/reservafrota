@@ -7,19 +7,22 @@ Session::checkRight(Booking::$rightname, READ);
 $id = (int) ($_GET['id'] ?? 0);
 $booking = new Booking();
 if ($id <= 0 || !$booking->getFromDB($id)) {
-    Html::displayErrorAndDie(__('Agendamento não encontrado.', 'reservafrota'));
+    http_response_code(404);
+    exit;
 }
 
 // Dono do pedido ou aprovador podem baixar a folha.
 if (!Booking::canApprove() && (int) $booking->fields['users_id'] !== (int) Session::getLoginUserID()) {
-    Html::displayRightError();
+    http_response_code(403);
+    exit;
 }
 
 $sheet = (string) ($booking->fields['arrival_sheet'] ?? '');
 $path  = GLPI_DOC_DIR . '/_plugins/reservafrota/' . basename($sheet);
 
 if ($sheet === '' || !is_file($path)) {
-    Html::displayErrorAndDie(__('Nenhuma folha anexada para este agendamento.', 'reservafrota'));
+    http_response_code(404);
+    exit;
 }
 
 $type = function_exists('mime_content_type') ? (mime_content_type($path) ?: 'application/octet-stream') : 'application/octet-stream';

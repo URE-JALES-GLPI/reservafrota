@@ -1104,7 +1104,7 @@ class Booking extends CommonDBTM
         foreach ($cars as $cid => $car) {
             $picture = null;
             if (!empty($car['picture'])) {
-                $picture = Plugin::getWebDir('reservafrota')
+                $picture = plugin_reservafrota_webdir()
                     . '/front/car.picture.php?id=' . (int) $cid;
             }
             $result[$cid] = [
@@ -1733,10 +1733,18 @@ class Booking extends CommonDBTM
         /** @var \DBmysql $DB */
         global $DB;
 
-        return (int) countElementsInTable(self::getTable(), [
-            'is_deleted' => 0,
-            'status'     => self::STATUS_PENDING,
-        ]);
+        $n = 0;
+        foreach ($DB->request([
+            'SELECT' => ['id'],
+            'FROM'   => self::getTable(),
+            'WHERE'  => [
+                'is_deleted' => 0,
+                'status'     => self::STATUS_PENDING,
+            ],
+        ]) as $row) {
+            $n++;
+        }
+        return $n;
     }
 
     /**
@@ -2221,7 +2229,7 @@ class Booking extends CommonDBTM
             'groups'         => self::getGroupsList(),
             'users'          => self::getUsersList(),
             'requester_name' => $requester,
-            'web_dir'        => Plugin::getWebDir('reservafrota'),
+            'web_dir'        => plugin_reservafrota_webdir(),
             'current_driver_id' => $this->isNewItem()
                 ? Driver::getDriverIdForUser((int) Session::getLoginUserID())
                 : 0,

@@ -11,5 +11,5 @@ $count = Booking::canApprove() ? Booking::countPending() : 0;
 
 echo json_encode([
     'count' => $count,
-    'url'   => Plugin::getWebDir('reservafrota') . '/front/booking.php',
+    'url'   => plugin_reservafrota_webdir() . '/front/booking.php',
 ]);

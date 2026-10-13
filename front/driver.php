@@ -15,7 +15,7 @@ if (Session::getCurrentInterface() === 'helpdesk' && method_exists(Html::class, 
 }
 
 TemplateRenderer::getInstance()->display('@reservafrota/driver.list.html.twig', [
-    'web_dir'            => Plugin::getWebDir('reservafrota'),
+    'web_dir'            => plugin_reservafrota_webdir(),
     'drivers'            => Driver::getAllForList(),
     'can_edit'           => Session::haveRight(Driver::$rightname, UPDATE),
     'can_add'            => Session::haveRight(Driver::$rightname, CREATE),

@@ -52,7 +52,7 @@ try {
 } catch (\Throwable $e) {}
 
 TemplateRenderer::getInstance()->display('@reservafrota/analytics.html.twig', [
-    'web_dir'         => Plugin::getWebDir('reservafrota'),
+    'web_dir'         => plugin_reservafrota_webdir(),
     'month'           => $month,
     'month_label'     => $month_label,
     'year'            => $year,

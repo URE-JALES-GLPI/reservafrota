@@ -79,12 +79,12 @@ if (isset($_POST['add'])) {
     if (!empty($_POST['_from_calendar'])) {
         $m = $_POST['_calendar_month'] ?? '';
         $q = preg_match('/^\d{4}-\d{2}$/', (string) $m) ? ('?month=' . $m) : '';
-        Html::redirect(Plugin::getWebDir('reservafrota') . '/front/calendar.php' . $q);
+        Html::redirect(plugin_reservafrota_webdir() . '/front/calendar.php' . $q);
     }
 
     // Volta para a agenda quando o pedido veio de lá.
     if (!empty($_POST['_from_agenda'])) {
-        Html::redirect(Plugin::getWebDir('reservafrota') . '/front/agenda.php'
+        Html::redirect(plugin_reservafrota_webdir() . '/front/agenda.php'
             . (isset($_POST['_agenda_date']) ? '?date=' . urlencode($_POST['_agenda_date']) : ''));
     }
     if ($newID && ($_SESSION['glpibackcreated'] ?? false)) {
@@ -136,7 +136,7 @@ if (isset($_POST['add'])) {
         $km   = (isset($_POST['km_final']) && $_POST['km_final'] !== '') ? (int) $_POST['km_final'] : null;
         $booking->markReturned($sheet, $when, $obs, $km);
     }
-    Html::redirect(Plugin::getWebDir('reservafrota') . '/front/calendar.php#reservafrota-arrived-section');
+    Html::redirect(plugin_reservafrota_webdir() . '/front/calendar.php#reservafrota-arrived-section');
 
 } elseif (isset($_POST['update_obs'])) {
     // Editar / remover a observação de viagem (somente aprovador).
@@ -217,7 +217,7 @@ if (isset($_POST['add'])) {
     if (!empty($_POST['_from_calendar'])) {
         $m = $_POST['_calendar_month'] ?? '';
         $q = preg_match('/^\d{4}-\d{2}$/', (string) $m) ? ('?month=' . $m) : '';
-        Html::redirect(Plugin::getWebDir('reservafrota') . '/front/calendar.php' . $q);
+        Html::redirect(plugin_reservafrota_webdir() . '/front/calendar.php' . $q);
     }
     Html::back();
 
