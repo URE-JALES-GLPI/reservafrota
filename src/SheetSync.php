@@ -276,6 +276,15 @@ class SheetSync extends CommonDBTM
      * @param list<string> $header
      * @return array{code:int,event:int,km:int,driver:int,obs:int,ts:int}
      */
+    /**
+     * É coluna marcadora de chegada (ex.: "Chegada" com X)? Nesse caso,
+     * linha marcada = chegada, linha vazia = saída.
+     */
+    private static function isArrivalMarker(string $headerNorm): bool
+    {
+        return $headerNorm === 'chegada';
+    }
+
     private static function mapHeader(array $header): array
     {
         $map = ['code' => -1, 'event' => -1, 'km' => -1, 'driver' => -1, 'obs' => -1, 'ts' => 0, 'when' => -1, 'local' => -1, 'marker' => -1, 'datepart' => -1, 'timepart' => -1];
