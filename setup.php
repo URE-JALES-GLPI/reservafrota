@@ -187,20 +187,6 @@ function plugin_init_reservafrota(): void
                         ADD COLUMN `local` varchar(255) NOT NULL DEFAULT '' AFTER `obs`");
                 } catch (\Throwable $e) {}
             }
-            $feedTable = 'glpi_plugin_reservafrota_feeds';
-            if (!$db->tableExists($feedTable)) {
-                try {
-                    $db->doQuery("CREATE TABLE `$feedTable` (
-                        `id`            int unsigned NOT NULL AUTO_INCREMENT,
-                        `users_id`      int unsigned NOT NULL DEFAULT 0,
-                        `token`         varchar(64)  NOT NULL DEFAULT '',
-                        `date_creation` timestamp    NULL DEFAULT NULL,
-                        PRIMARY KEY (`id`),
-                        UNIQUE KEY `users_id` (`users_id`),
-                        KEY `token` (`token`)
-                    ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
-                } catch (\Throwable $e) {}
-            }
             $legsTable = 'glpi_plugin_reservafrota_legs';
             if (!$db->tableExists($legsTable)) {
                 try {
@@ -388,13 +374,6 @@ function plugin_init_reservafrota(): void
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/maintenance\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/maintenance\.form\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/sheetsync\.php$#', $auth);
-        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/ajax/feed\.php$#', $auth);
-        // Feed ICS público: o token na URL é a credencial (Google Agenda não loga).
-        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts(
-            'reservafrota',
-            '#^/front/ical\.php$#',
-            \Glpi\Http\Firewall::STRATEGY_NO_CHECK
-        );
     }
 }
 
