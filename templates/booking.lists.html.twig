@@ -44,6 +44,15 @@
             {% endif %}
         </section>
 
+        <section class="reservafrota-blist-col col-arrived" data-status-group="arrived">
+            <header class="reservafrota-blist-head"><i class="ti ti-flag-check"></i> {{ __('Concluídos', 'reservafrota') }} <span class="reservafrota-blist-count">{{ blist.arrived|length }}</span></header>
+            {% if blist.arrived is empty %}
+                <p class="reservafrota-blist-empty">{{ __('Nenhum concluído.', 'reservafrota') }}</p>
+            {% else %}
+                {% for b in blist.arrived %}{% include '@reservafrota/booking.row.html.twig' with {'b': b, 'web_dir': web_dir, 'can_approve': can_approve, 'csrf': csrf} %}{% endfor %}
+            {% endif %}
+        </section>
+
         <section class="reservafrota-blist-col col-rejected" data-status-group="rejected">
             <header class="reservafrota-blist-head"><i class="ti ti-circle-x"></i> {{ __('Recusados / Cancelados', 'reservafrota') }} <span class="reservafrota-blist-count">{{ blist.rejected|length + blist.cancelled|length }}</span></header>
             {% if blist.rejected is empty and blist.cancelled is empty %}

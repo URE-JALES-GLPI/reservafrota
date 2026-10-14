@@ -24,7 +24,7 @@
         {% if b.status == 4 and b.note %}<div class="reservafrota-blist-meta no"><i class="ti ti-info-circle"></i> {{ __('Motivo', 'reservafrota') }}: {{ b.note }}</div>{% endif %}
     </div>
     <div class="reservafrota-blist-item__side">
-        <span class="reservafrota-chip status-{{ b.status == 2 ? 'approved' : (b.status == 3 ? 'rejected' : (b.status == 4 ? 'rejected' : 'pending')) }}">{{ b.status_label }}</span>
+        <span class="reservafrota-chip status-{{ b.status == 2 ? 'approved' : (b.status == 3 ? 'rejected' : (b.status == 4 ? 'rejected' : (b.status == 5 ? 'arrived' : 'pending'))) }}">{{ b.status_label }}</span>
 
         {% if b.has_sheet %}
             <div class="reservafrota-blist-actions">

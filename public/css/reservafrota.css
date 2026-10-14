@@ -909,8 +909,9 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-notify .ti { font-size: 1.2rem; }
 
 .reservafrota-blist-cols {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; align-items: start;
 }
+@media (max-width: 1100px) { .reservafrota-blist-cols { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 900px) { .reservafrota-blist-cols { grid-template-columns: 1fr; } }
 .reservafrota-blist-col {
     background: var(--cb-surface, #fff); border: 1px solid var(--cb-border);
