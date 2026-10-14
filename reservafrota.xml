@@ -2,7 +2,7 @@
    <name>[URE] Reserva de Frota</name>
    <key>reservafrota</key>
    <state>stable</state>
-   <logo>icon.png</logo>
+   <logo>logo.png</logo>
    <description>
       <short>
          <pt_BR>Reserva de veiculos da frota com aprovação do administrador.</pt_BR>

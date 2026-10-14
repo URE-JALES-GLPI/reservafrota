@@ -409,10 +409,6 @@ function plugin_version_reservafrota(): array
         'author'       => 'Aryan Lourenço Ferrari',
         'license'      => 'MIT',
         'homepage'     => '',
-        // Ícone exibido na lista de plugins (Configurar > Plugins) quando o
-        // GLPI renderiza o logo a partir dos metadados. URL montada em tempo
-        // de execução para funcionar com GLPI em subdiretório.
-        'logo'         => plugin_reservafrota_webdir() . '/icon.png',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_RESERVAFROTA_MIN_GLPI_VERSION,
