@@ -1,7 +1,8 @@
 <root>
-   <name>Reserva de Frota</name>
+   <name>[URE] Reserva de Frota</name>
    <key>reservafrota</key>
    <state>stable</state>
+   <logo>icon.png</logo>
    <description>
       <short>
          <pt_BR>Reserva de veiculos da frota com aprovação do administrador.</pt_BR>
@@ -13,7 +14,7 @@
       </long>
    </description>
    <authors>
-      <author>Fox</author>
+       <author>Aryan Lourenço Ferrari</author>
    </authors>
     <versions>
        <version>
