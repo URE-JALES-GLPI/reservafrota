@@ -11,6 +11,7 @@ use GlpiPlugin\Reservafrota\Driver;
 use GlpiPlugin\Reservafrota\Maintenance;
 use GlpiPlugin\Reservafrota\MaintenancePlan;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
+use GlpiPlugin\Reservafrota\SheetSync;
 
 /**
  * Instalação: cria as tabelas e configura permissões.
@@ -447,4 +448,54 @@ function plugin_reservafrota_uninstall(): bool
     } catch (\Throwable $e) {}
 
     return true;
+}
+
+/**
+ * Cartão na página inicial do GLPI (hook display_central) — só para gestor.
+ *
+ * Exibe o estado da integração com o Sheets e dois botões lado a lado:
+ * "Sincronizar agora" (POST que roda o sync e volta para a central) e
+ * "Integração Sheets" (link para a página de sincronização).
+ * O hook é chamado dentro de um elemento <table>, por isso a saída é <tr>.
+ */
+function plugin_reservafrota_display_central(): void
+{
+    try {
+        if (!Booking::canApprove()) {
+            return;
+        }
+        $cfg = SheetSync::getConfig();
+    } catch (\Throwable $e) {
+        return;
+    }
+
+    $web = plugin_reservafrota_webdir();
+    $last = $cfg['last_sync'] ?? null;
+    if (is_string($last) && strlen($last) >= 16) {
+        $lastTxt = substr($last, 8, 2) . '/' . substr($last, 5, 2)
+            . ' ' . substr($last, 11, 5)
+            . ' (linha ' . (int) ($cfg['last_row'] ?? 1) . ')';
+    } else {
+        $lastTxt = __('nenhuma leitura ainda', 'reservafrota');
+    }
+    $stateTxt = !empty($cfg['enabled'])
+        ? __('Automática ativa', 'reservafrota')
+        : __('Automática pausada', 'reservafrota');
+
+    echo "<tr><td colspan='2'>";
+    echo "<div class='card mb-3'><div class='card-body d-flex flex-wrap align-items-center gap-3'>";
+    echo "<span class='avatar avatar-md bg-blue-lt'><i class='ti ti-table-import'></i></span>";
+    echo "<div class='flex-fill'><strong>" . __('Reserva de Frota — Integração Sheets', 'reservafrota') . "</strong>";
+    echo "<div class='text-muted small'>" . htmlspecialchars($stateTxt) . ' · '
+        . __('Última leitura:', 'reservafrota') . ' ' . htmlspecialchars($lastTxt) . "</div></div>";
+    echo "<form method='post' action='" . htmlspecialchars($web) . "/front/sheetsync.php' class='m-0'>";
+    echo "<input type='hidden' name='_glpi_csrf_token' value='" . htmlspecialchars((string) Session::getNewCSRFToken()) . "'>";
+    echo "<input type='hidden' name='back' value='central'>";
+    echo "<button type='submit' name='sync_now' value='1' class='btn btn-primary'>"
+        . "<i class='ti ti-refresh'></i> " . __('Sincronizar agora', 'reservafrota') . "</button>";
+    echo "</form>";
+    echo "<a class='btn btn-outline-secondary' href='" . htmlspecialchars($web) . "/front/sheetsync.php'>"
+        . "<i class='ti ti-settings'></i> " . __('Integração Sheets', 'reservafrota') . "</a>";
+    echo "</div></div>";
+    echo "</td></tr>";
 }
