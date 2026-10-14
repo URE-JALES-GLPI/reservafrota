@@ -7,8 +7,6 @@ use Glpi\Application\View\TemplateRenderer;
 // Integração Sheets — somente gestor (quem pode aprovar).
 Session::checkRight(Booking::$rightname, Booking::APPROVE);
 
-global $CFG_GLPI;
-
 $feedback = null;
 
 // ---- Ações POST (redirect-after-POST para não reenviar no refresh) ----
@@ -28,9 +26,9 @@ if (isset($_POST['save_cfg'])) {
     } else {
         Session::addMessageAfterRedirect((string) ($res['message'] ?? __('Falha na sincronização.', 'reservafrota')), false, ERROR);
     }
-    // Vindo do cartão da página inicial: volta para a central em vez daqui.
-    if (($_POST['back'] ?? '') === 'central') {
-        Html::redirect($CFG_GLPI['root_doc'] . '/central.php');
+    // Vindo do calendário: volta para lá em vez de ficar aqui.
+    if (($_POST['back'] ?? '') === 'calendar') {
+        Html::redirect(plugin_reservafrota_webdir() . '/front/calendar.php');
     }
     Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
 } elseif (isset($_POST['reprocess'])) {

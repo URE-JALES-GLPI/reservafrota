@@ -34,6 +34,14 @@
                 <a class="reservafrota-pill" href="{{ web_dir }}/front/analytics.php"><i class="ti ti-chart-pie"></i> {{ __('Análise', 'reservafrota') }}</a>
             {% endif %}
             <a class="reservafrota-pill" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+            {% if can_approve %}
+                <form method="post" action="{{ web_dir }}/front/sheetsync.php" style="display:inline;margin:0;">
+                    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="back" value="calendar">
+                    <button type="submit" name="sync_now" value="1" class="reservafrota-pill" title="{{ sync_last ? __('Última leitura:', 'reservafrota') ~ ' ' ~ sync_last|slice(8,2) ~ '/' ~ sync_last|slice(5,2) ~ ' ' ~ sync_last|slice(11,5) : __('Planilha ainda sem leitura', 'reservafrota') }}"><i class="ti ti-refresh"></i> {{ __('Sincronizar', 'reservafrota') }}</button>
+                </form>
+                <a class="reservafrota-pill" href="{{ web_dir }}/front/sheetsync.php"><i class="ti ti-table-import"></i> {{ __('Integração', 'reservafrota') }}</a>
+            {% endif %}
         </nav>
     </div>
 

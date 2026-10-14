@@ -4,6 +4,7 @@ use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Reservafrota\Booking;
 use GlpiPlugin\Reservafrota\Car;
 use GlpiPlugin\Reservafrota\Driver;
+use GlpiPlugin\Reservafrota\SheetSync;
 
 
 Session::checkRight(Booking::$rightname, READ);
@@ -75,6 +76,17 @@ try {
     $monthStats = ['pending' => 0, 'approved' => 0, 'arrived' => 0, 'conflict' => 0, 'cancelled' => 0];
 }
 
+// Última leitura do Sheets (tooltip do botão Sincronizar, só gestor usa).
+$syncLast = null;
+try {
+    $syncCfg = SheetSync::getConfig();
+    if (!empty($syncCfg['last_sync'])) {
+        $syncLast = (string) $syncCfg['last_sync'];
+    }
+} catch (\Throwable $e) {
+    $syncLast = null;
+}
+
 TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'web_dir'            => plugin_reservafrota_webdir(),
     'month'              => $month,
@@ -100,6 +112,7 @@ TemplateRenderer::getInstance()->display('@reservafrota/calendar.html.twig', [
     'current_driver_id'  => Driver::getDriverIdForUser((int) Session::getLoginUserID()),
     'month_stats'        => $monthStats,
     'month_label'        => $month,
+    'sync_last'          => $syncLast,
 ]);
 
 if ($used_help) {

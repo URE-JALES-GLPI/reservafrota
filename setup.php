@@ -343,10 +343,6 @@ function plugin_init_reservafrota(): void
     $PLUGIN_HOOKS['helpdesk_menu_entry']['reservafrota']      = '/front/calendar.php';
     $PLUGIN_HOOKS['helpdesk_menu_entry_icon']['reservafrota'] = 'ti ti-car';
 
-    // Cartão na página inicial (central) com "Sincronizar agora" — só gestor
-    // (a própria função filtra por Booking::canApprove()).
-    $PLUGIN_HOOKS[Hooks::DISPLAY_CENTRAL]['reservafrota'] = 'plugin_reservafrota_display_central';
-
     // GLPI 11: por padrão os scripts de plugin exigem a interface central.
     // Liberamos as páginas usadas pelo funcionário (interface simplificada)
     // para qualquer usuário autenticado — a permissão real continua sendo
