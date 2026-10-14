@@ -382,7 +382,7 @@ class SheetSync extends CommonDBTM
         // Usa a ordem documentada em vez do mapa vazio:
         // Carimbo | Código | Data/Hora | Local | KM | Tipo | Motorista | Obs.
         if ($map['code'] < 0 && $map['event'] < 0 && $map['km'] < 0 && $map['driver'] < 0 && $map['when'] < 0 && $map['local'] < 0) {
-            $map = ['code' => 1, 'event' => 5, 'km' => 4, 'driver' => 6, 'obs' => 7, 'ts' => 0, 'when' => 2, 'local' => 3, 'marker' => -1, 'datepart' => -1, 'timepart' => -1];
+            $map = ['code' => 1, 'event' => 6, 'km' => 5, 'driver' => 7, 'obs' => 8, 'ts' => 0, 'when' => -1, 'local' => 4, 'marker' => -1, 'datepart' => 2, 'timepart' => 3];
         }
         $dataStart = 0;
         if ($map['code'] >= 0) {
