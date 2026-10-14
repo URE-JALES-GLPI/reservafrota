@@ -322,6 +322,27 @@ function plugin_init_reservafrota(): void
                     }
                 } catch (\Throwable $e) {}
             }
+            // Nome exibido em Configurar > Plugins vem do banco (glpi_plugins),
+            // gravado na instalação — se o nome mudou depois (ex.: prefixo
+            // [URE]), atualiza sozinho no primeiro carregamento.
+            try {
+                if ($db->tableExists('glpi_plugins') && $db->fieldExists('glpi_plugins', 'name')) {
+                    $wantName = (string) (plugin_version_reservafrota()['name'] ?? '');
+                    if ($wantName !== '') {
+                        $plugRow = $db->request([
+                            'SELECT' => ['name'],
+                            'FROM'   => 'glpi_plugins',
+                            'WHERE'  => ['directory' => 'reservafrota'],
+                            'LIMIT'  => 1,
+                        ])->current();
+                        if (is_array($plugRow) && ($plugRow['name'] ?? null) !== $wantName) {
+                            $db->update('glpi_plugins', ['name' => $wantName], [
+                                'directory' => 'reservafrota',
+                            ]);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {}
         }
     } catch (\Throwable $e) {
         // Silencioso: instalação/migração completa será feita em Configurar > Plugins > Instalar/Atualizar
