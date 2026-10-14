@@ -60,6 +60,38 @@
         if (!sameDay) { return '<span class="reservafrota-multiday">' + esc(txt) + '</span>'; }
         return esc(txt);
     }
+    function gcalStamp(s) {
+        // "2026-10-09 08:00:00" -> "20261009T080000" (hora local, como o Google espera)
+        var m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+        if (!m) { return ''; }
+        return m[1] + m[2] + m[3] + 'T' + m[4] + m[5] + (m[6] || '00');
+    }
+    function gcalUrl(b) {
+        var start = gcalStamp(b.departure);
+        if (!start) { return '#'; }
+        var end = gcalStamp(b.arrival);
+        if (!end) {
+            var d = new Date(String(b.departure || '').replace(' ', 'T'));
+            if (!isNaN(d.getTime())) {
+                d = new Date(d.getTime() + 3600000);
+                end = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
+                    + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+            } else {
+                end = start;
+            }
+        }
+        var title = 'Reserva #' + (b.request_code || b.id) + ' — ' + (b.car || '');
+        var details = [];
+        if (b.user) { details.push('Solicitante: ' + b.user); }
+        if (b.driver) { details.push('Motorista: ' + b.driver); }
+        if (b.status_label) { details.push('Status: ' + b.status_label); }
+        if (b.request_code || b.id) { details.push('Código: ' + (b.request_code || b.id)); }
+        return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+            + '&text=' + encodeURIComponent(title)
+            + '&dates=' + start + '/' + end
+            + '&details=' + encodeURIComponent(details.join('\n'))
+            + '&location=' + encodeURIComponent(b.destination || '');
+    }
 
     function init() {
         var root = document.getElementById('reservafrota-calendar');
@@ -510,6 +542,9 @@
                     ? '<a class="reservafrota-open" href="' + bform.replace('booking.form.php', 'sheet.php') + '?id=' + b.id + '"><i class="ti ti-download"></i> Baixar folha</a>'
                     : '';
                 var openUrl = bform ? (bform + '?id=' + b.id) : '';
+                var gcalBtn = ((b.status === 4 || b.status === 5) || !b.departure)
+                    ? ''
+                    : '<a class="reservafrota-open" target="_blank" rel="noopener" href="' + gcalUrl(b) + '"><i class="ti ti-calendar-plus"></i> Google Agenda</a>';
                 var hasObs = (b.status === 5 && b.obs);
                 return '<div class="reservafrota-day-item s-' + (b.status || 1) + ((b.conflict && (b.status || 1) !== 2) ? ' is-conflict' : '') + (hasObs ? ' has-obs' : '') + '"'
                     + (openUrl ? ' data-open="' + openUrl + '" style="cursor:pointer;"' : '')
@@ -528,7 +563,7 @@
                     + (b.status === 4 && b.note ? '<div class="reservafrota-day-item__reason"><i class="ti ti-info-circle"></i> Motivo: ' + esc(b.note) + '</div>' : '')
                     + (hasObs ? '<div class="reservafrota-day-item__reason obs"><i class="ti ti-message-circle"></i> Observação: ' + esc(b.obs) + '</div>' : '')
                     + '</div>'
-                    + '<div class="reservafrota-day-item__actions">' + sheetBtn + cancelBtn + uploadSheetBtn
+                    + '<div class="reservafrota-day-item__actions">' + sheetBtn + gcalBtn + cancelBtn + uploadSheetBtn
                     + ((b.conflict_with && b.conflict_with.length) ? '<button type="button" class="reservafrota-btn-conflict" data-cb-conflicts="' + idx + '"><i class="ti ti-alert-triangle"></i> Ver conflito</button>' : '')
                     + '</div>'
                     + '</div>';

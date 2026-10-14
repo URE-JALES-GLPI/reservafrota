@@ -240,6 +240,19 @@ function plugin_reservafrota_install(): bool
         $DB->doQuery("ALTER TABLE `$sheetLog`
             ADD COLUMN `local` varchar(255) NOT NULL DEFAULT '' AFTER `obs`");
     }
+    // ---- Tokens do feed ICS por usuário (Google Agenda) ----
+    $feedTable = 'glpi_plugin_reservafrota_feeds';
+    if (!$DB->tableExists($feedTable)) {
+        $DB->doQuery("CREATE TABLE `$feedTable` (
+            `id`            int unsigned NOT NULL AUTO_INCREMENT,
+            `users_id`      int unsigned NOT NULL DEFAULT 0,
+            `token`         varchar(64)  NOT NULL DEFAULT '',
+            `date_creation` timestamp    NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `users_id` (`users_id`),
+            KEY `token` (`token`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
     // ---- Diário de bordo: uma linha por parada (saída/chegada) ----
     $legsTable = 'glpi_plugin_reservafrota_legs';
     if (!$DB->tableExists($legsTable)) {
@@ -430,7 +443,8 @@ function plugin_reservafrota_uninstall(): bool
     }
 
     // Remove as tabelas.
-    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(), Maintenance::getTable(), 'glpi_plugin_reservafrota_sheetcfg', 'glpi_plugin_reservafrota_sheetlog', 'glpi_plugin_reservafrota_legs'] as $table) {
+    foreach ([Booking::getTable(), Car::getTable(), Driver::getTable(), MaintenancePlan::getTable(),            Maintenance::getTable(), 'glpi_plugin_reservafrota_sheetcfg', 'glpi_plugin_reservafrota_sheetlog',
+           'glpi_plugin_reservafrota_legs', 'glpi_plugin_reservafrota_feeds'] as $table) {
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `$table`");
         }

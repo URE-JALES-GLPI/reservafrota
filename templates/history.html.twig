@@ -58,6 +58,7 @@
                 </select>
             </label>
             <button type="button" id="cb-h-clear" class="reservafrota-clearbtn" style="align-self:flex-end;"><i class="ti ti-eraser"></i> {{ __('Limpar', 'reservafrota') }}</button>
+            <button type="button" id="cb-h-gcal" class="reservafrota-clearbtn" style="align-self:flex-end;" data-feed="{{ web_dir }}/ajax/feed.php" title="{{ __('Copiar o link do calendário para assinar no Google Agenda', 'reservafrota') }}"><i class="ti ti-calendar-plus"></i> {{ __('Google Agenda', 'reservafrota') }}</button>
         </div>
 
         {% if history is empty %}
@@ -102,3 +103,27 @@
         {% endif %}
     </div>
 </div>
+<script>
+(function () {
+    var btn = document.getElementById('cb-h-gcal');
+    if (!btn) { return; }
+    btn.addEventListener('click', function () {
+        fetch(btn.dataset.feed + '?action=get', {credentials: 'same-origin'})
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data || !data.success || !data.path) {
+                    alert("{{ __('Não foi possível gerar o link do calendário.', 'reservafrota') }}");
+                    return;
+                }
+                var url = new URL(data.path, window.location.href).href;
+                var hint = "{{ __('Link copiado! No Google Agenda: Outros calendários (+) > De URL > colar.', 'reservafrota') }}";
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(function () { alert(hint); }, function () { prompt(url, url); });
+                } else {
+                    prompt(url, url);
+                }
+            })
+            .catch(function () { alert("{{ __('Não foi possível gerar o link do calendário.', 'reservafrota') }}"); });
+    });
+})();
+</script>
