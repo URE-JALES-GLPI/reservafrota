@@ -313,10 +313,10 @@
                 var isPast = dateStr < todayCompare;
 
                 var chips = '';
-                if (isPast) {
-                    chips = '<span class="reservafrota-evt s-past" title="Data já passou"><i class="ti ti-ban" style="font-size:0.7rem;"></i> Indisponível</span>';
-                } else if (items.length === 0) {
-                    chips = '<span class="reservafrota-evt s-empty" title="Clique para reservar"><i class="ti ti-plus" style="font-size:0.7rem;"></i> Disponível</span>';
+                if (items.length === 0) {
+                    chips = isPast
+                        ? '<span class="reservafrota-evt s-past" title="Data já passou"><i class="ti ti-ban" style="font-size:0.7rem;"></i> Indisponível</span>'
+                        : '<span class="reservafrota-evt s-empty" title="Clique para reservar"><i class="ti ti-plus" style="font-size:0.7rem;"></i> Disponível</span>';
                 } else {
                     items.slice(0, 4).forEach(function (b) {
                         var hasCar = b.car_id && b.car && b.car !== 'A designar';
