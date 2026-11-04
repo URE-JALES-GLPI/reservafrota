@@ -928,7 +928,9 @@ class SheetSync extends CommonDBTM
         if ($code === '' || $url === '' || $secret === '') {
             return '';
         }
-        return $url . '?v=' . rawurlencode($code) . '&t=' . self::formToken($code, $secret);
+        // Um único parâmetro: sem "&", o e-mail não tem como corromper o link
+        // (o GLPI pode codificá-lo como "&#38;", e o "#" corta o token).
+        return $url . '?v=' . $code . '-' . self::formToken($code, $secret);
     }
 
     /**

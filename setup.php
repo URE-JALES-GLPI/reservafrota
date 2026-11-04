@@ -131,6 +131,13 @@ function plugin_init_reservafrota(): void
                         WHERE `request_code` = '' OR `request_code` LIKE 'RF-%'");
                 } catch (\Throwable $e) {}
             }
+            if ($db->tableExists($bkTable) && !$db->fieldExists($bkTable, 'whatsapp_error')) {
+                try {
+                    $db->doQuery("ALTER TABLE `$bkTable`
+                        ADD COLUMN `whatsapp_sent_at` datetime DEFAULT NULL,
+                        ADD COLUMN `whatsapp_error` varchar(255) NOT NULL DEFAULT ''");
+                } catch (\Throwable $e) {}
+            }
             if ($db->tableExists($bkTable) && !$db->fieldExists($bkTable, 'km_initial')) {
                 try {
                     $db->doQuery("ALTER TABLE `$bkTable`

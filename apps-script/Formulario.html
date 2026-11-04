@@ -289,18 +289,32 @@
   el('confirmarBtn').addEventListener('click', function () { enviar(true); });
   el('novo').addEventListener('click', reiniciar);
 
-  google.script.url.getLocation(function (loc) {
-    var p = loc.parameter || {};
-    estado.codigo = p.v || '';
-    // Alguns e-mails entregam o "&" do link como "&amp;".
-    estado.token = p.t || p['amp;t'] || '';
+  /**
+   * Formato atual: ?v=12-abc. Links antigos: ?v=12&t=abc, inclusive quando o
+   * e-mail entregou o "&" como "&#38;", caso em que o token cai depois do "#".
+   */
+  function lerLink(p, hash) {
+    var v = String(p.v || '').trim();
+    var junto = /^#?0*(\d+)-([0-9a-f]+)$/i.exec(v);
+    if (junto) { return { codigo: junto[1], token: junto[2] }; }
+    var noHash = /(?:^|[;&])t=([0-9a-f]+)/i.exec(String(hash || ''));
+    return { codigo: v, token: String(p.t || '') || (noHash ? noHash[1] : '') };
+  }
+
+  var inicial = <?!= parametros ?>;
+  function iniciar(hash) {
+    var link = lerLink(inicial, hash);
+    estado.codigo = link.codigo;
+    estado.token = link.token;
     estado.idEnvio = novoId();
     if (!estado.codigo || !estado.token) {
-      falhar('Abra este formulário pelo link recebido na aprovação da viagem.');
+      falhar('Abra este formulário pelo link recebido na aprovação da viagem. Se o erro continuar, copie o link na página da reserva, no GLPI.');
       return;
     }
     consultar('');
-  });
+  }
+  // O hash só existe no navegador e nunca chega ao doGet.
+  google.script.url.getLocation(function (loc) { iniciar(loc.hash); });
 })();
 </script>
 </body>

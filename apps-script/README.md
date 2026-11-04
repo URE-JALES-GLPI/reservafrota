@@ -88,11 +88,24 @@ validação na hora.
 - **Viagem que ainda não chegou ao Google:** o formulário aceita com aviso, e o
   GLPI faz a conferência na sincronização.
 
+## Envio por WhatsApp
+
+Se o plugin `whatsappsimples` estiver ativo, o motorista recebe o link ao aprovar
+a viagem. Só é preciso ter o telefone certo no cadastro do motorista. O resultado
+aparece junto do link na reserva, onde o gestor também pode reenviar.
+
+O envio não deve abrir chat na fila de atendimento: o ID da mensagem fica na
+tabela do `whatsappsimples`, com `chats_id = 0`, para o webhook ignorar o eco. Se o
+motorista responder, a resposta abre um chat pendente, como qualquer contato.
+
 ## Atualizar o script
 
 Depois de alterar o código, use **Implantar > Gerenciar implantações > lápis >
 Versão: Nova versão**. Assim a URL não muda. Criar uma nova implantação gera
 outra URL, e os links já enviados param de funcionar.
+
+Publique o script antes de atualizar o plugin no servidor, porque o formato atual
+do link (`?v=12-abc`) só é entendido pela versão nova do script.
 
 Não execute outro projeto com outro segredo: os links são calculados a partir
 dele, e os já enviados deixariam de valer.

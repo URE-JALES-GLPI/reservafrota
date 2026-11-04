@@ -2,6 +2,7 @@
 
 use GlpiPlugin\Reservafrota\Booking;
 use GlpiPlugin\Reservafrota\Car;
+use GlpiPlugin\Reservafrota\WhatsappNotifier;
 use Glpi\Application\View\TemplateRenderer;
 
 $booking = new Booking();
@@ -99,7 +100,25 @@ if (isset($_POST['add'])) {
     if ($booking->getFromDB((int) $_POST['id'])) {
         $carId = !empty($_POST['plugin_reservafrota_cars_id']) ? (int) $_POST['plugin_reservafrota_cars_id'] : null;
         $driverId = isset($_POST['plugin_reservafrota_drivers_id']) && $_POST['plugin_reservafrota_drivers_id'] !== '' ? (int) $_POST['plugin_reservafrota_drivers_id'] : null;
-        $booking->approve($_POST['comment_validation'] ?? '', $carId, $driverId);
+        if ($booking->approve($_POST['comment_validation'] ?? '', $carId, $driverId) && $booking->getFromDB((int) $_POST['id'])) {
+            $wa = WhatsappNotifier::sendTripLink($booking);
+            if (!$wa['skipped']) {
+                Session::addMessageAfterRedirect($wa['message'], false, $wa['ok'] ? INFO : WARNING);
+            }
+        }
+    }
+    Html::back();
+
+} elseif (isset($_POST['resend_whatsapp'])) {
+    // Reenvio do link ao motorista (só viagem aprovada).
+    Session::checkRight(Booking::$rightname, Booking::APPROVE);
+    if ($booking->getFromDB((int) $_POST['id']) && (int) $booking->fields['status'] === Booking::STATUS_APPROVED) {
+        $wa = WhatsappNotifier::sendTripLink($booking);
+        Session::addMessageAfterRedirect(
+            $wa['skipped'] ? __('O envio por WhatsApp não está disponível.', 'reservafrota') : $wa['message'],
+            false,
+            $wa['ok'] ? INFO : WARNING
+        );
     }
     Html::back();
 

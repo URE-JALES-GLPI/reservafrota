@@ -168,6 +168,11 @@ function plugin_reservafrota_install(): bool
     }
 
     // Migração: KM inicial do veículo, informado na saída (Forms/Sheets).
+    if ($DB->tableExists($bookings) && !$DB->fieldExists($bookings, 'whatsapp_error')) {
+        $DB->doQuery("ALTER TABLE `$bookings`
+            ADD COLUMN `whatsapp_sent_at` datetime DEFAULT NULL,
+            ADD COLUMN `whatsapp_error` varchar(255) NOT NULL DEFAULT ''");
+    }
     if ($DB->tableExists($bookings) && !$DB->fieldExists($bookings, 'km_initial')) {
         $DB->doQuery("ALTER TABLE `$bookings`
             ADD COLUMN `km_initial` int unsigned DEFAULT NULL AFTER `arrival_obs`");

@@ -9,6 +9,14 @@
         <a class="reservafrota-back" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-arrow-left"></i> {{ __('Voltar para o calendário', 'reservafrota') }}</a>
     </div>
 
+    {# Fora do formulário principal: não pode ser nele o botão acionado pelo Enter. #}
+    {% if driver_form_url and whatsapp_available and can_approve %}
+        <form id="rf-resend-whatsapp" method="post" action="{{ web_dir }}/front/booking.form.php">
+            <input type="hidden" name="id" value="{{ item.fields['id'] }}">
+            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+        </form>
+    {% endif %}
+
     <form method="post" action="{{ web_dir }}/front/booking.form.php">
 
         {% if not is_new %}
@@ -34,8 +42,20 @@
         {% if driver_form_url %}
             <div class="mb-3">
                 <label class="form-label" for="rf-driver-form-url">{{ __('Link do formulário de saída/chegada', 'reservafrota') }}</label>
-                <input type="text" class="form-control" id="rf-driver-form-url" value="{{ driver_form_url }}" readonly onclick="this.select()">
-                <small class="text-muted">{{ __('Envie ao motorista. Cada viagem tem seu próprio link.', 'reservafrota') }}</small>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="rf-driver-form-url" value="{{ driver_form_url }}" readonly onclick="this.select()">
+                    <button type="button" class="btn btn-outline-secondary" onclick="var i=document.getElementById('rf-driver-form-url');i.select();if(navigator.clipboard){navigator.clipboard.writeText(i.value)}else{document.execCommand('copy')}this.textContent='{{ __('Copiado', 'reservafrota')|e('js') }}';"><i class="ti ti-copy"></i> {{ __('Copiar', 'reservafrota') }}</button>
+                    {% if whatsapp_available and can_approve %}
+                        <button type="submit" form="rf-resend-whatsapp" name="resend_whatsapp" value="1" class="btn btn-outline-secondary"><i class="ti ti-brand-whatsapp"></i> {{ item.fields['whatsapp_sent_at'] ?? null ? __('Reenviar', 'reservafrota') : __('Enviar', 'reservafrota') }}</button>
+                    {% endif %}
+                </div>
+                {% if whatsapp_available and can_approve and (item.fields['whatsapp_error'] ?? '') %}
+                    <small style="color:#d6336c;"><i class="ti ti-alert-triangle"></i> {{ item.fields['whatsapp_error'] }}</small>
+                {% elseif whatsapp_available and (item.fields['whatsapp_sent_at'] ?? null) %}
+                    <small class="text-muted"><i class="ti ti-check"></i> {{ __('Enviado por WhatsApp em', 'reservafrota') }} {{ item.fields['whatsapp_sent_at'] }}</small>
+                {% else %}
+                    <small class="text-muted">{{ __('Cada viagem tem seu próprio link.', 'reservafrota') }}</small>
+                {% endif %}
             </div>
         {% endif %}
 

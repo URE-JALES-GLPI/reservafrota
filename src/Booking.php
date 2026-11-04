@@ -2316,6 +2316,7 @@ class Booking extends CommonDBTM
             'driver_form_url' => (!$this->isNewItem() && (int) ($this->fields['status'] ?? 0) === self::STATUS_APPROVED)
                 ? SheetSync::getDriverFormLink((string) ($this->fields['request_code'] ?? ''))
                 : '',
+            'whatsapp_available' => WhatsappNotifier::isAvailable(),
             'current_driver_id' => $this->isNewItem()
                 ? Driver::getDriverIdForUser((int) Session::getLoginUserID())
                 : 0,

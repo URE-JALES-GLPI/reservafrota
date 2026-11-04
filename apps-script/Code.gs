@@ -33,8 +33,15 @@ function configurar() {
 
 // ================= Pontos de entrada =================
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Formulario')
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  var pagina = HtmlService.createTemplateFromFile('Formulario');
+  // "<" escapado: o valor vem da URL e entra dentro de um <script>.
+  pagina.parametros = JSON.stringify({
+    v: String(p.v || ''),
+    t: String(p.t || p['amp;t'] || ''),
+  }).replace(/</g, '\\u003c');
+  return pagina.evaluate()
     .setTitle('Registro de viagem')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
