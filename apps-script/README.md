@@ -85,6 +85,11 @@ validação na hora.
   mostrado aos próximos motoristas.
 - **Lançamento atrasado:** se outra viagem já subiu o KM do carro, o registro é
   recusado, e o gestor pode reprocessar.
+- **Fim da viagem:** ao registrar a chegada na URE, o link passa a mostrar
+  "viagem finalizada", e as repetições de outros dias continuam abertas. Se o GLPI
+  recusar essa chegada na sincronização, o link volta a aceitar registros. O mesmo
+  aviso aparece para viagens concluídas direto no GLPI nos últimos 180 dias, assim
+  que ele enviar os dados.
 - **Viagem que ainda não chegou ao Google:** o formulário aceita com aviso, e o
   GLPI faz a conferência na sincronização.
 

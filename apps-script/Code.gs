@@ -66,6 +66,7 @@ function doPost(e) {
     var cursor = Number(dados.cursor) || 0;
     gravarJson_('DADOS', {
       trips: dados.trips || [],
+      closed: dados.closed || [],
       cars: dados.cars || {},
       drivers: dados.drivers || [],
       max_jump: Number(dados.max_jump) || 0,
@@ -74,6 +75,9 @@ function doPost(e) {
     // O GLPI manda a partir de agora, exceto nas linhas que ainda não leu.
     var pendentes = lerJson_('PENDENTES', []).filter(function (p) { return p.row > cursor; });
     gravarJson_('PENDENTES', pendentes);
+    // Mesma regra para os encerramentos: o que o GLPI já leu passa a valer pela
+    // lista "closed". Se ele recusou a chegada, a viagem volta a aceitar registro.
+    gravarJson_('FINALIZADAS', lerJson_('FINALIZADAS', []).filter(function (f) { return f.row > cursor; }));
     return respostaJson_({ ok: true, trips: (dados.trips || []).length });
   } finally {
     trava.releaseLock();
@@ -95,7 +99,7 @@ function consultar(codigoBruto, token, dataIso) {
   var hoje = Utilities.formatDate(new Date(), FUSO, 'yyyy-MM-dd');
   var data = dataValida_(dataIso) ? dataIso : hoje;
   var dados = lerJson_('DADOS', { trips: [], cars: {}, drivers: [], max_jump: 0, sheet: '' });
-  var r = resolverViagem_(dados, codigo, data);
+  var r = resolverViagem_(dados, codigo, data, lerJson_('FINALIZADAS', []));
   var resposta = {
     ok: true,
     codigo: codigo,
@@ -144,7 +148,11 @@ function registrar(f) {
   try {
     var dados = lerJson_('DADOS', { trips: [], cars: {}, drivers: [], max_jump: 0, sheet: '' });
     var pendentes = lerJson_('PENDENTES', []);
-    var r = resolverViagem_(dados, codigo, entrada.data);
+    var finalizadas = lerJson_('FINALIZADAS', []);
+    var r = resolverViagem_(dados, codigo, entrada.data, finalizadas);
+    if (r.situacao === 'finalizada') {
+      return { ok: false, finalizada: true, erro: r.mensagem };
+    }
     if (r.situacao === 'outra_data' || r.situacao === 'ambigua') {
       return { ok: false, erro: r.mensagem };
     }
@@ -187,10 +195,21 @@ function registrar(f) {
       pendentes.push({ row: linha, car: carId, km: entrada.km });
       gravarJson_('PENDENTES', pendentes);
     }
+    var finalizou = entrada.tipo === 'Chegada' && ehLocalBase_(entrada.local);
+    if (finalizou) {
+      finalizadas.push({
+        row: linha,
+        code: codigo,
+        from: r.viagem ? r.viagem.from : entrada.data,
+        to: r.viagem ? (r.viagem.to || r.viagem.from) : entrada.data,
+        at: entrada.data + ' ' + entrada.hora,
+      });
+      gravarJson_('FINALIZADAS', finalizadas);
+    }
     if (f.idEnvio) {
       cache.put(idEnvio, '1', 600);
     }
-    return { ok: true, aguardaConferencia: !dentroDoLimite };
+    return { ok: true, aguardaConferencia: !dentroDoLimite, finalizou: finalizou };
   } finally {
     trava.releaseLock();
   }
@@ -198,22 +217,59 @@ function registrar(f) {
 
 // ================= Regras =================
 
-/** Mesma janela de SheetSync::findBooking: data da viagem ±1 dia. */
-function resolverViagem_(dados, codigo, data) {
-  var doCodigo = (dados.trips || []).filter(function (t) { return String(t.code) === codigo; });
-  if (doCodigo.length === 0) {
+/**
+ * Mesma janela de SheetSync::findBooking: data da viagem ±1 dia.
+ *
+ * O encerramento vale por viagem, e não por código: as repetições da semana
+ * compartilham código e link, e as dos outros dias continuam abertas.
+ */
+function resolverViagem_(dados, codigo, data, finalizadasLocais) {
+  var doCodigo = function (t) { return String(t.code) === codigo; };
+  var fechadas = (dados.closed || []).concat(finalizadasLocais || []).filter(doCodigo);
+  var mesmaViagem = function (t) {
+    return fechadas.some(function (f) { return f.from === t.from && (f.to || f.from) === (t.to || t.from); });
+  };
+  var abertas = (dados.trips || []).filter(function (t) { return doCodigo(t) && !mesmaViagem(t); });
+  var naData = function (t) { return data >= t.from && data <= (t.to || t.from); };
+  var naJanelaDe = function (t) { return data >= somarDias_(t.from, -1) && data <= somarDias_(t.to || t.from, 1); };
+  var finalizada = function (f) {
+    return { situacao: 'finalizada', mensagem: mensagemFinalizada_(codigo, f) };
+  };
+
+  var fechadasNaData = fechadas.filter(naData);
+  if (fechadasNaData.length > 0 && !abertas.some(naData)) {
+    return finalizada(fechadasNaData[fechadasNaData.length - 1]);
+  }
+  if (abertas.length === 0) {
+    if (fechadas.length > 0) {
+      return finalizada(fechadas[fechadas.length - 1]);
+    }
     return { situacao: 'sem_dados', mensagem: 'Os dados desta viagem ainda não chegaram aqui. Você pode registrar: o KM será conferido no GLPI.' };
   }
-  var naJanela = doCodigo.filter(function (t) {
-    return data >= somarDias_(t.from, -1) && data <= somarDias_(t.to || t.from, 1);
-  });
+  var naJanela = abertas.filter(naJanelaDe);
   if (naJanela.length === 1) {
     return { situacao: 'ok', viagem: naJanela[0] };
   }
   if (naJanela.length > 1) {
     return { situacao: 'ambigua', mensagem: 'Há mais de uma viagem com este código nesta data. Fale com o gestor.' };
   }
-  return { situacao: 'outra_data', mensagem: 'Esta viagem é de ' + formatarData_(doCodigo[0].from) + '. Confira a data informada.' };
+  var fechadasNaJanela = fechadas.filter(naJanelaDe);
+  if (fechadasNaJanela.length > 0) {
+    return finalizada(fechadasNaJanela[fechadasNaJanela.length - 1]);
+  }
+  return { situacao: 'outra_data', mensagem: 'Esta viagem é de ' + formatarData_(abertas[0].from) + '. Confira a data informada.' };
+}
+
+function mensagemFinalizada_(codigo, f) {
+  var p = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/.exec(String(f.at || ''));
+  return 'A viagem #' + codigo + ' já foi finalizada' +
+    (p ? ' em ' + formatarData_(p[1]) + ' às ' + p[2] : '') +
+    '. Este link não aceita mais registros.';
+}
+
+/** Mesma regra de SheetSync::isBaseLocal: a palavra exata "URE" no local. */
+function ehLocalBase_(local) {
+  return (' ' + normalizarTexto_(local) + ' ').indexOf(' ' + normalizarTexto_(LOCAL_BASE) + ' ') >= 0;
 }
 
 /** Maior valor entre o KM do GLPI e os registros que ele ainda não leu. */

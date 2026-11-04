@@ -32,6 +32,7 @@ class SheetSync extends CommonDBTM
     /** Janela de viagens aprovadas enviadas ao formulário web. */
     private const PUSH_DAYS_BACK    = 30;
     private const PUSH_DAYS_FORWARD = 90;
+    private const PUSH_CLOSED_DAYS_BACK = 180;
 
     private static bool $pushQueued = false;
     private static bool $pushShutdownRegistered = false;
@@ -1004,8 +1005,35 @@ class SheetSync extends CommonDBTM
             }
         }
 
+        // Viagens concluídas: o formulário troca o link por "viagem finalizada".
+        $closed = [];
+        $it = $DB->request([
+            'SELECT' => ['request_code', 'date_departure', 'date_arrival', 'date_returned'],
+            'FROM'   => Booking::getTable(),
+            'WHERE'  => [
+                'status'     => Booking::STATUS_ARRIVED,
+                'is_deleted' => 0,
+                ['date_departure' => ['>=', date('Y-m-d 00:00:00', strtotime('-' . self::PUSH_CLOSED_DAYS_BACK . ' days'))]],
+            ],
+            'ORDER'  => 'date_departure ASC',
+        ]);
+        foreach ($it as $r) {
+            $code = self::normCode((string) ($r['request_code'] ?? ''));
+            if ($code === '') {
+                continue;
+            }
+            $from = substr((string) ($r['date_departure'] ?? ''), 0, 10);
+            $closed[] = [
+                'code' => $code,
+                'from' => $from,
+                'to'   => substr((string) ($r['date_arrival'] ?? ''), 0, 10) ?: $from,
+                'at'   => substr((string) ($r['date_returned'] ?? ''), 0, 16),
+            ];
+        }
+
         return [
             'trips'    => $trips,
+            'closed'   => $closed,
             'cars'     => (object) $cars,
             'drivers'  => array_values(array_filter($drivers, static fn($n) => $n !== '')),
             'cursor'   => (int) ($cfg['last_row'] ?? 1),

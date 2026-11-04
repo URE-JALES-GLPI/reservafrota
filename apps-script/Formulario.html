@@ -98,6 +98,11 @@
     <div id="prontoMsg" class="msg sucesso" role="status"></div>
     <button type="button" id="novo">Fazer outro registro</button>
   </div>
+
+  <div id="encerrada" class="cartao" role="status" hidden>
+    <div class="carro">Viagem finalizada</div>
+    <p id="encerradaMsg" class="km"></p>
+  </div>
 </main>
 
 <script>
@@ -134,7 +139,19 @@
       .consultar(estado.codigo, estado.token, data);
   }
 
+  function encerrar(texto) {
+    mostrar('carregando', false);
+    mostrar('tela', false);
+    mostrar('pronto', false);
+    el('encerradaMsg').textContent = texto;
+    mostrar('encerrada', true);
+  }
+
   function aplicar(r) {
+    if (r.situacao === 'finalizada') {
+      encerrar(r.mensagem);
+      return;
+    }
     var primeira = !estado.info;
     estado.info = r;
     estado.localBase = r.localBase;
@@ -228,6 +245,10 @@
           return;
         }
         el('enviar').disabled = false;
+        if (r.finalizada) {
+          encerrar(r.erro);
+          return;
+        }
         if (r.precisaConfirmar) {
           el('confirmarTexto').textContent = 'Este KM está ' + km(r.salto) + ' km acima do último registrado (' + km(r.kmAtual) + '). Confira o hodômetro. Se estiver certo, confirme: o registro será conferido pelo gestor.';
           mostrar('confirmar', true);
@@ -260,6 +281,12 @@
   }
 
   function concluir(r) {
+    if (r.finalizou) {
+      encerrar(r.aguardaConferencia
+        ? 'Chegada registrada. Como o KM ficou muito acima do último, o gestor vai conferir. Se ele precisar de um novo registro, este link volta a funcionar.'
+        : 'Chegada registrada. Este link não aceita mais registros.');
+      return;
+    }
     mostrar('tela', false);
     el('prontoMsg').textContent = r.aguardaConferencia
       ? 'Registro enviado. Como o KM ficou muito acima do último, ele aguarda a conferência do gestor.'
