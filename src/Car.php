@@ -199,6 +199,10 @@ class Car extends CommonDBTM
             if (isset($this->input['km_current']) && class_exists(MaintenancePlan::class)) {
                 MaintenancePlan::checkAndNotify((int) ($this->fields['id'] ?? 0));
             }
+            // Mantém o último KM mostrado no formulário do motorista em dia.
+            if (isset($this->input['km_current'])) {
+                SheetSync::queuePush();
+            }
         } catch (\Throwable $e) {}
     }
 

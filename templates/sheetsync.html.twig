@@ -65,6 +65,38 @@
         <p class="reservafrota-hint">{{ __('Colunas no Forms (qualquer ordem, pelo nome): Código da viagem | Data/Hora do evento | Local | KM | Tipo (Saída/Chegada) | Motorista | Observação.', 'reservafrota') }}</p>
     </div>
 
+    {# ---------- Formulário do motorista (Apps Script) ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-device-mobile"></i> {{ __('Formulário do motorista', 'reservafrota') }}</h3>
+        <form method="post" action="{{ web_dir }}/front/sheetsync.php">
+            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label class="form-label" for="ss-webapp-url">{{ __('URL do app da web', 'reservafrota') }}</label>
+                    <input type="url" class="form-control" id="ss-webapp-url" name="webapp_url" value="{{ cfg.webapp_url }}" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+                <div class="col-12 col-md-8 mb-3">
+                    <label class="form-label" for="ss-webapp-secret">{{ __('Segredo', 'reservafrota') }}</label>
+                    <input type="password" class="form-control" id="ss-webapp-secret" name="webapp_secret" autocomplete="new-password" placeholder="{{ cfg.webapp_secret ? '••••••••' : '' }}">
+                    <small class="text-muted">{{ __('Gerado pela função configurar() do Apps Script. Em branco mantém o atual.', 'reservafrota') }}</small>
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                    <label class="form-label" for="ss-max-jump">{{ __('Salto máximo de KM', 'reservafrota') }}</label>
+                    <input type="number" class="form-control" id="ss-max-jump" name="max_km_jump" min="0" step="1" value="{{ cfg.max_km_jump }}">
+                    <small class="text-muted">{{ __('Acima disso, o lançamento aguarda conferência. 0 desliga.', 'reservafrota') }}</small>
+                </div>
+            </div>
+            <button type="submit" name="save_form_cfg" value="1" class="btn btn-primary"><i class="ti ti-device-floppy"></i> {{ __('Salvar e enviar dados', 'reservafrota') }}</button>
+            {% if cfg.webapp_url %}
+            <button type="submit" name="push_now" value="1" class="btn btn-outline-secondary"><i class="ti ti-cloud-upload"></i> {{ __('Enviar dados agora', 'reservafrota') }}</button>
+            {% endif %}
+        </form>
+        <p class="reservafrota-hint">
+            {{ __('Último envio', 'reservafrota') }}: {{ cfg.last_push ?: '—' }}
+            {% if cfg.last_push_error %}<br><span style="color:#d6336c;"><i class="ti ti-alert-triangle"></i> {{ cfg.last_push_error }}</span>{% endif %}
+        </p>
+    </div>
+
     {# ---------- Lançamento manual ---------- #}
     <div class="reservafrota-panel__card reservafrota-chartbox">
         <h3><i class="ti ti-plus"></i> {{ __('Lançamento manual', 'reservafrota') }}</h3>

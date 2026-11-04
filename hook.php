@@ -10,6 +10,7 @@ use GlpiPlugin\Reservafrota\Car;
 use GlpiPlugin\Reservafrota\Driver;
 use GlpiPlugin\Reservafrota\Maintenance;
 use GlpiPlugin\Reservafrota\MaintenancePlan;
+use GlpiPlugin\Reservafrota\NotificationInstaller;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 
 /**
@@ -208,6 +209,17 @@ function plugin_reservafrota_install(): bool
             `enabled`        tinyint      NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+    }
+    foreach ([
+        'webapp_url'      => "varchar(255) NOT NULL DEFAULT ''",
+        'webapp_secret'   => "varchar(255) NOT NULL DEFAULT ''",
+        'max_km_jump'     => 'int unsigned NOT NULL DEFAULT 2000',
+        'last_push'       => 'datetime DEFAULT NULL',
+        'last_push_error' => "varchar(255) NOT NULL DEFAULT ''",
+    ] as $col => $def) {
+        if (!$DB->fieldExists($sheetCfg, $col)) {
+            $DB->doQuery("ALTER TABLE `$sheetCfg` ADD COLUMN `$col` $def");
+        }
     }
     $sheetLog = 'glpi_plugin_reservafrota_sheetlog';
     if (!$DB->tableExists($sheetLog)) {
@@ -408,6 +420,8 @@ function plugin_reservafrota_install(): bool
         }
     }
 
+    NotificationInstaller::ensure();
+
     return true;
 }
 
@@ -418,6 +432,8 @@ function plugin_reservafrota_uninstall(): bool
 {
     /** @var DBmysql $DB */
     global $DB;
+
+    NotificationInstaller::remove();
 
     // Remove os direitos de perfil.
     foreach (ReservafrotaProfile::getAllRights() as $right) {

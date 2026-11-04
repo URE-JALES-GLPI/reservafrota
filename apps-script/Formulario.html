@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light; --borda: #cfd6e0; --texto: #1f2933; --fraco: #5f6c7b; --cor: #1b5fa8; --erro: #b3261e; --aviso: #8a5a00; --ok: #1a7f4b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f3f5f8; color: var(--texto); font: 16px/1.45 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 16px; }
+  h1 { margin: 4px 0 14px; font-size: 1.25rem; }
+  .cartao { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .carro { font-size: 1.1rem; font-weight: 600; }
+  .km { margin-top: 6px; color: var(--fraco); }
+  .km b { color: var(--texto); font-size: 1.25rem; }
+  label { display: block; margin: 0 0 4px; font-weight: 600; font-size: .92rem; }
+  .campo { margin-bottom: 14px; }
+  input, select, textarea { width: 100%; min-height: 46px; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; background: #fff; color: inherit; }
+  input[readonly] { background: #eef1f5; }
+  textarea { min-height: 72px; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opcoes label { display: flex; align-items: center; justify-content: center; min-height: 48px; margin: 0; border: 1px solid var(--borda); border-radius: 8px; background: #fff; cursor: pointer; }
+  .opcoes input { position: absolute; opacity: 0; width: 1px; min-height: 0; }
+  .opcoes input:checked + span { color: #fff; }
+  .opcoes label:has(input:checked) { background: var(--cor); border-color: var(--cor); }
+  .opcoes input:focus-visible + span { outline: 2px solid var(--texto); outline-offset: 3px; }
+  .marcar { display: flex; gap: 10px; align-items: center; font-weight: 400; min-height: 44px; }
+  .marcar input { width: 22px; min-height: 22px; flex: none; }
+  button { width: 100%; min-height: 50px; border: 0; border-radius: 8px; background: var(--cor); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: default; }
+  button.secundario { background: #fff; color: var(--cor); border: 1px solid var(--cor); margin-top: 10px; }
+  .msg { padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; }
+  .erro { background: #fdecea; color: var(--erro); }
+  .aviso { background: #fff5dc; color: var(--aviso); }
+  .sucesso { background: #e5f6ec; color: var(--ok); }
+  .dica { margin-top: 4px; color: var(--fraco); font-size: .85rem; }
+  .ajuda-erro { margin-top: 4px; color: var(--erro); font-size: .88rem; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Registro de viagem</h1>
+  <div id="carregando" class="cartao" role="status">Carregando dados da viagem…</div>
+  <div id="falha" class="msg erro" role="alert" hidden></div>
+
+  <div id="tela" hidden>
+    <div class="cartao">
+      <div class="dica">Viagem <span id="codigo"></span></div>
+      <div class="carro" id="carro"></div>
+      <div class="km" id="kmBloco">Último KM registrado: <b id="kmAtual"></b></div>
+    </div>
+    <div id="aviso" class="msg aviso" role="status" hidden></div>
+
+    <form id="form" novalidate>
+      <div class="campo">
+        <div class="opcoes" role="radiogroup" aria-label="Tipo de registro">
+          <label><input type="radio" name="tipo" value="saida" checked><span>Saída</span></label>
+          <label><input type="radio" name="tipo" value="chegada"><span>Chegada</span></label>
+        </div>
+      </div>
+      <div class="campo" id="blocoBase" hidden>
+        <label class="marcar"><input type="checkbox" id="retornoBase"><span>Retorno à <span id="nomeBase"></span> (encerra a viagem)</span></label>
+      </div>
+      <div class="campo" id="blocoLocal">
+        <label for="local">Local</label>
+        <input id="local" maxlength="255" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="km">KM do hodômetro</label>
+        <input id="km" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="off" aria-describedby="kmErro">
+        <div id="kmErro" class="ajuda-erro" hidden></div>
+      </div>
+      <div class="campo duas">
+        <div><label for="data">Data</label><input id="data" type="date"></div>
+        <div><label for="hora">Hora</label><input id="hora" type="time"></div>
+      </div>
+      <div class="campo">
+        <label for="motoristaSel" id="motoristaRotulo">Motorista</label>
+        <select id="motoristaSel" hidden></select>
+        <input id="motoristaFixo" readonly hidden aria-labelledby="motoristaRotulo">
+      </div>
+      <div class="campo">
+        <label for="obs">Observação (opcional)</label>
+        <textarea id="obs" maxlength="1000"></textarea>
+      </div>
+      <div id="erroEnvio" class="msg erro" role="alert" hidden></div>
+      <div id="confirmar" class="msg aviso" role="alert" hidden>
+        <div id="confirmarTexto"></div>
+        <button type="button" class="secundario" id="confirmarBtn">Sim, o KM está correto</button>
+      </div>
+      <button type="submit" id="enviar">Registrar</button>
+    </form>
+  </div>
+
+  <div id="pronto" hidden>
+    <div id="prontoMsg" class="msg sucesso" role="status"></div>
+    <button type="button" id="novo">Fazer outro registro</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  var el = function (id) { return document.getElementById(id); };
+  var estado = { codigo: '', token: '', idEnvio: '', info: null, localBase: 'URE' };
+
+  function mostrar(id, sim) { el(id).hidden = !sim; }
+  function km(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function novoId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+  function tipoAtual() { return document.querySelector('input[name=tipo]:checked').value; }
+
+  function falhar(texto) {
+    mostrar('carregando', false);
+    mostrar('tela', false);
+    el('falha').textContent = texto;
+    mostrar('falha', true);
+  }
+
+  function consultar(data, aoTerminar) {
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (!r.ok) { falhar(r.erro); return; }
+        aplicar(r);
+        if (aoTerminar) { aoTerminar(); }
+      })
+      .withFailureHandler(function () {
+        if (estado.info) {
+          mostrarErroEnvio('Sem conexão com o servidor. Confira o sinal e tente de novo.');
+        } else {
+          falhar('Sem conexão com o servidor. Confira o sinal e abra o link de novo.');
+        }
+      })
+      .consultar(estado.codigo, estado.token, data);
+  }
+
+  function aplicar(r) {
+    var primeira = !estado.info;
+    estado.info = r;
+    estado.localBase = r.localBase;
+    mostrar('carregando', false);
+    mostrar('tela', true);
+    el('codigo').textContent = '#' + r.codigo;
+    el('nomeBase').textContent = r.localBase;
+    el('carro').textContent = r.carro || 'Veículo não identificado';
+    el('kmAtual').textContent = km(r.kmAtual);
+    mostrar('kmBloco', !!r.carro);
+
+    el('aviso').textContent = r.mensagem;
+    mostrar('aviso', !!r.mensagem);
+
+    el('data').max = r.hoje;
+    if (primeira) {
+      el('data').value = r.data;
+      el('hora').value = r.agora;
+      el('local').value = r.localBase;
+    }
+    montarMotorista(r);
+    validarKm();
+    el('enviar').disabled = r.situacao === 'outra_data' || r.situacao === 'ambigua';
+  }
+
+  function montarMotorista(r) {
+    var fixo = !!r.motorista;
+    mostrar('motoristaFixo', fixo);
+    mostrar('motoristaSel', !fixo);
+    el('motoristaFixo').value = r.motorista || '';
+    if (fixo) { return; }
+    var sel = el('motoristaSel');
+    var atual = sel.value;
+    sel.textContent = '';
+    var vazio = document.createElement('option');
+    vazio.value = '';
+    vazio.textContent = 'Selecione';
+    sel.appendChild(vazio);
+    (r.motoristas || []).forEach(function (nome) {
+      var o = document.createElement('option');
+      o.value = nome;
+      o.textContent = nome;
+      sel.appendChild(o);
+    });
+    sel.value = atual;
+  }
+
+  function validarKm() {
+    var i = estado.info;
+    var bruto = el('km').value.trim();
+    var ruim = '';
+    if (bruto && !/^\d+$/.test(bruto)) {
+      ruim = 'Use só números, sem ponto ou vírgula.';
+    } else if (bruto && i && i.carro && Number(bruto) < i.kmAtual) {
+      ruim = 'O KM não pode ser menor que o último registrado (' + km(i.kmAtual) + ').';
+    }
+    el('kmErro').textContent = ruim;
+    mostrar('kmErro', !!ruim);
+    return !ruim;
+  }
+
+  function atualizarLocal() {
+    var chegada = tipoAtual() === 'chegada';
+    mostrar('blocoBase', chegada);
+    if (!chegada) { el('retornoBase').checked = false; }
+    var base = el('retornoBase').checked;
+    mostrar('blocoLocal', !base);
+    var local = el('local');
+    if (chegada && local.value === estado.localBase) { local.value = ''; }
+    if (!chegada && !local.value) { local.value = estado.localBase; }
+  }
+
+  function mostrarErroEnvio(texto) {
+    el('erroEnvio').textContent = texto;
+    mostrar('erroEnvio', !!texto);
+    el('enviar').disabled = false;
+  }
+
+  function enviar(confirmaSalto) {
+    mostrarErroEnvio('');
+    mostrar('confirmar', false);
+    if (!validarKm()) { el('km').focus(); return; }
+    el('enviar').disabled = true;
+    el('enviar').textContent = 'Enviando…';
+    var fim = function () { el('enviar').textContent = 'Registrar'; };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        fim();
+        if (r.ok) {
+          concluir(r);
+          return;
+        }
+        el('enviar').disabled = false;
+        if (r.precisaConfirmar) {
+          el('confirmarTexto').textContent = 'Este KM está ' + km(r.salto) + ' km acima do último registrado (' + km(r.kmAtual) + '). Confira o hodômetro. Se estiver certo, confirme: o registro será conferido pelo gestor.';
+          mostrar('confirmar', true);
+          return;
+        }
+        if (r.kmAtual) {
+          estado.info.kmAtual = r.kmAtual;
+          el('kmAtual').textContent = km(r.kmAtual);
+        }
+        mostrarErroEnvio(r.erro);
+      })
+      .withFailureHandler(function () {
+        fim();
+        mostrarErroEnvio('Não foi possível enviar. Seus dados continuam aqui: confira o sinal e toque em Registrar de novo.');
+      })
+      .registrar({
+        codigo: estado.codigo,
+        token: estado.token,
+        idEnvio: estado.idEnvio,
+        tipo: tipoAtual(),
+        retornoBase: el('retornoBase').checked,
+        local: el('local').value,
+        km: el('km').value.trim(),
+        data: el('data').value,
+        hora: el('hora').value,
+        motorista: el('motoristaFixo').value || el('motoristaSel').value,
+        obs: el('obs').value,
+        confirmaSalto: !!confirmaSalto,
+      });
+  }
+
+  function concluir(r) {
+    mostrar('tela', false);
+    el('prontoMsg').textContent = r.aguardaConferencia
+      ? 'Registro enviado. Como o KM ficou muito acima do último, ele aguarda a conferência do gestor.'
+      : 'Registro enviado. O GLPI recebe os dados na próxima sincronização.';
+    mostrar('pronto', true);
+  }
+
+  function reiniciar() {
+    estado.info = null;
+    estado.idEnvio = novoId();
+    el('km').value = '';
+    el('obs').value = '';
+    el('retornoBase').checked = false;
+    document.querySelector('input[name=tipo][value=saida]').checked = true;
+    mostrar('pronto', false);
+    mostrar('carregando', true);
+    mostrar('blocoBase', false);
+    mostrar('blocoLocal', true);
+    consultar('');
+  }
+
+  el('km').addEventListener('input', function () { validarKm(); estado.idEnvio = novoId(); mostrar('confirmar', false); });
+  el('data').addEventListener('change', function () { if (el('data').value) { consultar(el('data').value); } });
+  el('retornoBase').addEventListener('change', atualizarLocal);
+  document.querySelectorAll('input[name=tipo]').forEach(function (r) { r.addEventListener('change', atualizarLocal); });
+  el('form').addEventListener('submit', function (e) { e.preventDefault(); enviar(false); });
+  el('confirmarBtn').addEventListener('click', function () { enviar(true); });
+  el('novo').addEventListener('click', reiniciar);
+
+  google.script.url.getLocation(function (loc) {
+    var p = loc.parameter || {};
+    estado.codigo = p.v || '';
+    // Alguns e-mails entregam o "&" do link como "&amp;".
+    estado.token = p.t || p['amp;t'] || '';
+    estado.idEnvio = novoId();
+    if (!estado.codigo || !estado.token) {
+      falhar('Abra este formulário pelo link recebido na aprovação da viagem.');
+      return;
+    }
+    consultar('');
+  });
+})();
+</script>
+</body>
+</html>

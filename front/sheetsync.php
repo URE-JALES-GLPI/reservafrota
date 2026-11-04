@@ -19,6 +19,23 @@ if (isset($_POST['save_cfg'])) {
     );
     Session::addMessageAfterRedirect(__('Configuração da integração salva.', 'reservafrota'), true);
     Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
+} elseif (isset($_POST['save_form_cfg'])) {
+    $res = SheetSync::setFormConfig(
+        (string) ($_POST['webapp_url'] ?? ''),
+        (string) ($_POST['webapp_secret'] ?? ''),
+        (int) ($_POST['max_km_jump'] ?? SheetSync::DEFAULT_MAX_KM_JUMP)
+    );
+    if ($res['ok']) {
+        $push = SheetSync::pushSnapshot();
+        Session::addMessageAfterRedirect((string) $push['message'], false, $push['ok'] ? INFO : ERROR);
+    } else {
+        Session::addMessageAfterRedirect((string) $res['message'], false, ERROR);
+    }
+    Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
+} elseif (isset($_POST['push_now'])) {
+    $push = SheetSync::pushSnapshot();
+    Session::addMessageAfterRedirect((string) $push['message'], false, $push['ok'] ? INFO : ERROR);
+    Html::redirect(plugin_reservafrota_webdir() . '/front/sheetsync.php');
 } elseif (isset($_POST['sync_now'])) {
     $res = SheetSync::runSync(true);
     if (!empty($res['ok'])) {

@@ -26,6 +26,16 @@ class SheetSync extends CommonDBTM
     public const EVENT_DEPARTURE = 'departure';
     public const EVENT_ARRIVAL   = 'arrival';
 
+    /** Salto máximo de KM aceito sem conferência do gestor (0 desliga). */
+    public const DEFAULT_MAX_KM_JUMP = 2000;
+
+    /** Janela de viagens aprovadas enviadas ao formulário web. */
+    private const PUSH_DAYS_BACK    = 30;
+    private const PUSH_DAYS_FORWARD = 90;
+
+    private static bool $pushQueued = false;
+    private static bool $pushShutdownRegistered = false;
+
     public static function getTypeName($nb = 0)
     {
         return __('Integração Sheets', 'reservafrota');
@@ -37,17 +47,22 @@ class SheetSync extends CommonDBTM
      * Lê a configuração (linha única id=1). Devolve sempre um array com
      * chaves garantidas, mesmo sem nada salvo.
      *
-     * @return array{spreadsheet_id:string,api_key:string,sheet_range:string,last_row:int,last_sync:?string,enabled:int}
+     * @return array{spreadsheet_id:string,api_key:string,sheet_range:string,last_row:int,last_sync:?string,enabled:int,webapp_url:string,webapp_secret:string,max_km_jump:int,last_push:?string,last_push_error:string}
      */
     public static function getConfig(): array
     {
         $defaults = [
-            'spreadsheet_id' => '',
-            'api_key'        => '',
-            'sheet_range'    => 'Respostas!A2:F',
-            'last_row'       => 1,
-            'last_sync'      => null,
-            'enabled'        => 0,
+            'spreadsheet_id'  => '',
+            'api_key'         => '',
+            'sheet_range'     => 'Respostas!A2:F',
+            'last_row'        => 1,
+            'last_sync'       => null,
+            'enabled'         => 0,
+            'webapp_url'      => '',
+            'webapp_secret'   => '',
+            'max_km_jump'     => self::DEFAULT_MAX_KM_JUMP,
+            'last_push'       => null,
+            'last_push_error' => '',
         ];
         try {
             /** @var \DBmysql $DB */
@@ -70,9 +85,68 @@ class SheetSync extends CommonDBTM
                 'last_row'       => (int) ($row['last_row'] ?? 1),
                 'last_sync'      => $row['last_sync'] ?? null,
                 'enabled'        => (int) ($row['enabled'] ?? 0),
+                'webapp_url'      => (string) ($row['webapp_url'] ?? ''),
+                'webapp_secret'   => (string) ($row['webapp_secret'] ?? ''),
+                'max_km_jump'     => (int) ($row['max_km_jump'] ?? self::DEFAULT_MAX_KM_JUMP),
+                'last_push'       => $row['last_push'] ?? null,
+                'last_push_error' => (string) ($row['last_push_error'] ?? ''),
             ];
         } catch (\Throwable $e) {
             return $defaults;
+        }
+    }
+
+    /**
+     * Salva a configuração do formulário web (Apps Script).
+     * Segredo em branco mantém o atual. Só aceita URL de script.google.com,
+     * pois o segredo é enviado para esse endereço.
+     *
+     * @return array{ok:bool,message:string}
+     */
+    public static function setFormConfig(string $url, string $secret, int $maxJump): array
+    {
+        $url = trim($url);
+        if ($url !== '') {
+            $parts = parse_url($url);
+            if (
+                !is_array($parts)
+                || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+                || strtolower((string) ($parts['host'] ?? '')) !== 'script.google.com'
+                || !str_ends_with((string) ($parts['path'] ?? ''), '/exec')
+            ) {
+                return ['ok' => false, 'message' => __('A URL do formulário deve ser a do app da web: https://script.google.com/.../exec', 'reservafrota')];
+            }
+        }
+        $data = [
+            'webapp_url'  => substr($url, 0, 255),
+            'max_km_jump' => max(0, $maxJump),
+        ];
+        $secret = trim($secret);
+        if ($secret !== '') {
+            $data['webapp_secret'] = substr($secret, 0, 255);
+        }
+        try {
+            /** @var \DBmysql $DB */
+            global $DB;
+            if (!$DB->tableExists(self::CFG_TABLE) || !$DB->fieldExists(self::CFG_TABLE, 'webapp_url')) {
+                return ['ok' => false, 'message' => __('Tabela de configuração desatualizada. Recarregue a página.', 'reservafrota')];
+            }
+            $exists = $DB->request([
+                'SELECT' => ['id'],
+                'FROM'   => self::CFG_TABLE,
+                'WHERE'  => ['id' => 1],
+                'LIMIT'  => 1,
+            ])->current();
+            if (is_array($exists)) {
+                $ok = (bool) $DB->update(self::CFG_TABLE, $data, ['id' => 1]);
+            } else {
+                $data['id'] = 1;
+                $data['last_row'] = 1;
+                $ok = (bool) $DB->insert(self::CFG_TABLE, $data);
+            }
+            return ['ok' => $ok, 'message' => $ok ? '' : __('Falha ao salvar a configuração do formulário.', 'reservafrota')];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => __('Falha ao salvar a configuração do formulário.', 'reservafrota')];
         }
     }
 
@@ -750,10 +824,24 @@ class SheetSync extends CommonDBTM
             /** @var \DBmysql $DB */
             global $DB;
             $local = trim((string) $local);
-            // Hodômetro nunca anda para trás (salvo força do gestor).
-            $maxKm = self::maxRecordedKm($bid, isset($booking->fields['km_initial']) && $booking->fields['km_initial'] !== null ? (int) $booking->fields['km_initial'] : null);
-            if ($km < $maxKm && !$force) {
-                return $fail(sprintf(__('KM %s menor que o último registrado (%s).', 'reservafrota'), number_format($km, 0, ',', '.'), number_format($maxKm, 0, ',', '.')), $bid);
+            $carId = (int) ($booking->fields['plugin_reservafrota_cars_id'] ?? 0);
+            // Hodômetro nunca anda para trás (salvo força do gestor): compara
+            // com os registros da reserva e com o KM atual do carro, porque a
+            // primeira saída de uma viagem ainda não tem registro próprio.
+            $maxKm = max(
+                self::maxRecordedKm($bid, isset($booking->fields['km_initial']) && $booking->fields['km_initial'] !== null ? (int) $booking->fields['km_initial'] : null),
+                $carId > 0 ? Car::getCurrentKm($carId) : 0
+            );
+            if (!$force) {
+                if ($km < $maxKm) {
+                    return $fail(sprintf(__('KM %s menor que o último registrado (%s).', 'reservafrota'), number_format($km, 0, ',', '.'), number_format($maxKm, 0, ',', '.')), $bid);
+                }
+                // Salto grande costuma ser erro de digitação e, se aplicado,
+                // bloquearia os próximos motoristas. O gestor pode reprocessar.
+                $maxJump = (int) (self::getConfig()['max_km_jump'] ?? self::DEFAULT_MAX_KM_JUMP);
+                if ($maxKm > 0 && $maxJump > 0 && ($km - $maxKm) > $maxJump) {
+                    return $fail(sprintf(__('KM %s está %s km acima do último registrado (%s). Confira e reprocesse se estiver correto.', 'reservafrota'), number_format($km, 0, ',', '.'), number_format($km - $maxKm, 0, ',', '.'), number_format($maxKm, 0, ',', '.')), $bid);
+                }
             }
             // Grava a perna no diário de bordo (idempotente).
             self::insertLeg($bid, $code, $when, $local, $km, $event, $driverName, $rowNum);
@@ -762,7 +850,6 @@ class SheetSync extends CommonDBTM
                 $upd['plugin_reservafrota_drivers_id'] = $drvId;
                 $upd['driver'] = $driverName;
             }
-            $carId = (int) ($booking->fields['plugin_reservafrota_cars_id'] ?? 0);
             $carNote = '';
             if ($carId > 0) {
                 try {
@@ -806,6 +893,7 @@ class SheetSync extends CommonDBTM
             if (!$DB->update(Booking::getTable(), $upd, ['id' => $bid])) {
                 return $fail(__('Falha ao gravar a chegada.', 'reservafrota'), $bid);
             }
+            Booking::notifyEvent('returned', $bid);
             $msg = sprintf(__('Chegada registrada via Forms: %s, KM %s em %s (motorista %s). Viagem concluída.', 'reservafrota'), $local, number_format($km, 0, ',', '.'), $when, $driverName);
             \Log::history($bid, Booking::class, [0, '', $msg], '', \Log::HISTORY_LOG_SIMPLE_MESSAGE);
             if (trim($obs) !== '' && $carId > 0) {
@@ -815,6 +903,231 @@ class SheetSync extends CommonDBTM
         } catch (\Throwable $e) {
             return $fail(__('Erro interno ao aplicar o evento.', 'reservafrota'), $bid);
         }
+    }
+
+    // ================= Formulário web (Apps Script) =================
+
+    /**
+     * Token do link do motorista. O Apps Script calcula o mesmo HMAC, então
+     * o link funciona mesmo antes de a viagem chegar ao Google.
+     */
+    public static function formToken(string $code, string $secret): string
+    {
+        return substr(hash_hmac('sha256', $code, $secret), 0, 16);
+    }
+
+    /**
+     * Link do formulário para uma viagem ('' se não configurado).
+     */
+    public static function getFormUrl(string $codeRaw): string
+    {
+        $code = self::normCode($codeRaw);
+        $cfg = self::getConfig();
+        $url = trim((string) ($cfg['webapp_url'] ?? ''));
+        $secret = trim((string) ($cfg['webapp_secret'] ?? ''));
+        if ($code === '' || $url === '' || $secret === '') {
+            return '';
+        }
+        return $url . '?v=' . rawurlencode($code) . '&t=' . self::formToken($code, $secret);
+    }
+
+    /**
+     * Monta os dados das viagens aprovadas para o formulário.
+     *
+     * @return array<string,mixed>
+     */
+    public static function buildSnapshot(array $cfg): array
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+
+        $range = (string) ($cfg['sheet_range'] ?? '');
+        $sheet = str_contains($range, '!') ? trim(substr($range, 0, (int) strrpos($range, '!')), " '") : '';
+
+        $drivers = [];
+        foreach (Driver::getActiveDrivers() as $id => $d) {
+            $drivers[(int) $id] = (string) ($d['name'] ?? '');
+        }
+
+        $trips = [];
+        $carIds = [];
+        $it = $DB->request([
+            'SELECT' => [
+                'request_code', 'date_departure', 'date_arrival', 'driver',
+                'plugin_reservafrota_drivers_id', 'plugin_reservafrota_cars_id',
+            ],
+            'FROM'   => Booking::getTable(),
+            'WHERE'  => [
+                'status'     => Booking::STATUS_APPROVED,
+                'is_deleted' => 0,
+                ['date_departure' => ['>=', date('Y-m-d 00:00:00', strtotime('-' . self::PUSH_DAYS_BACK . ' days'))]],
+                ['date_departure' => ['<=', date('Y-m-d 23:59:59', strtotime('+' . self::PUSH_DAYS_FORWARD . ' days'))]],
+            ],
+            'ORDER'  => 'date_departure ASC',
+        ]);
+        foreach ($it as $r) {
+            $code = self::normCode((string) ($r['request_code'] ?? ''));
+            if ($code === '') {
+                continue;
+            }
+            $carId = (int) ($r['plugin_reservafrota_cars_id'] ?? 0);
+            if ($carId > 0) {
+                $carIds[$carId] = $carId;
+            }
+            $from = substr((string) ($r['date_departure'] ?? ''), 0, 10);
+            $driverId = (int) ($r['plugin_reservafrota_drivers_id'] ?? 0);
+            $trips[] = [
+                'code'   => $code,
+                'from'   => $from,
+                'to'     => substr((string) ($r['date_arrival'] ?? ''), 0, 10) ?: $from,
+                'car'    => $carId,
+                // Sem motorista designado, o formulário pede para escolher.
+                'driver' => $driverId > 0 ? ($drivers[$driverId] ?? trim((string) ($r['driver'] ?? ''))) : '',
+            ];
+        }
+
+        $cars = [];
+        if ($carIds !== []) {
+            $it = $DB->request([
+                'SELECT' => ['id', 'name', 'plate', 'km_current'],
+                'FROM'   => Car::getTable(),
+                'WHERE'  => ['id' => array_values($carIds)],
+            ]);
+            foreach ($it as $c) {
+                $plate = trim((string) ($c['plate'] ?? ''));
+                $cars[(string) $c['id']] = [
+                    'label' => trim((string) ($c['name'] ?? '')) . ($plate !== '' ? ' - ' . $plate : ''),
+                    'km'    => (int) ($c['km_current'] ?? 0),
+                ];
+            }
+        }
+
+        return [
+            'trips'    => $trips,
+            'cars'     => (object) $cars,
+            'drivers'  => array_values(array_filter($drivers, static fn($n) => $n !== '')),
+            'cursor'   => (int) ($cfg['last_row'] ?? 1),
+            'max_jump' => (int) ($cfg['max_km_jump'] ?? self::DEFAULT_MAX_KM_JUMP),
+            'sheet'    => $sheet,
+        ];
+    }
+
+    /**
+     * POST JSON no app da web. O Apps Script responde com um redirecionamento
+     * 302, e o curl o segue com GET por padrão, que é o que devolve o JSON.
+     *
+     * @return array{ok:bool,body:string,error:string}
+     */
+    private static function httpsPostJson(string $url, string $json, int $timeout = 15): array
+    {
+        if (!function_exists('curl_init')) {
+            return ['ok' => false, 'body' => '', 'error' => 'extensão curl ausente'];
+        }
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $json,
+                CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS      => 5,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+                CURLOPT_USERAGENT      => 'GLPI-Reservafrota-SheetSync/1.0',
+            ]);
+            $body = curl_exec($ch);
+            $err  = curl_error($ch);
+            $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($body === false) {
+                return ['ok' => false, 'body' => '', 'error' => $err !== '' ? $err : 'curl failed'];
+            }
+            if ($http < 200 || $http >= 300) {
+                return ['ok' => false, 'body' => (string) $body, 'error' => 'HTTP ' . $http];
+            }
+            return ['ok' => true, 'body' => (string) $body, 'error' => ''];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'body' => '', 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Envia as viagens e o KM dos carros ao formulário. Falha aqui nunca
+     * derruba a sincronização nem a aprovação: fica registrada na tela da
+     * integração e o próximo cron tenta de novo.
+     *
+     * @return array{ok:bool,message:string}
+     */
+    public static function pushSnapshot(): array
+    {
+        self::$pushQueued = false;
+        $cfg = self::getConfig();
+        $url = trim((string) ($cfg['webapp_url'] ?? ''));
+        $secret = trim((string) ($cfg['webapp_secret'] ?? ''));
+        if ($url === '' || $secret === '') {
+            return ['ok' => false, 'message' => __('Formulário web não configurado.', 'reservafrota')];
+        }
+        $error = '';
+        try {
+            $payload = self::buildSnapshot($cfg);
+            $payload['secret'] = $secret;
+            $res = self::httpsPostJson($url, (string) json_encode($payload, JSON_UNESCAPED_UNICODE));
+            if (!$res['ok']) {
+                $error = $res['error'];
+            } else {
+                $json = json_decode($res['body'], true);
+                if (!is_array($json)) {
+                    $error = __('Resposta inesperada do Google. Confira se o app da web está implantado com acesso para "Qualquer pessoa".', 'reservafrota');
+                } elseif (empty($json['ok'])) {
+                    $error = (string) ($json['error'] ?? 'erro desconhecido');
+                }
+            }
+        } catch (\Throwable $e) {
+            $error = $e->getMessage();
+        }
+        self::setPushStatus($error);
+        return $error === ''
+            ? ['ok' => true, 'message' => __('Dados enviados ao formulário.', 'reservafrota')]
+            : ['ok' => false, 'message' => sprintf(__('Falha ao enviar dados ao formulário: %s', 'reservafrota'), $error)];
+    }
+
+    private static function setPushStatus(string $error): void
+    {
+        try {
+            /** @var \DBmysql $DB */
+            global $DB;
+            $data = ['last_push_error' => substr($error, 0, 255)];
+            if ($error === '') {
+                $data['last_push'] = date('Y-m-d H:i:s');
+            }
+            $DB->update(self::CFG_TABLE, $data, ['id' => 1]);
+        } catch (\Throwable $e) {}
+    }
+
+    /**
+     * Agenda um envio para o fim da requisição. Várias mudanças na mesma
+     * requisição (ex.: aprovar a série da semana) geram um envio só.
+     */
+    public static function queuePush(): void
+    {
+        self::$pushQueued = true;
+        if (!self::$pushShutdownRegistered) {
+            self::$pushShutdownRegistered = true;
+            register_shutdown_function([self::class, 'runQueuedPush']);
+        }
+    }
+
+    public static function runQueuedPush(): void
+    {
+        if (!self::$pushQueued) {
+            return;
+        }
+        try {
+            self::pushSnapshot();
+        } catch (\Throwable $e) {}
     }
 
     // ================= Sincronização =================
@@ -835,6 +1148,7 @@ class SheetSync extends CommonDBTM
         }
         $fetch = self::fetchRows($cfg, $maxRows);
         if (!$fetch['ok']) {
+            self::pushSnapshot();
             return ['ok' => false, 'message' => (string) $fetch['message'], 'applied' => 0, 'errors' => 0, 'total' => 0];
         }
         $applied = 0;
@@ -876,6 +1190,8 @@ class SheetSync extends CommonDBTM
             }
         }
         self::setCursor($maxRow);
+        // Depois do cursor: o formulário descarta os KMs locais já processados.
+        self::pushSnapshot();
         $total = $applied + $errors;
         if ($total === 0) {
             return ['ok' => true, 'message' => __('Nenhuma linha nova.', 'reservafrota'), 'applied' => 0, 'errors' => 0, 'total' => 0];

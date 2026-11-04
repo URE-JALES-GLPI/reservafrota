@@ -31,6 +31,14 @@
             <div class="reservafrota-warnbox"><i class="ti ti-alert-triangle"></i> {{ __('Atenção: ao salvar alterações, este agendamento aprovado voltará para Pendente e precisará ser aprovado novamente.', 'reservafrota') }}</div>
         {% endif %}
 
+        {% if driver_form_url %}
+            <div class="mb-3">
+                <label class="form-label" for="rf-driver-form-url">{{ __('Link do formulário de saída/chegada', 'reservafrota') }}</label>
+                <input type="text" class="form-control" id="rf-driver-form-url" value="{{ driver_form_url }}" readonly onclick="this.select()">
+                <small class="text-muted">{{ __('Envie ao motorista. Cada viagem tem seu próprio link.', 'reservafrota') }}</small>
+            </div>
+        {% endif %}
+
         {# Veículo removido da parte de agendamento — aparece somente na
            aprovação do gestor (painel abaixo / modal de confirmação). #}
         <div class="row">

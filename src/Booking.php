@@ -515,6 +515,89 @@ class Booking extends CommonDBTM
                 $this->fields['request_code'] = (string) $id;
             }
         } catch (\Throwable $e) {}
+
+        self::raiseNotification('new', $this);
+    }
+
+    public function post_updateItem($history = true)
+    {
+        parent::post_updateItem($history);
+
+        // Mantém o formulário do motorista em dia com a viagem.
+        if (array_intersect(array_keys($this->oldvalues), [
+            'status', 'plugin_reservafrota_cars_id', 'plugin_reservafrota_drivers_id', 'date_departure', 'date_arrival', 'is_deleted',
+        ])) {
+            SheetSync::queuePush();
+        }
+
+        $oldStatus = isset($this->oldvalues['status']) ? (int) $this->oldvalues['status'] : null;
+        if ($oldStatus === null) {
+            return;
+        }
+
+        $event = self::getNotificationEventForStatus(
+            $oldStatus,
+            (int) ($this->fields['status'] ?? 0)
+        );
+        if ($event !== null) {
+            self::raiseNotification($event, $this);
+        }
+    }
+
+    /**
+     * Converte uma mudança de status em evento de notificação.
+     * Retorna null quando o status não mudou ou não gera e-mail.
+     */
+    public static function getNotificationEventForStatus(int $oldStatus, int $newStatus): ?string
+    {
+        if ($oldStatus === $newStatus) {
+            return null;
+        }
+
+        return match ($newStatus) {
+            self::STATUS_APPROVED  => 'approved',
+            self::STATUS_REJECTED  => 'rejected',
+            self::STATUS_CANCELLED => 'cancelled',
+            self::STATUS_ARRIVED   => 'returned',
+            default                => null,
+        };
+    }
+
+    /**
+     * Dispara um evento de notificação para uma reserva já persistida.
+     * Útil quando o status é alterado por SQL direto (ex.: integração Sheets).
+     */
+    public static function notifyEvent(string $event, int $bookingId): void
+    {
+        if ($bookingId <= 0) {
+            return;
+        }
+
+        $booking = new self();
+        if ($booking->getFromDB($bookingId)) {
+            self::raiseNotification($event, $booking);
+        }
+    }
+
+    /**
+     * Dispara a notificação sem deixar uma falha de e-mail quebrar a reserva.
+     */
+    private static function raiseNotification(string $event, self $booking): void
+    {
+        try {
+            if (class_exists('NotificationEvent')) {
+                \NotificationEvent::raiseEvent($event, $booking, ['entities_id' => 0]);
+            }
+        } catch (\Throwable $e) {
+            if (class_exists('Toolbox') && method_exists('Toolbox', 'logWarning')) {
+                \Toolbox::logWarning(sprintf(
+                    'Reservafrota: falha ao disparar notificação "%s" da reserva #%d: %s',
+                    $event,
+                    (int) ($booking->fields['id'] ?? 0),
+                    $e->getMessage()
+                ));
+            }
+        }
     }
 
     /**
@@ -2230,6 +2313,9 @@ class Booking extends CommonDBTM
             'users'          => self::getUsersList(),
             'requester_name' => $requester,
             'web_dir'        => plugin_reservafrota_webdir(),
+            'driver_form_url' => (!$this->isNewItem() && (int) ($this->fields['status'] ?? 0) === self::STATUS_APPROVED)
+                ? SheetSync::getFormUrl((string) ($this->fields['request_code'] ?? ''))
+                : '',
             'current_driver_id' => $this->isNewItem()
                 ? Driver::getDriverIdForUser((int) Session::getLoginUserID())
                 : 0,

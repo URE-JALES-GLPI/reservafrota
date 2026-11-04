@@ -13,6 +13,7 @@ use GlpiPlugin\Reservafrota\Car;
 use GlpiPlugin\Reservafrota\Driver;
 use GlpiPlugin\Reservafrota\Maintenance;
 use GlpiPlugin\Reservafrota\MaintenancePlan;
+use GlpiPlugin\Reservafrota\NotificationInstaller;
 use GlpiPlugin\Reservafrota\Profile as ReservafrotaProfile;
 
 define('PLUGIN_RESERVAFROTA_VERSION', '1.2.0');
@@ -59,7 +60,9 @@ function plugin_init_reservafrota(): void
     // (reservafrota::booking e reservafrota::car) e os carregue na sessão de
     // qualquer usuário no login — sem isso, perfis não-admin não recebem o
     // direito na sessão mesmo tendo o valor gravado em glpi_profilerights.
-    Plugin::registerClass(Booking::class);
+    Plugin::registerClass(Booking::class, [
+        'notificationtemplates_types' => true,
+    ]);
     Plugin::registerClass(Car::class);
     Plugin::registerClass(Driver::class);
     Plugin::registerClass(MaintenancePlan::class);
@@ -149,6 +152,21 @@ function plugin_init_reservafrota(): void
                         PRIMARY KEY (`id`)
                     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
                 } catch (\Throwable $e) {}
+            }
+            if ($db->tableExists($sheetCfg)) {
+                foreach ([
+                    'webapp_url'      => "varchar(255) NOT NULL DEFAULT ''",
+                    'webapp_secret'   => "varchar(255) NOT NULL DEFAULT ''",
+                    'max_km_jump'     => 'int unsigned NOT NULL DEFAULT 2000',
+                    'last_push'       => 'datetime DEFAULT NULL',
+                    'last_push_error' => "varchar(255) NOT NULL DEFAULT ''",
+                ] as $col => $def) {
+                    if (!$db->fieldExists($sheetCfg, $col)) {
+                        try {
+                            $db->doQuery("ALTER TABLE `$sheetCfg` ADD COLUMN `$col` $def");
+                        } catch (\Throwable $e) {}
+                    }
+                }
             }
             $sheetLog = 'glpi_plugin_reservafrota_sheetlog';
             if (!$db->tableExists($sheetLog)) {
@@ -347,6 +365,10 @@ function plugin_init_reservafrota(): void
     } catch (\Throwable $e) {
         // Silencioso: instalação/migração completa será feita em Configurar > Plugins > Instalar/Atualizar
     }
+
+    // Cria modelos/notificações padrão uma única vez, inclusive quando a
+    // atualização chegou por cópia de arquivos (sem passar por Instalar/Atualizar).
+    NotificationInstaller::ensureIfNeeded();
 
     // ESSENCIAL: a cada login/troca de perfil, o GLPI dispara este hook.
     // Ele carrega os direitos do plugin (reservafrota::booking / reservafrota::car)
