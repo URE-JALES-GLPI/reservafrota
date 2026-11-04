@@ -714,6 +714,107 @@ class SheetSync extends CommonDBTM
     }
 
     /**
+     * Percurso de uma viagem para a tela do gestor: registros em ordem, com o
+     * KM de cada trecho, e os totais.
+     *
+     * @param array<string,mixed> $booking Campos da reserva.
+     * @return array{legs:list<array<string,mixed>>,stops:int,km_start:?int,km_end:?int,km_total:?int,duration:string}
+     */
+    public static function getTripTimeline(array $booking): array
+    {
+        $legs = [];
+        $stops = 0;
+        $previousKm = null;
+        foreach (self::getLegs((int) ($booking['id'] ?? 0), 500) as $leg) {
+            $km = (int) ($leg['km'] ?? 0);
+            if (($leg['event'] ?? '') === self::EVENT_DEPARTURE) {
+                $label = __('Saída', 'reservafrota');
+                $icon = 'ti-player-play';
+            } elseif (self::isBaseLocal((string) ($leg['local'] ?? ''))) {
+                $label = __('Chegada na URE', 'reservafrota');
+                $icon = 'ti-flag-check';
+            } else {
+                $label = __('Parada', 'reservafrota');
+                $icon = 'ti-map-pin';
+                $stops++;
+            }
+            $leg['label'] = $label;
+            $leg['icon'] = $icon;
+            // Lançamento fora de ordem (reprocessado) não tem trecho a mostrar.
+            $leg['delta'] = ($previousKm !== null && $km >= $previousKm) ? $km - $previousKm : null;
+            $previousKm = max($previousKm ?? 0, $km);
+            $legs[] = $leg;
+        }
+
+        // Sem pernas (chegada lançada direto no GLPI), usa os campos da reserva.
+        $kmStart = $legs !== [] ? min(array_map(static fn($l) => (int) $l['km'], $legs)) : null;
+        $kmEnd = $legs !== [] ? max(array_map(static fn($l) => (int) $l['km'], $legs)) : null;
+        if ($kmStart === null && !empty($booking['km_initial'])) {
+            $kmStart = (int) $booking['km_initial'];
+        }
+        if (!empty($booking['km_final'])) {
+            $kmEnd = max((int) $booking['km_final'], (int) $kmEnd);
+        }
+
+        $duration = '';
+        if (count($legs) >= 2) {
+            $seconds = (int) strtotime((string) $legs[count($legs) - 1]['event_at']) - (int) strtotime((string) $legs[0]['event_at']);
+            if ($seconds > 0) {
+                $hours = (int) floor($seconds / 3600);
+                $minutes = (int) floor(($seconds % 3600) / 60);
+                $duration = ($hours > 0 ? $hours . 'h ' : '') . $minutes . 'min';
+            }
+        }
+
+        return [
+            'legs'     => $legs,
+            'stops'    => $stops,
+            'km_start' => $kmStart,
+            'km_end'   => $kmEnd,
+            'km_total' => ($kmStart !== null && $kmEnd !== null && $kmEnd >= $kmStart) ? $kmEnd - $kmStart : null,
+            'duration' => $duration,
+        ];
+    }
+
+    /**
+     * Registros recusados de uma viagem, ainda sem reprocesso aplicado.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public static function getRejectedRows(int $bookingsId): array
+    {
+        $out = [];
+        try {
+            /** @var \DBmysql $DB */
+            global $DB;
+            if ($bookingsId <= 0 || !$DB->tableExists(self::LOG_TABLE)) {
+                return [];
+            }
+            $applied = [];
+            $it = $DB->request([
+                'SELECT' => ['row_num'],
+                'FROM'   => self::LOG_TABLE,
+                'WHERE'  => ['bookings_id' => $bookingsId, 'status' => 'applied', 'row_num' => ['>', 0]],
+            ]);
+            foreach ($it as $row) {
+                $applied[(int) $row['row_num']] = true;
+            }
+            $it = $DB->request([
+                'FROM'  => self::LOG_TABLE,
+                'WHERE' => ['bookings_id' => $bookingsId, 'status' => 'error'],
+                'ORDER' => 'id ASC',
+                'LIMIT' => 100,
+            ]);
+            foreach ($it as $row) {
+                if (!isset($applied[(int) ($row['row_num'] ?? 0)])) {
+                    $out[] = $row;
+                }
+            }
+        } catch (\Throwable $e) {}
+        return $out;
+    }
+
+    /**
      * Registra uma linha no log de sincronização.
      */
     public static function logRow(int $rowNum, string $receivedAt, string $code, int $bookingsId, string $event, int $km, string $driver, string $obs, string $local, string $status, string $message, string $source): void

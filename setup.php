@@ -427,6 +427,7 @@ function plugin_init_reservafrota(): void
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/ajax/availability\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/export\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/history\.php$#', $auth);
+        \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/trip\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/maintenance\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/maintenance\.form\.php$#', $auth);
         \Glpi\Http\Firewall::addPluginStrategyForLegacyScripts('reservafrota', '#^/front/sheetsync\.php$#', $auth);

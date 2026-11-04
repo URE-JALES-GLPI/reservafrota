@@ -508,6 +508,9 @@
                 var sheetBtn = (b.has_sheet && bform)
                     ? '<a class="reservafrota-open" href="' + bform.replace('booking.form.php', 'sheet.php') + '?id=' + b.id + '"><i class="ti ti-download"></i> Baixar folha</a>'
                     : '';
+                var tripBtn = (canApprove && bform && (b.status === 2 || b.status === 5))
+                    ? '<a class="reservafrota-open" href="' + bform.replace('booking.form.php', 'trip.php') + '?id=' + b.id + '"><i class="ti ti-route"></i> Histórico</a>'
+                    : '';
                 var openUrl = bform ? (bform + '?id=' + b.id) : '';
                 var hasObs = (b.status === 5 && b.obs);
                 return '<div class="reservafrota-day-item s-' + (b.status || 1) + ((b.conflict && (b.status || 1) !== 2) ? ' is-conflict' : '') + (hasObs ? ' has-obs' : '') + '"'
@@ -527,7 +530,7 @@
                     + (b.status === 4 && b.note ? '<div class="reservafrota-day-item__reason"><i class="ti ti-info-circle"></i> Motivo: ' + esc(b.note) + '</div>' : '')
                     + (hasObs ? '<div class="reservafrota-day-item__reason obs"><i class="ti ti-message-circle"></i> Observação: ' + esc(b.obs) + '</div>' : '')
                     + '</div>'
-                    + '<div class="reservafrota-day-item__actions">' + sheetBtn + cancelBtn + uploadSheetBtn
+                    + '<div class="reservafrota-day-item__actions">' + tripBtn + sheetBtn + cancelBtn + uploadSheetBtn
                     + ((b.conflict_with && b.conflict_with.length) ? '<button type="button" class="reservafrota-btn-conflict" data-cb-conflicts="' + idx + '"><i class="ti ti-alert-triangle"></i> Ver conflito</button>' : '')
                     + '</div>'
                     + '</div>';

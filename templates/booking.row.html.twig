@@ -26,9 +26,15 @@
     <div class="reservafrota-blist-item__side">
         <span class="reservafrota-chip status-{{ b.status == 2 ? 'approved' : (b.status == 3 ? 'rejected' : (b.status == 4 ? 'rejected' : (b.status == 5 ? 'arrived' : 'pending'))) }}">{{ b.status_label }}</span>
 
-        {% if b.has_sheet %}
+        {% set show_trip = can_approve and b.status in [2, 5] %}
+        {% if b.has_sheet or show_trip %}
             <div class="reservafrota-blist-actions">
-                <a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ b.id }}"><i class="ti ti-download"></i> {{ __('Baixar folha', 'reservafrota') }}</a>
+                {% if show_trip %}
+                    <a class="reservafrota-btn-info" href="{{ web_dir }}/front/trip.php?id={{ b.id }}"><i class="ti ti-route"></i> {{ __('Histórico', 'reservafrota') }}</a>
+                {% endif %}
+                {% if b.has_sheet %}
+                    <a class="reservafrota-btn-info" href="{{ web_dir }}/front/sheet.php?id={{ b.id }}"><i class="ti ti-download"></i> {{ __('Baixar folha', 'reservafrota') }}</a>
+                {% endif %}
             </div>
         {% endif %}
     </div>

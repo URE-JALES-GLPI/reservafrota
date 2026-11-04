@@ -126,6 +126,7 @@
                                 {% endif %}
                                 <div><i class="ti ti-message-circle"></i> <b>{{ __('Observação', 'reservafrota') }}:</b> <span class="reservafrota-obsval">{{ b.obs ?: __('(sem observação)', 'reservafrota') }}</span></div>
                                 {% if can_approve %}
+                                    <a class="reservafrota-btn-info" href="{{ web_dir }}/front/trip.php?id={{ b.id }}"><i class="ti ti-route"></i> {{ __('Histórico da viagem', 'reservafrota') }}</a>
                                     <button type="button" class="reservafrota-btn-info" data-cb-editobs
                                             data-id="{{ b.id }}"
                                             data-obs="{{ b.obs }}"

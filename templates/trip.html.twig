@@ -1,0 +1,148 @@
+{# Histórico de uma viagem: saída, paradas e chegada — só gestor #}
+{% set chip = {1: 'status-pending', 2: 'status-approved', 3: 'status-rejected', 4: 'status-rejected', 5: 'status-arrived'} %}
+
+<div id="reservafrota-trip" class="reservafrota-agenda">
+
+    <div class="reservafrota-pagehead">
+        <div class="reservafrota-pagehead__title">
+            <span class="reservafrota-pagehead__icon"><i class="ti ti-route"></i></span>
+            <div>
+                <h1>{{ __('Viagem', 'reservafrota') }} #{{ code }}</h1>
+            </div>
+        </div>
+        <nav class="reservafrota-pagehead__nav">
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/calendar.php"><i class="ti ti-calendar-month"></i> {{ __('Calendário', 'reservafrota') }}</a>
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/booking.form.php?id={{ b.id }}"><i class="ti ti-file-text"></i> {{ __('Abrir reserva', 'reservafrota') }}</a>
+            <a class="reservafrota-pill" href="{{ web_dir }}/front/history.php"><i class="ti ti-history"></i> {{ __('Histórico', 'reservafrota') }}</a>
+        </nav>
+    </div>
+
+    {# ---------- Resumo ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-info-circle"></i> {{ __('Resumo', 'reservafrota') }}
+            <span class="reservafrota-chip {{ chip[b.status] ?? '' }}">{{ status_label }}</span>
+        </h3>
+        <div class="row">
+            <div class="col-12 col-md-6 mb-2"><i class="ti ti-car"></i> <b>{{ __('Carro', 'reservafrota') }}:</b> {{ car_label ?: '—' }}</div>
+            <div class="col-12 col-md-6 mb-2"><i class="ti ti-steering-wheel"></i> <b>{{ __('Motorista', 'reservafrota') }}:</b> {{ driver_name ?: '—' }}</div>
+            <div class="col-12 col-md-6 mb-2"><i class="ti ti-user"></i> <b>{{ __('Solicitante', 'reservafrota') }}:</b> {{ requester ?: '—' }}</div>
+            <div class="col-12 col-md-6 mb-2"><i class="ti ti-map-pin"></i> <b>{{ __('Destino', 'reservafrota') }}:</b> {{ b.destination ?: '—' }}</div>
+            <div class="col-12 col-md-6 mb-2"><i class="ti ti-calendar"></i> <b>{{ __('Previsto', 'reservafrota') }}:</b> {{ b.date_departure ? b.date_departure|date('d/m/Y H:i') : '—' }}{% if b.date_arrival %} &rarr; {{ b.date_arrival|date('d/m/Y H:i') }}{% endif %}</div>
+            <div class="col-12 col-md-6 mb-2"><i class="ti ti-circle-check"></i> <b>{{ __('Concluída em', 'reservafrota') }}:</b> {{ b.date_returned ? b.date_returned|date('d/m/Y H:i') : '—' }}</div>
+            {% if b.arrival_obs %}
+                <div class="col-12 mb-2"><i class="ti ti-message-circle"></i> <b>{{ __('Observação', 'reservafrota') }}:</b> {{ b.arrival_obs }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="reservafrota-stat-grid">
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-approved">{{ __('KM rodado', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number">{{ trip.km_total is null ? '—' : trip.km_total|number_format(0, ',', '.') }}</div>
+            <div class="reservafrota-stat-label">
+                {% if trip.km_start is not null %}{{ trip.km_start|number_format(0, ',', '.') }} &rarr; {{ trip.km_end is null ? '…' : trip.km_end|number_format(0, ',', '.') }}{% else %}{{ __('sem registro', 'reservafrota') }}{% endif %}
+            </div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-pending">{{ __('Paradas', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number">{{ trip.stops }}</div>
+            <div class="reservafrota-stat-label">{{ __('fora da URE', 'reservafrota') }}</div>
+        </div>
+        <div class="reservafrota-stat-card">
+            <div class="reservafrota-stat-top"><span class="reservafrota-stat-badge badge-arrived">{{ __('Duração', 'reservafrota') }}</span></div>
+            <div class="reservafrota-stat-number" style="font-size:1.3rem;">{{ trip.duration ?: '—' }}</div>
+            <div class="reservafrota-stat-label">{{ __('do 1º ao último registro', 'reservafrota') }}</div>
+        </div>
+    </div>
+
+    {# ---------- Percurso ---------- #}
+    <div class="reservafrota-panel__card reservafrota-chartbox">
+        <h3><i class="ti ti-route"></i> {{ __('Percurso', 'reservafrota') }}</h3>
+        {% if trip.legs is empty %}
+            <p class="reservafrota-blist-empty">{{ __('Nenhum registro de saída ou chegada sincronizado até agora.', 'reservafrota') }}</p>
+        {% else %}
+            <div class="reservafrota-tablewrap">
+                <table class="reservafrota-arrived-table">
+                    <thead><tr>
+                        <th>{{ __('Quando', 'reservafrota') }}</th>
+                        <th>{{ __('Evento', 'reservafrota') }}</th>
+                        <th>{{ __('Local', 'reservafrota') }}</th>
+                        <th>{{ __('KM', 'reservafrota') }}</th>
+                        <th>{{ __('Trecho', 'reservafrota') }}</th>
+                        <th>{{ __('Motorista', 'reservafrota') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for l in trip.legs %}
+                        <tr>
+                            <td>{{ l.event_at ? l.event_at|date('d/m/Y H:i') : '—' }}</td>
+                            <td><i class="ti {{ l.icon }}"></i> {{ l.label }}</td>
+                            <td>{{ l.local ?: '—' }}</td>
+                            <td>{{ l.km|number_format(0, ',', '.') }}</td>
+                            <td>{{ l.delta is null ? '—' : '+' ~ l.delta|number_format(0, ',', '.') ~ ' km' }}</td>
+                            <td>{{ l.driver_name ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+        <p class="reservafrota-hint">{{ __('Mostra o que já foi sincronizado. Um registro feito agora aparece depois da próxima sincronização.', 'reservafrota') }}</p>
+    </div>
+
+    {# ---------- Registros recusados ---------- #}
+    {% if rejected is not empty %}
+        <div class="reservafrota-panel__card reservafrota-chartbox">
+            <h3><i class="ti ti-alert-triangle"></i> {{ __('Registros recusados', 'reservafrota') }}
+                <span class="reservafrota-level">{{ __('reprocesse na tela de integração, se estiverem corretos', 'reservafrota') }}</span>
+            </h3>
+            <div class="reservafrota-tablewrap">
+                <table class="reservafrota-arrived-table">
+                    <thead><tr>
+                        <th>{{ __('Recebido', 'reservafrota') }}</th>
+                        <th>{{ __('Local', 'reservafrota') }}</th>
+                        <th>{{ __('KM', 'reservafrota') }}</th>
+                        <th>{{ __('Motivo', 'reservafrota') }}</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for r in rejected %}
+                        <tr>
+                            <td>{{ r.received_at ? r.received_at|date('d/m/Y H:i') : '—' }}</td>
+                            <td>{{ r.local ?: '—' }}</td>
+                            <td>{{ r.km|number_format(0, ',', '.') }}</td>
+                            <td><small>{{ r.message }}</small></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="reservafrota-hint"><a href="{{ web_dir }}/front/sheetsync.php?f=error">{{ __('Abrir a auditoria da integração', 'reservafrota') }}</a></p>
+        </div>
+    {% endif %}
+
+    {# ---------- Alterações no GLPI ---------- #}
+    {% if changes is not empty %}
+        <div class="reservafrota-panel__card reservafrota-chartbox">
+            <details>
+                <summary><b><i class="ti ti-list-details"></i> {{ __('Alterações registradas na reserva', 'reservafrota') }} ({{ changes|length }})</b></summary>
+                <div class="reservafrota-tablewrap">
+                    <table class="reservafrota-arrived-table">
+                        <thead><tr>
+                            <th>{{ __('Quando', 'reservafrota') }}</th>
+                            <th>{{ __('Por', 'reservafrota') }}</th>
+                            <th>{{ __('O que mudou', 'reservafrota') }}</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for c in changes %}
+                            <tr>
+                                <td><small>{{ c.date }}</small></td>
+                                <td>{{ c.user }}</td>
+                                <td>{{ c.change }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </div>
+    {% endif %}
+</div>
