@@ -39,6 +39,7 @@ class NotificationInstaller
             }
         } catch (\Throwable $e) {
             // A instalação/atualização explícita tentará novamente.
+            error_log('Reservafrota: falha ao criar notificações: ' . $e->getMessage());
         }
     }
 

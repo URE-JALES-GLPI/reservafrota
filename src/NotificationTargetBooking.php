@@ -188,7 +188,7 @@ class NotificationTargetBooking extends NotificationTarget
         $this->data['##booking.action##']             = $events[$event] ?? $event;
         $this->data['##booking.url##']                = $url;
         // Só na aprovação: o modelo é único e usa ##IFbooking.form_url##.
-        $this->data['##booking.form_url##']           = $event === 'approved' ? SheetSync::getFormUrl($code) : '';
+        $this->data['##booking.form_url##']           = $event === 'approved' ? SheetSync::getDriverFormLink($code) : '';
     }
 
     /**

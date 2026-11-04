@@ -2314,7 +2314,7 @@ class Booking extends CommonDBTM
             'requester_name' => $requester,
             'web_dir'        => plugin_reservafrota_webdir(),
             'driver_form_url' => (!$this->isNewItem() && (int) ($this->fields['status'] ?? 0) === self::STATUS_APPROVED)
-                ? SheetSync::getFormUrl((string) ($this->fields['request_code'] ?? ''))
+                ? SheetSync::getDriverFormLink((string) ($this->fields['request_code'] ?? ''))
                 : '',
             'current_driver_id' => $this->isNewItem()
                 ? Driver::getDriverIdForUser((int) Session::getLoginUserID())

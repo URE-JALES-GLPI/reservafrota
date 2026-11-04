@@ -919,7 +919,7 @@ class SheetSync extends CommonDBTM
     /**
      * Link do formulário para uma viagem ('' se não configurado).
      */
-    public static function getFormUrl(string $codeRaw): string
+    public static function getDriverFormLink(string $codeRaw): string
     {
         $code = self::normCode($codeRaw);
         $cfg = self::getConfig();

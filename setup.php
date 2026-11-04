@@ -368,7 +368,13 @@ function plugin_init_reservafrota(): void
 
     // Cria modelos/notificações padrão uma única vez, inclusive quando a
     // atualização chegou por cópia de arquivos (sem passar por Instalar/Atualizar).
-    NotificationInstaller::ensureIfNeeded();
+    // O GLPI desativa o plugin se o init lançar erro, e notificação não pode
+    // derrubar o plugin inteiro.
+    try {
+        NotificationInstaller::ensureIfNeeded();
+    } catch (\Throwable $e) {
+        error_log('Reservafrota: falha ao preparar notificações: ' . $e->getMessage());
+    }
 
     // ESSENCIAL: a cada login/troca de perfil, o GLPI dispara este hook.
     // Ele carrega os direitos do plugin (reservafrota::booking / reservafrota::car)
