@@ -660,7 +660,12 @@
                 mDate.min = todayStr();
                 mDate.value = dateStr;
             }
-            if (mTime && !mTime.value) { mTime.value = ''; }
+            // Novo agendamento: sugere a hora do computador, de 5 em 5 minutos.
+            if (mTime && !mTime.value) {
+                var agora = new Date();
+                mTime.value = pad(agora.getHours()) + ':' + pad(agora.getMinutes());
+                snapToFive(mTime);
+            }
             if (mADate) {
                 mADate.min = mDate ? mDate.value : todayStr();
                 mADate.value = mDate && mDate.value ? mDate.value : todayStr();
