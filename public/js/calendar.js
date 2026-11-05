@@ -334,7 +334,7 @@
                 if (items.length === 0) {
                     chips = isPast
                         ? '<span class="reservafrota-evt s-past" title="Data já passou"><i class="ti ti-ban" style="font-size:0.7rem;"></i> Indisponível</span>'
-                        : '<span class="reservafrota-evt s-empty" title="Clique para reservar"><i class="ti ti-plus" style="font-size:0.7rem;"></i> Disponível</span>';
+                        : '';
                 } else {
                     items.slice(0, 4).forEach(function (b) {
                         var hasCar = b.car_id && b.car && b.car !== 'A designar';
@@ -361,7 +361,7 @@
                     + (isPast ? ' is-past' : '')
                     + (hasAllArrived ? ' is-all-arrived' : (hasSomeArrived ? ' is-some-arrived' : ''))
                     + (hasConflict ? ' is-conflict-day' : '')
-                    + '" data-day="' + d + '"' + (isPast ? ' title="Data passada - indisponível"' : '') + '>'
+                    + '" data-day="' + d + '"' + (isPast ? ' title="Data passada - indisponível"' : (items.length ? '' : ' title="Clique para reservar"')) + '>'
                     + '<span class="reservafrota-cell__num">' + d + '</span>'
                     + '<div class="reservafrota-cell__evts">' + chips + '</div>'
                     + '</div>';
