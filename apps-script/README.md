@@ -79,6 +79,8 @@ validação na hora.
 - **Link:** vai na notificação de reserva aprovada e também aparece na reserva.
 - **Dados:** o GLPI envia ao aprovar ou alterar uma reserva, ao mudar o KM do
   carro e a cada sincronização (15 min no cron).
+- **KM na saída:** o campo já vem com o último KM do carro, e o motorista corrige se
+  o hodômetro estiver diferente. Na chegada, ele fica vazio.
 - **KM menor:** é bloqueado no formulário e de novo no GLPI.
 - **Salto acima do limite:** o motorista confirma, e a linha fica como erro em
   **Auditoria** até o gestor conferir e reprocessar. Esse valor não eleva o KM

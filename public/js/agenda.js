@@ -335,7 +335,7 @@
         try { data = JSON.parse(card.getAttribute('data-booking') || '{}'); } catch (x) {}
         var depDay = String(data.departure || '').substr(0, 10);
         if (depDay && typeof window.cbOpenDayForDate === 'function' && document.getElementById('reservafrota-day-modal')) {
-            window.cbOpenDayForDate(depDay);
+            window.cbOpenDayForDate(depDay, data.id);
             return;
         }
         openEditModal(data, card.getAttribute('data-bform'), card.getAttribute('data-csrf'), card.getAttribute('data-can-approve') === '1');

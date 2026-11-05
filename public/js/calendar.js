@@ -77,15 +77,18 @@
         var newBtn = document.getElementById('reservafrota-new-booking-btn');
         var latestByDay = {};
         var pendingOpenDay = 0;
-        window.cbOpenDayForDate = function (dateStr) {
+        var pendingFocusId = 0;
+        // bookingId (opcional): já abre o dia com esse agendamento selecionado.
+        window.cbOpenDayForDate = function (dateStr, bookingId) {
             var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
             if (!m) { return; }
             var day = parseInt(m[3], 10);
             if (parseInt(m[1], 10) === cur.getFullYear() && (parseInt(m[2], 10) - 1) === cur.getMonth()) {
-                openDay(day, latestByDay[day] || []);
+                openDay(day, latestByDay[day] || [], bookingId);
             } else {
                 cur = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
                 pendingOpenDay = day;
+                pendingFocusId = bookingId || 0;
                 load();
             }
         };
@@ -249,8 +252,10 @@
                     refreshStats(list);
                     if (pendingOpenDay) {
                         var pd = pendingOpenDay;
+                        var pf = pendingFocusId;
                         pendingOpenDay = 0;
-                        openDay(pd, latestByDay[pd] || []);
+                        pendingFocusId = 0;
+                        openDay(pd, latestByDay[pd] || [], pf);
                     }
                 })
                 .catch(function (err) {
@@ -470,12 +475,13 @@
             overlay.querySelectorAll('[data-x]').forEach(function (el) {
                 el.addEventListener('click', function () {
                     overlay.remove();
-                    document.body.classList.remove('reservafrota-modal-open');
+                    // A tela do dia continua aberta por trás: a página segue travada.
+                    if (!modal || modal.hidden) { document.body.classList.remove('reservafrota-modal-open'); }
                 });
             });
         }
 
-        function openDay(day, items) {
+        function openDay(day, items, focusId) {
             if (!modal) { return; }
             hideTip();
             var weekday = WEEK[new Date(cur.getFullYear(), cur.getMonth(), day).getDay()];
@@ -536,6 +542,13 @@
                     + '</div>';
             }).join('');
 
+            if (items.length) {
+                listHtml = '<div class="reservafrota-modal__existinghead">'
+                    + items.length + (items.length === 1 ? ' agendamento neste dia' : ' agendamentos neste dia')
+                    + '</div>' + listHtml;
+            }
+            modalExisting.innerHTML = listHtml;
+
             modalExisting.querySelectorAll('[data-cb-conflicts]').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     e.preventDefault();
@@ -544,13 +557,6 @@
                     if (b) { openConflictPopup(b, dateStr); }
                 });
             });
-
-            if (items.length) {
-                listHtml = '<div class="reservafrota-modal__existinghead">'
-                    + items.length + (items.length === 1 ? ' agendamento neste dia' : ' agendamentos neste dia')
-                    + '</div>' + listHtml;
-            }
-            modalExisting.innerHTML = listHtml;
 
             // Clicar no card preenche o formulário para edição.
             modalExisting.querySelectorAll('.reservafrota-day-item').forEach(function (card, idx) {
@@ -649,6 +655,18 @@
 
             modal.hidden = false;
             document.body.classList.add('reservafrota-modal-open');
+
+            // Por último: o clique preenche o formulário por cima dos valores do dia.
+            if (focusId) {
+                var focusCards = modalExisting.querySelectorAll('.reservafrota-day-item');
+                for (var fi = 0; fi < ordered.length; fi++) {
+                    if (Number(ordered[fi].id) === Number(focusId) && focusCards[fi]) {
+                        focusCards[fi].click();
+                        focusCards[fi].scrollIntoView({ block: 'nearest' });
+                        break;
+                    }
+                }
+            }
         }
 
         function closeModal() {
@@ -812,7 +830,13 @@
                 el.addEventListener('click', closeModal);
             });
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && !modal.hidden) { closeModal(); }
+                if (e.key !== 'Escape' || modal.hidden) { return; }
+                // Com o popup de conflito aberto, o Esc fecha só ele.
+                if (document.getElementById('reservafrota-conflict-modal')) {
+                    closeConflictPopup();
+                    return;
+                }
+                closeModal();
             });
         }
 

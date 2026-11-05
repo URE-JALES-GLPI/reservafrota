@@ -69,7 +69,8 @@
       </div>
       <div class="campo">
         <label for="km">KM do hodômetro</label>
-        <input id="km" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="off" aria-describedby="kmErro">
+        <input id="km" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="off" aria-describedby="kmDica kmErro">
+        <div id="kmDica" class="dica" hidden>Preenchido com o último KM. Confira o hodômetro e corrija se estiver diferente.</div>
         <div id="kmErro" class="ajuda-erro" hidden></div>
       </div>
       <div class="campo duas">
@@ -108,7 +109,7 @@
 <script>
 (function () {
   var el = function (id) { return document.getElementById(id); };
-  var estado = { codigo: '', token: '', idEnvio: '', info: null, localBase: 'URE' };
+  var estado = { codigo: '', token: '', idEnvio: '', info: null, localBase: 'URE', kmAuto: '' };
 
   function mostrar(id, sim) { el(id).hidden = !sim; }
   function km(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
@@ -173,7 +174,7 @@
       el('local').value = r.localBase;
     }
     montarMotorista(r);
-    validarKm();
+    preencherKm();
     el('enviar').disabled = r.situacao === 'outra_data' || r.situacao === 'ambigua';
   }
 
@@ -213,6 +214,19 @@
     return !ruim;
   }
 
+  /** Na saída, sugere o último KM. Nunca substitui o que o motorista digitou. */
+  function preencherKm() {
+    var i = estado.info;
+    var campo = el('km');
+    var sugestao = i && i.carro && i.kmAtual > 0 && tipoAtual() === 'saida' ? String(i.kmAtual) : '';
+    if (!campo.value || campo.value === estado.kmAuto) {
+      campo.value = sugestao;
+      estado.kmAuto = sugestao;
+    }
+    mostrar('kmDica', !!estado.kmAuto);
+    validarKm();
+  }
+
   function atualizarLocal() {
     var chegada = tipoAtual() === 'chegada';
     mostrar('blocoBase', chegada);
@@ -222,6 +236,7 @@
     var local = el('local');
     if (chegada && local.value === estado.localBase) { local.value = ''; }
     if (!chegada && !local.value) { local.value = estado.localBase; }
+    preencherKm();
   }
 
   function mostrarErroEnvio(texto) {
@@ -257,6 +272,7 @@
         if (r.kmAtual) {
           estado.info.kmAtual = r.kmAtual;
           el('kmAtual').textContent = km(r.kmAtual);
+          preencherKm();
         }
         mostrarErroEnvio(r.erro);
       })
@@ -298,6 +314,7 @@
     estado.info = null;
     estado.idEnvio = novoId();
     el('km').value = '';
+    estado.kmAuto = '';
     el('obs').value = '';
     el('retornoBase').checked = false;
     document.querySelector('input[name=tipo][value=saida]').checked = true;
@@ -308,7 +325,9 @@
     consultar('');
   }
 
-  el('km').addEventListener('input', function () { validarKm(); estado.idEnvio = novoId(); mostrar('confirmar', false); });
+  el('km').addEventListener('input', function () { estado.kmAuto = ''; mostrar('kmDica', false); validarKm(); estado.idEnvio = novoId(); mostrar('confirmar', false); });
+  // Facilita a correção: o primeiro dígito substitui o valor sugerido.
+  el('km').addEventListener('focus', function () { if (estado.kmAuto) { el('km').select(); } });
   el('data').addEventListener('change', function () { if (el('data').value) { consultar(el('data').value); } });
   el('retornoBase').addEventListener('change', atualizarLocal);
   document.querySelectorAll('input[name=tipo]').forEach(function (r) { r.addEventListener('change', atualizarLocal); });
