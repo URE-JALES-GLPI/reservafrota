@@ -101,7 +101,7 @@
   </div>
 
   <div id="encerrada" class="cartao" role="status" hidden>
-    <div class="carro">Viagem finalizada</div>
+    <div class="carro" id="encerradaTitulo">Viagem finalizada</div>
     <p id="encerradaMsg" class="km"></p>
   </div>
 </main>
@@ -140,17 +140,18 @@
       .consultar(estado.codigo, estado.token, data);
   }
 
-  function encerrar(texto) {
+  function encerrar(texto, titulo) {
     mostrar('carregando', false);
     mostrar('tela', false);
     mostrar('pronto', false);
+    el('encerradaTitulo').textContent = titulo || 'Viagem finalizada';
     el('encerradaMsg').textContent = texto;
     mostrar('encerrada', true);
   }
 
   function aplicar(r) {
     if (r.situacao === 'finalizada') {
-      encerrar(r.mensagem);
+      encerrar(r.mensagem, r.titulo);
       return;
     }
     var primeira = !estado.info;
@@ -261,7 +262,7 @@
         }
         el('enviar').disabled = false;
         if (r.finalizada) {
-          encerrar(r.erro);
+          encerrar(r.erro, r.titulo);
           return;
         }
         if (r.precisaConfirmar) {

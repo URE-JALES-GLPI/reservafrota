@@ -92,6 +92,9 @@ validação na hora.
   recusar essa chegada na sincronização, o link volta a aceitar registros. O mesmo
   aviso aparece para viagens concluídas direto no GLPI nos últimos 180 dias, assim
   que ele enviar os dados.
+- **Viagem cancelada ou recusada:** o link passa a mostrar esse aviso e não aceita
+  registros, assim que o GLPI enviar os dados. As repetições de outros dias continuam
+  abertas, e o link volta a funcionar se a viagem for aprovada de novo.
 - **Viagem que ainda não chegou ao Google:** o formulário aceita com aviso, e o
   GLPI faz a conferência na sincronização.
 

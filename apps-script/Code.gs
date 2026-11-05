@@ -108,6 +108,7 @@ function consultar(codigoBruto, token, dataIso) {
     data: data,
     situacao: r.situacao,
     mensagem: r.mensagem || '',
+    titulo: r.titulo || '',
     carro: '',
     kmAtual: 0,
     motorista: '',
@@ -151,7 +152,7 @@ function registrar(f) {
     var finalizadas = lerJson_('FINALIZADAS', []);
     var r = resolverViagem_(dados, codigo, entrada.data, finalizadas);
     if (r.situacao === 'finalizada') {
-      return { ok: false, finalizada: true, erro: r.mensagem };
+      return { ok: false, finalizada: true, erro: r.mensagem, titulo: r.titulo };
     }
     if (r.situacao === 'outra_data' || r.situacao === 'ambigua') {
       return { ok: false, erro: r.mensagem };
@@ -233,7 +234,7 @@ function resolverViagem_(dados, codigo, data, finalizadasLocais) {
   var naData = function (t) { return data >= t.from && data <= (t.to || t.from); };
   var naJanelaDe = function (t) { return data >= somarDias_(t.from, -1) && data <= somarDias_(t.to || t.from, 1); };
   var finalizada = function (f) {
-    return { situacao: 'finalizada', mensagem: mensagemFinalizada_(codigo, f) };
+    return { situacao: 'finalizada', titulo: tituloEncerramento_(f), mensagem: mensagemFinalizada_(codigo, f) };
   };
 
   var fechadasNaData = fechadas.filter(naData);
@@ -260,9 +261,20 @@ function resolverViagem_(dados, codigo, data, finalizadasLocais) {
   return { situacao: 'outra_data', mensagem: 'Esta viagem é de ' + formatarData_(abertas[0].from) + '. Confira a data informada.' };
 }
 
+/** Situações de encerramento enviadas pelo GLPI (SheetSync::buildSnapshot). */
+var ENCERRAMENTOS = {
+  cancelled: { titulo: 'Viagem cancelada', texto: 'foi cancelada' },
+  rejected: { titulo: 'Viagem recusada', texto: 'foi recusada' },
+};
+var ENCERRAMENTO_PADRAO = { titulo: 'Viagem finalizada', texto: 'já foi finalizada' };
+
+function tituloEncerramento_(f) {
+  return (ENCERRAMENTOS[f.kind] || ENCERRAMENTO_PADRAO).titulo;
+}
+
 function mensagemFinalizada_(codigo, f) {
   var p = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/.exec(String(f.at || ''));
-  return 'A viagem #' + codigo + ' já foi finalizada' +
+  return 'A viagem #' + codigo + ' ' + (ENCERRAMENTOS[f.kind] || ENCERRAMENTO_PADRAO).texto +
     (p ? ' em ' + formatarData_(p[1]) + ' às ' + p[2] : '') +
     '. Este link não aceita mais registros.';
 }

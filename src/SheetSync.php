@@ -1106,13 +1106,13 @@ class SheetSync extends CommonDBTM
             }
         }
 
-        // Viagens concluídas: o formulário troca o link por "viagem finalizada".
+        // Viagens encerradas: o formulário troca o link pelo aviso de cada situação.
         $closed = [];
         $it = $DB->request([
-            'SELECT' => ['request_code', 'date_departure', 'date_arrival', 'date_returned'],
+            'SELECT' => ['request_code', 'date_departure', 'date_arrival', 'date_returned', 'date_validation', 'status'],
             'FROM'   => Booking::getTable(),
             'WHERE'  => [
-                'status'     => Booking::STATUS_ARRIVED,
+                'status'     => [Booking::STATUS_ARRIVED, Booking::STATUS_CANCELLED, Booking::STATUS_REJECTED],
                 'is_deleted' => 0,
                 ['date_departure' => ['>=', date('Y-m-d 00:00:00', strtotime('-' . self::PUSH_CLOSED_DAYS_BACK . ' days'))]],
             ],
@@ -1124,11 +1124,14 @@ class SheetSync extends CommonDBTM
                 continue;
             }
             $from = substr((string) ($r['date_departure'] ?? ''), 0, 10);
+            $status = (int) ($r['status'] ?? 0);
+            $arrived = $status === Booking::STATUS_ARRIVED;
             $closed[] = [
                 'code' => $code,
                 'from' => $from,
                 'to'   => substr((string) ($r['date_arrival'] ?? ''), 0, 10) ?: $from,
-                'at'   => substr((string) ($r['date_returned'] ?? ''), 0, 16),
+                'at'   => substr((string) ($r[$arrived ? 'date_returned' : 'date_validation'] ?? ''), 0, 16),
+                'kind' => $arrived ? 'finished' : ($status === Booking::STATUS_CANCELLED ? 'cancelled' : 'rejected'),
             ];
         }
 
