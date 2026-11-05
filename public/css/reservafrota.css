@@ -935,15 +935,9 @@ body.reservafrota-modal-open { overflow: hidden; }
     border-radius: 11px; padding: 0.6rem 0.7rem; margin-bottom: 0.6rem;
     transition: opacity 0.15s ease;
 }
-.reservafrota-blist-item[draggable="true"] { cursor: grab; }
-.reservafrota-blist-item[draggable="true"]:active { cursor: grabbing; }
-.reservafrota-blist-item.is-dragging { opacity: 0.4; }
 
-/* Kanban: destaca as colunas onde o card arrastado pode ser solto. */
+/* Destaca a coluna de pendentes ao clicar na notificação. */
 .reservafrota-blist-col[data-status-group] { transition: box-shadow 0.15s ease, background-color 0.15s ease; }
-.reservafrota-blist-col.is-drop-ok {
-    box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.35);
-}
 .reservafrota-blist-col.is-drop-over {
     box-shadow: inset 0 0 0 2px var(--cb-approved, #6366f1);
     background-color: rgba(99, 102, 241, 0.06);
@@ -1030,6 +1024,8 @@ body.reservafrota-modal-open { overflow: hidden; }
 }
 .reservafrota-timegrid button:hover { background: #e9ebf0; color: #4f46e5; }
 .reservafrota-timegrid button.is-sel { background: #4f46e5; color: #fff; }
+.reservafrota-timegrid.has-clear { display: grid; grid-template-columns: auto auto; }
+.reservafrota-timegrid__clear { grid-column: 1 / -1; }
 .reservafrota-time5::-webkit-calendar-picker-indicator { display: none; }
 .reservafrota-timepop {
     position: fixed; z-index: 3000; max-height: 240px; overflow-y: auto;

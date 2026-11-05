@@ -118,7 +118,7 @@
         }
         if (mTime) { mTime.addEventListener('change', function () { snapToFive(mTime); }); }
         if (mATime) { mATime.addEventListener('change', function () { snapToFive(mATime); }); }
-        function attachTimeGrid(input) {
+        function attachTimeGrid(input, canClear) {
             if (!input || input.dataset.timeGrid) { return; }
             input.dataset.timeGrid = '1';
             var pop = null;
@@ -134,7 +134,7 @@
                 var sel = readHM();
                 var pickH = (sel.h >= 0 && sel.h <= 23) ? sel.h : 8;
                 pop = document.createElement('div');
-                pop.className = 'reservafrota-timegrid';
+                pop.className = 'reservafrota-timegrid' + (canClear ? ' has-clear' : '');
                 pop.style.position = 'fixed';
                 pop.style.zIndex = '3000';
                 var html = '<div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Hora</div><div class="reservafrota-timegrid__hours">';
@@ -146,7 +146,20 @@
                     html += '<button type="button" data-m="' + mi + '" class="' + (mi === sel.min ? 'is-sel' : '') + '">' + pad2(mi) + '</button>';
                 }
                 html += '</div></div>';
+                if (canClear) {
+                    html += '<button type="button" class="reservafrota-timegrid__clear" data-clear>Sem horário</button>';
+                }
                 pop.innerHTML = html;
+                var clearBtn = pop.querySelector('[data-clear]');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        input.value = '';
+                        try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+                        close();
+                    });
+                }
                 pop.querySelectorAll('[data-h]').forEach(function (b) {
                     b.addEventListener('click', function (ev) {
                         ev.preventDefault();
@@ -169,7 +182,8 @@
                 var r = input.getBoundingClientRect();
                 pop.style.left = r.left + 'px';
                 var top = r.bottom + 4;
-                if (top + 260 > window.innerHeight) { top = Math.max(4, r.top - 264); }
+                var popH = pop.offsetHeight || 260;
+                if (top + popH > window.innerHeight) { top = Math.max(4, r.top - popH - 4); }
                 pop.style.top = top + 'px';
                 var selH = pop.querySelector('[data-h].is-sel');
                 var hoursBox = pop.querySelector('.reservafrota-timegrid__hours');
@@ -190,7 +204,7 @@
             }, true);
         }
         if (mTime) { attachTimeGrid(mTime); }
-        if (mATime) { attachTimeGrid(mATime); }
+        if (mATime) { attachTimeGrid(mATime, true); }
         var modalWeekdays = document.getElementById('cb-m-weekdays');
         var submitBtn = document.getElementById('cb-m-submit');
         var cancelBtn = document.getElementById('cb-m-cancel');
@@ -807,13 +821,15 @@
             mDate.addEventListener('change', function(){
                 if (!mDate.value) { return; }
                 mADate.min = mDate.value;
+                // Sem hora de chegada, o dia sugerido acompanha a saída.
+                if (mATime && !mATime.value) { mADate.value = mDate.value; }
                 if (mADate.value && mADate.value < mDate.value) {
                     mADate.value = '';
                     if (mATime) { mATime.value = ''; }
                 }
-                // Se já tem horário, revalida que chegada > saída
-                if (mADate.value && mTime && mTime.value) {
-                    var at = (mATime && mATime.value) ? mATime.value : mTime.value;
+                // Se já tem os dois horários, revalida que chegada > saída
+                if (mADate.value && mTime && mTime.value && mATime && mATime.value) {
+                    var at = mATime.value;
                     var depDt = new Date(mDate.value + 'T' + mTime.value);
                     var arrDt = new Date(mADate.value + 'T' + at);
                     if (arrDt <= depDt) {
@@ -917,16 +933,20 @@
                     alert('Informe o dia e a hora da saída.');
                     return;
                 }
-                // Chegada é obrigatória (ida e volta).
-                if (modalArr) {
+                // Chegada é opcional: sem hora, a viagem fica sem retorno previsto.
+                var semRetorno = !!modalArr && (!mATime || !mATime.value);
+                if (semRetorno) {
+                    // A data de outro dia se perderia sem a hora, então pede a hora.
+                    if (mADate && mADate.value && mADate.value !== mDate.value) {
+                        alert('Para voltar em outro dia, informe também a hora da chegada.');
+                        if (mATime) { mATime.focus(); }
+                        return;
+                    }
+                    modalArr.value = '';
+                } else if (modalArr) {
                     if (!mADate || !mADate.value) {
                         alert('Informe o dia da chegada (volta).');
                         if (mADate) { mADate.focus(); }
-                        return;
-                    }
-                    if (!mATime || !mATime.value) {
-                        alert('Informe a hora da chegada (volta).');
-                        if (mATime) { mATime.focus(); }
                         return;
                     }
                     var at = mATime.value;
@@ -1043,8 +1063,8 @@
             });
         }
 
-        // Confirmar (aprovar com escolha de carro) — abre o mesmo pop-up usado
-        // no kanban, fechando primeiro este popup do dia.
+        // Confirmar (aprovar com escolha de carro) — abre o pop-up de aprovação,
+        // fechando primeiro este popup do dia.
         if (confirmBtn) {
             confirmBtn.addEventListener('click', function () {
                 var id = confirmBtn.getAttribute('data-id');

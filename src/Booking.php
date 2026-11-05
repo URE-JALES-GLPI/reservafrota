@@ -127,7 +127,7 @@ class Booking extends CommonDBTM
             $input['users_id'] = (int) Session::getLoginUserID();
         }
 
-        // Datas — ambas obrigatórias (ida e volta).
+        // Saída obrigatória; o retorno é opcional.
         $input['date_departure'] = self::normalizeDatetime($input['date_departure'] ?? null);
         $input['date_arrival']   = self::normalizeDatetime($input['date_arrival'] ?? null);
 
@@ -137,10 +137,6 @@ class Booking extends CommonDBTM
             Session::addMessageAfterRedirect(__('Informe a data e hora de saída (ida).', 'reservafrota'), false, ERROR);
             return false;
         }
-        if (empty($input['date_arrival'])) {
-            Session::addMessageAfterRedirect(__('Informe a data e hora de chegada (volta).', 'reservafrota'), false, ERROR);
-            return false;
-        }
 
         // Solicitante não pode agendar em data passada; o gestor pode
         // (ex.: para registrar um uso que já aconteceu).
@@ -148,19 +144,19 @@ class Booking extends CommonDBTM
             Session::addMessageAfterRedirect(__('Não é possível agendar em uma data anterior a hoje.', 'reservafrota'), false, ERROR);
             return false;
         }
-        if (!self::canApprove() && substr($input['date_arrival'], 0, 10) < date('Y-m-d')) {
+        if (!empty($input['date_arrival']) && !self::canApprove() && substr($input['date_arrival'], 0, 10) < date('Y-m-d')) {
             Session::addMessageAfterRedirect(__('A data de chegada não pode ser anterior a hoje.', 'reservafrota'), false, ERROR);
             return false;
         }
 
-        // Chegada deve ser posterior à saída.
+        // Chegada, se informada, deve ser posterior à saída.
         $depTs = strtotime($input['date_departure']);
-        $arrTs = strtotime($input['date_arrival']);
-        if ($arrTs === false || $depTs === false || $arrTs <= $depTs) {
+        $arrTs = !empty($input['date_arrival']) ? strtotime($input['date_arrival']) : null;
+        if ($depTs === false || $arrTs === false || ($arrTs !== null && $arrTs <= $depTs)) {
             Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
             return false;
         }
-        if (!self::isFiveMinuteSlot($input['date_departure']) || !self::isFiveMinuteSlot($input['date_arrival'])) {
+        if (!self::isFiveMinuteSlot($input['date_departure']) || ($arrTs !== null && !self::isFiveMinuteSlot($input['date_arrival']))) {
             Session::addMessageAfterRedirect(__('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).', 'reservafrota'), false, ERROR);
             return false;
         }
@@ -352,23 +348,14 @@ class Booking extends CommonDBTM
             $input['date_arrival'] = self::normalizeDatetime($input['date_arrival']);
         }
 
-        // Validação de datas na edição — ida e volta continuam obrigatórias.
+        // Validação de datas na edição — a saída é obrigatória; o retorno, opcional.
         // Determina valores finais (considera o que está sendo alterado + o que já existe no BD).
         $finalDep = $input['date_departure'] ?? ($this->fields['date_departure'] ?? null);
         $finalArr = array_key_exists('date_arrival', $input) ? $input['date_arrival'] : ($this->fields['date_arrival'] ?? null);
 
-        // Se a edição está alterando data, não pode deixar nenhuma vazia.
-        if (array_key_exists('date_departure', $input) && empty($finalDep)) {
+        // Se a edição está alterando datas, a saída não pode ficar vazia.
+        if ((array_key_exists('date_departure', $input) || array_key_exists('date_arrival', $input)) && empty($finalDep)) {
             Session::addMessageAfterRedirect(__('Informe a data e hora de saída (ida).', 'reservafrota'), false, ERROR);
-            return false;
-        }
-        if (array_key_exists('date_arrival', $input) && empty($finalArr)) {
-            Session::addMessageAfterRedirect(__('Informe a data e hora de chegada (volta).', 'reservafrota'), false, ERROR);
-            return false;
-        }
-        // Se o registro já existe sem chegada (legado), exige preencher agora em qualquer edição de data.
-        if ((isset($input['date_departure']) || array_key_exists('date_arrival', $input)) && (empty($finalDep) || empty($finalArr))) {
-            Session::addMessageAfterRedirect(__('Informe a data e hora de saída e de chegada (volta).', 'reservafrota'), false, ERROR);
             return false;
         }
 
@@ -387,11 +374,14 @@ class Booking extends CommonDBTM
                 Session::addMessageAfterRedirect(__('A data/hora de chegada deve ser posterior à data/hora de saída.', 'reservafrota'), false, ERROR);
                 return false;
             }
-            if ((isset($input['date_departure']) || array_key_exists('date_arrival', $input))
-                && (!self::isFiveMinuteSlot($finalDep) || !self::isFiveMinuteSlot($finalArr))) {
-                Session::addMessageAfterRedirect(__('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).', 'reservafrota'), false, ERROR);
-                return false;
-            }
+        }
+        if (
+            (isset($input['date_departure']) || array_key_exists('date_arrival', $input))
+            && !empty($finalDep)
+            && (!self::isFiveMinuteSlot($finalDep) || (!empty($finalArr) && !self::isFiveMinuteSlot($finalArr)))
+        ) {
+            Session::addMessageAfterRedirect(__('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).', 'reservafrota'), false, ERROR);
+            return false;
         }
 
         // Motorista: se veio drivers_id, valida e sincroniza `driver` (nome).

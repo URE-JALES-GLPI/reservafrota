@@ -224,10 +224,10 @@
                                 <input type="text" class="form-control reservafrota-time5" id="cb-m-time" aria-label="{{ __('Hora da saída', 'reservafrota') }}" placeholder="HH:MM" maxlength="5" inputmode="none" autocomplete="off" required>
                             </div>
 
-                            <label class="form-label">4. {{ __('Chegada — dia e hora', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
+                            <label class="form-label">4. {{ __('Chegada — dia e hora', 'reservafrota') }} <span class="text-muted">({{ __('opcional', 'reservafrota') }})</span></label>
                             <div class="reservafrota-datetime">
-                                <input type="date" class="form-control" id="cb-m-adate" aria-label="{{ __('Dia da chegada', 'reservafrota') }}" required>
-                                <input type="text" class="form-control reservafrota-time5" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" placeholder="HH:MM" maxlength="5" inputmode="none" autocomplete="off" required>
+                                <input type="date" class="form-control" id="cb-m-adate" aria-label="{{ __('Dia da chegada', 'reservafrota') }}">
+                                <input type="text" class="form-control reservafrota-time5" id="cb-m-atime" aria-label="{{ __('Hora da chegada', 'reservafrota') }}" placeholder="HH:MM" maxlength="5" inputmode="none" autocomplete="off">
                             </div>
 
                             <label class="form-label" for="cb-m-dest">5. {{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>

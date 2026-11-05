@@ -90,9 +90,9 @@
                             <input type="datetime-local" class="form-control" id="cb-dep" name="date_departure" value="{{ date }}T08:00" required>
 
                             <label class="form-label" for="cb-arr">
-                                {{ __('Chegada', 'reservafrota') }} <span style="color:#d6336c;">*</span>
+                                {{ __('Chegada', 'reservafrota') }} <span class="text-muted">({{ __('opcional', 'reservafrota') }})</span>
                             </label>
-                            <input type="datetime-local" class="form-control" id="cb-arr" name="date_arrival" required>
+                            <input type="datetime-local" class="form-control" id="cb-arr" name="date_arrival">
 
                             <label class="form-label" for="cb-dest">{{ __('Destino', 'reservafrota') }} <span style="color:#d6336c;">*</span></label>
                             <input type="text" class="form-control" id="cb-dest" name="destination" placeholder="{{ __('Para onde o carro vai', 'reservafrota') }}" required>

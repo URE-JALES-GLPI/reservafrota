@@ -195,8 +195,8 @@
           + '</div>'
           + '<label class="form-label" style="margin-top:0.6rem;">Saída — dia e hora <span style="color:#d6336c;">*</span></label>'
           + '<input type="datetime-local" class="form-control" name="date_departure" value="' + dtLocal(b.departure) + '" step="300" required>'
-          + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora <span style="color:#d6336c;">*</span></label>'
-          + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="300" required>'
+          + '<label class="form-label" style="margin-top:0.6rem;">Chegada — dia e hora <span class="text-muted">(opcional)</span></label>'
+          + '<input type="datetime-local" class="form-control" name="date_arrival" value="' + dtLocal(b.arrival) + '" step="300">'
           + '<label class="form-label" style="margin-top:0.6rem;">Destino <span style="color:#d6336c;">*</span></label>'
           + '<input type="text" class="form-control" name="destination" placeholder="Cidade, escola, etc..." value="' + esc2(b.destination) + '" required>'
           + '<div class="reservafrota-confirm-actions">'
@@ -272,7 +272,7 @@
             arriveBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); close(); openArriveModal(b.id, bform, csrf); });
         }
 
-        // Validação de datas: ida e volta + destino são obrigatórios; chegada > saída; nada no passado.
+        // Validação de datas: saída e destino são obrigatórios; chegada, se informada, > saída; nada no passado.
         form.addEventListener('submit', function (e) {
             var destInput = form.querySelector('[name="destination"]');
             if (destInput && !destInput.value.trim()) {
@@ -288,27 +288,23 @@
                 alert('Informe a data e hora de saída (ida).');
                 return;
             }
-            if (!arrInput || !arrInput.value) {
-                e.preventDefault();
-                alert('Informe a data e hora de chegada (volta).');
-                return;
-            }
+            var arrValue = arrInput ? arrInput.value : '';
             var depTs = new Date(depInput.value).getTime();
-            var arrTs = new Date(arrInput.value).getTime();
+            var arrTs = new Date(arrValue).getTime();
             if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
                 e.preventDefault();
                 alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
                 return;
             }
             var depMin = parseInt(String(depInput.value).substr(14, 2), 10);
-            var arrMin = parseInt(String(arrInput.value).substr(14, 2), 10);
+            var arrMin = arrValue ? parseInt(arrValue.substr(14, 2), 10) : 0;
             if (isNaN(depMin) || depMin % 5 !== 0 || isNaN(arrMin) || arrMin % 5 !== 0) {
                 e.preventDefault();
                 alert('Os horários devem ser de 5 em 5 minutos (ex.: 08:00, 08:05, 08:10).');
                 return;
             }
             var todayStr = (function(){ var t=new Date(); function p(n){return n<10?'0'+n:''+n;} return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate()); })();
-            if (arrInput.value.substr(0,10) < todayStr) {
+            if (arrValue && arrValue.substr(0,10) < todayStr) {
                 e.preventDefault();
                 alert('A data de chegada não pode ser anterior a hoje.');
                 return;
@@ -445,21 +441,17 @@
             return;
         }
         var arr = form.querySelector('input[name="date_arrival"]');
-        // Ida e volta são obrigatórias
+        // A saída é obrigatória; a chegada é opcional
         if (!dep.value) {
             e.preventDefault();
             alert('Informe a data e hora de saída (ida).');
             return;
         }
-        if (!arr || !arr.value) {
-            e.preventDefault();
-            alert('Informe a data e hora de chegada (volta).');
-            return;
-        }
-        // Chegada deve ser depois da saída
-        if (dep.value && arr.value) {
+        var arrValue = arr ? arr.value : '';
+        // Chegada, se informada, deve ser depois da saída
+        if (arrValue) {
             var depTs = new Date(dep.value).getTime();
-            var arrTs = new Date(arr.value).getTime();
+            var arrTs = new Date(arrValue).getTime();
             if (!isNaN(depTs) && !isNaN(arrTs) && arrTs <= depTs) {
                 e.preventDefault();
                 alert('A data/hora de chegada deve ser posterior à data/hora de saída.');
@@ -474,12 +466,12 @@
             alert('Não é possível agendar em data anterior a hoje.');
             return;
         }
-        if (arr.value.substr(0,10) < today) {
+        if (arrValue && arrValue.substr(0,10) < today) {
             e.preventDefault();
             alert('A data de chegada não pode ser anterior a hoje.');
             return;
         }
-        if (arr.value.substr(0,10) < dep.value.substr(0,10)) {
+        if (arrValue && arrValue.substr(0,10) < dep.value.substr(0,10)) {
             e.preventDefault();
             alert('A data de chegada não pode ser anterior à data de saída.');
             return;
@@ -1018,85 +1010,6 @@
             form.submit();
         });
     }
-
-    /* Kanban dos agendamentos: arrastar um card para outra coluna troca o
-       status, mas sempre pelo mesmo pop-up de confirmação usado pelos botões
-       "Aprovar" e "Cancelar" (não duplica lógica nem pula a confirmação).
-       Delegado no documento porque a lista é recarregada via AJAX. */
-    (function bookingKanban() {
-        // De onde -> para onde é permitido arrastar (status: pendente=1, aprovado=2).
-        var ALLOWED_TARGETS = { '1': ['approved', 'rejected'], '2': ['rejected'] };
-        var dragged = null;
-        var draggedStatus = null;
-
-        document.addEventListener('dragstart', function (e) {
-            var card = e.target.closest && e.target.closest('.reservafrota-blist-item[draggable="true"]');
-            if (!card) { return; }
-            dragged = card;
-            draggedStatus = card.getAttribute('data-status');
-            card.classList.add('is-dragging');
-            if (e.dataTransfer) {
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', card.getAttribute('data-id') || '');
-            }
-            var targets = ALLOWED_TARGETS[draggedStatus] || [];
-            document.querySelectorAll('.reservafrota-blist-col[data-status-group]').forEach(function (col) {
-                if (targets.indexOf(col.getAttribute('data-status-group')) !== -1) {
-                    col.classList.add('is-drop-ok');
-                }
-            });
-        });
-
-        document.addEventListener('dragend', function () {
-            if (dragged) { dragged.classList.remove('is-dragging'); }
-            document.querySelectorAll('.reservafrota-blist-col').forEach(function (col) {
-                col.classList.remove('is-drop-ok', 'is-drop-over');
-            });
-            dragged = null;
-            draggedStatus = null;
-        });
-
-        document.addEventListener('dragover', function (e) {
-            if (!dragged) { return; }
-            var col = e.target.closest && e.target.closest('.reservafrota-blist-col[data-status-group]');
-            if (!col) { return; }
-            var targets = ALLOWED_TARGETS[draggedStatus] || [];
-            if (targets.indexOf(col.getAttribute('data-status-group')) === -1) { return; }
-            e.preventDefault(); // só permite o drop quando o destino é válido
-            if (e.dataTransfer) { e.dataTransfer.dropEffect = 'move'; }
-            col.classList.add('is-drop-over');
-        });
-
-        document.addEventListener('dragleave', function (e) {
-            var col = e.target.closest && e.target.closest('.reservafrota-blist-col[data-status-group]');
-            if (col) { col.classList.remove('is-drop-over'); }
-        });
-
-        document.addEventListener('drop', function (e) {
-            if (!dragged) { return; }
-            var col = e.target.closest && e.target.closest('.reservafrota-blist-col[data-status-group]');
-            if (!col) { return; }
-            var targetGroup = col.getAttribute('data-status-group');
-            var targets = ALLOWED_TARGETS[draggedStatus] || [];
-            if (targets.indexOf(targetGroup) === -1) { return; }
-            e.preventDefault();
-            col.classList.remove('is-drop-over');
-
-            // Reaproveita os mesmos pop-ups de confirmação usados ao abrir o
-            // agendamento (Confirmar com escolha de carro / Cancelar).
-            var id = dragged.getAttribute('data-id');
-            var bform = dragged.getAttribute('data-bform');
-            var csrf = dragged.getAttribute('data-csrf');
-            var canApprove = dragged.getAttribute('data-can-approve') === '1';
-            if (!id || !bform) { return; }
-
-            if (targetGroup === 'approved' && canApprove) {
-                cbOpenApprove(id, bform, csrf);
-            } else if (targetGroup === 'rejected' && dragged.getAttribute('data-can-cancel') === '1') {
-                openCancelModal(id, bform, csrf);
-            }
-        });
-    }());
 
     /* Notificação de pendentes para o aprovador — usa a URL exposta no HTML
        da página (atributo data-cb-pending-url), sem adivinhar caminho. */
