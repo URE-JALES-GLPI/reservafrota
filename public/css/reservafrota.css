@@ -1003,29 +1003,40 @@ body.reservafrota-modal-open { overflow: hidden; }
 .reservafrota-datetime { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem; margin-bottom: 0.4rem; }
 .reservafrota-time5 { cursor: pointer; background-color: #fff; }
 .reservafrota-timegrid {
-    display: flex; gap: 10px;
+    display: grid; grid-template-columns: auto auto; gap: 10px 16px;
+    max-width: calc(100vw - 16px);
     background: var(--tblr-bg-surface, #fff);
     border: 1px solid var(--tblr-border-color, #e7e9ee); border-radius: 12px;
-    box-shadow: 0 16px 40px -12px rgba(16,24,40,.35); padding: 10px;
+    box-shadow: 0 16px 40px -12px rgba(16,24,40,.35); padding: 12px;
 }
+.reservafrota-timegrid__col { display: flex; flex-direction: column; min-width: 0; }
 .reservafrota-timegrid__cap {
-    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; text-align: center;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #6b7280; margin-bottom: 6px;
 }
-.reservafrota-timegrid__hours { display: flex; flex-direction: column; gap: 4px; max-height: 212px; overflow-y: auto; padding-right: 2px; scroll-snap-type: y proximity; }
-.reservafrota-timegrid__hours button { scroll-snap-align: center; }
-.reservafrota-timegrid__mins { display: flex; flex-direction: column; gap: 4px; max-height: 212px; overflow-y: auto; padding-right: 2px; scroll-snap-type: y proximity; }
-.reservafrota-timegrid__mins button { scroll-snap-align: center; }
+.reservafrota-timegrid__hours,
+.reservafrota-timegrid__mins { display: grid; gap: 3px; flex: 1; grid-auto-rows: 1fr; }
+.reservafrota-timegrid__hours { grid-template-columns: repeat(6, 36px); }
+.reservafrota-timegrid__mins { grid-template-columns: repeat(4, 36px); }
 .reservafrota-timegrid button {
-    border: 0; background: #f4f5f7; border-radius: 10px;
-    padding: 9px 18px; font-size: 0.95rem; font-weight: 600;
-    min-width: 76px;
+    border: 0; background: transparent; border-radius: 8px;
+    min-height: 32px; padding: 0; font-size: 0.86rem; font-weight: 500;
+    font-variant-numeric: tabular-nums;
     cursor: pointer; color: #374151;
 }
-.reservafrota-timegrid button:hover { background: #e9ebf0; color: #4f46e5; }
-.reservafrota-timegrid button.is-sel { background: #4f46e5; color: #fff; }
-.reservafrota-timegrid.has-clear { display: grid; grid-template-columns: auto auto; }
-.reservafrota-timegrid__clear { grid-column: 1 / -1; }
+.reservafrota-timegrid button:hover { background: #eef0f6; color: #4f46e5; }
+.reservafrota-timegrid button:focus-visible { outline: 2px solid #4f46e5; outline-offset: 1px; }
+.reservafrota-timegrid button.is-sel { background: #4f46e5; color: #fff; font-weight: 600; }
+.reservafrota-timegrid .reservafrota-timegrid__clear {
+    grid-column: 1 / -1; color: #6b7280;
+    border-top: 1px solid var(--tblr-border-color, #e7e9ee); border-radius: 0 0 8px 8px;
+}
+@media (max-width: 420px) {
+    .reservafrota-timegrid { grid-template-columns: 1fr; }
+    .reservafrota-timegrid__hours { grid-template-columns: repeat(6, minmax(36px, 1fr)); }
+    .reservafrota-timegrid__mins { grid-template-columns: repeat(6, minmax(36px, 1fr)); }
+    .reservafrota-timegrid button { min-height: 40px; }
+}
 .reservafrota-time5::-webkit-calendar-picker-indicator { display: none; }
 .reservafrota-timepop {
     position: fixed; z-index: 3000; max-height: 240px; overflow-y: auto;

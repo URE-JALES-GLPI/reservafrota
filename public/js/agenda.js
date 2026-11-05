@@ -615,9 +615,9 @@
                 pop.style.zIndex = '3000';
                 var html = '<div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Hora</div><div class="reservafrota-timegrid__hours">';
                 for (var h = 0; h < 24; h++) {
-                    html += '<button type="button" data-h="' + h + '" class="' + (h === sh ? 'is-sel' : '') + '">' + pad2(h) + '</button>';
+                    html += '<button type="button" data-h="' + h + '" class="' + (h === pickH ? 'is-sel' : '') + '">' + pad2(h) + '</button>';
                 }
-                html += '</div></div><div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Min</div><div class="reservafrota-timegrid__mins">';
+                html += '</div></div><div class="reservafrota-timegrid__col"><div class="reservafrota-timegrid__cap">Minuto</div><div class="reservafrota-timegrid__mins">';
                 for (var mi = 0; mi < 60; mi += 5) {
                     html += '<button type="button" data-m="' + mi + '" class="' + (mi === sm ? 'is-sel' : '') + '">' + pad2(mi) + '</button>';
                 }
@@ -642,16 +642,11 @@
                 });
                 document.body.appendChild(pop);
                 var r = input.getBoundingClientRect();
-                pop.style.left = r.left + 'px';
+                pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+                var popH = pop.offsetHeight || 260;
                 var top = r.bottom + 4;
-                if (top + 260 > window.innerHeight) { top = Math.max(4, r.top - 264); }
+                if (top + popH > window.innerHeight) { top = Math.max(4, r.top - popH - 4); }
                 pop.style.top = top + 'px';
-                var selH = pop.querySelector('[data-h].is-sel');
-                var hoursBox = pop.querySelector('.reservafrota-timegrid__hours');
-                if (selH && hoursBox) { try { hoursBox.scrollTop = selH.offsetTop - hoursBox.clientHeight / 2; } catch (e2) {} }
-                var selM = pop.querySelector('[data-m].is-sel');
-                var minsBox = pop.querySelector('.reservafrota-timegrid__mins');
-                if (selM && minsBox) { try { minsBox.scrollTop = selM.offsetTop - minsBox.clientHeight / 2; } catch (e3) {} }
             }
             input.addEventListener('click', open);
             input.addEventListener('focus', open);
